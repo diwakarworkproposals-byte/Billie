@@ -93,17 +93,14 @@ export function extractNumber(text = '', defaultVal = 1) {
   if (typeof text === 'number') return isNaN(text) ? defaultVal : text;
   if (!text || typeof text !== 'string') return defaultVal;
 
-  // 1. Convert Devanagari numerals to ASCII (e.g. '३' -> '3', '५००' -> '500')
   let normalized = text.replace(/[०-९]/g, (d) => HINDI_DEVANAGARI_DIGITS[d] || d).toLowerCase().trim();
 
-  // 2. Direct regex match for ASCII digits (e.g. '3', '4.5', '5 piece', '₹500')
   const digitMatch = normalized.match(/(\d+(?:\.\d+)?)/);
   if (digitMatch) {
     const parsed = parseFloat(digitMatch[1]);
     if (!isNaN(parsed)) return parsed;
   }
 
-  // 3. Word token matching for Hindi/English words
   const words = normalized.split(/[\s,.-]+/);
   let total = 0;
   let currentGroup = 0;
@@ -127,7 +124,7 @@ export function extractNumber(text = '', defaultVal = 1) {
   return foundAny ? total : defaultVal;
 }
 
-// Hindi & English Trigger Detection
+// Hindi & English Trigger Detection for Billing
 export function isInvoiceIntent(text = '') {
   const normalized = text.toLowerCase().trim();
 
@@ -178,13 +175,61 @@ export function isInvoiceIntent(text = '') {
          (normalized.startsWith('invoice') && normalized.length > 7);
 }
 
+// Add Stock Intent Detection
+export function isAddStockIntent(text = '') {
+  const norm = text.toLowerCase().trim();
+  const hindiAddStock = [
+    'stock add karo', 'stock add', 'stock dalo', 'stock jodo', 'maal add karo',
+    'inventory add karo', 'naya stock', 'stock badhao', 'stock chadhao', 'maal dalo',
+    'स्टॉक जोड़ो', 'स्टॉक ऐड करो', 'स्टॉक डालो', 'माल जोड़ो'
+  ];
+  const englishAddStock = [
+    'add stock', 'restock', 'add inventory', 'new stock', 'increase stock', 'stock in', 'add product stock'
+  ];
+
+  return [...hindiAddStock, ...englishAddStock].some((t) => norm.includes(t));
+}
+
+// Check Stock Intent Detection
+export function isCheckStockIntent(text = '') {
+  const norm = text.toLowerCase().trim();
+  const hindiCheckStock = [
+    'check stock', 'stock check karo', 'stock dikhao', 'maal kitna hai', 'stock batao',
+    'inventory dikhao', 'kitna maal bacha hai', 'stock kitna hai', 'maal check karo',
+    'stock report', 'inventory check karo', 'kitna stock hai', 'stock dekhna hai',
+    'स्टॉक दिखाओ', 'स्टॉक चेक करो', 'स्टॉक बताओ', 'स्टॉक कितना है', 'माल कितना है'
+  ];
+  const englishCheckStock = [
+    'check stock', 'view stock', 'show stock', 'inventory report', 'check inventory',
+    'stock report', 'stock status', 'how much stock', 'view inventory'
+  ];
+
+  return [...hindiCheckStock, ...englishCheckStock].some((t) => norm.includes(t));
+}
+
+// Extract product from "Shirt ka stock dikhao" or "check stock of Jeans"
+export function extractProductFromStockQuery(text = '') {
+  const str = text.trim();
+  const match = 
+    str.match(/(?:check stock of|stock of|stock for)\s+([A-Za-z0-9\s-]+)/i) ||
+    str.match(/([A-Za-z0-9\s-]+?)\s+(?:ka stock|ka maal|stock kitna|kitna bacha)/i);
+
+  if (match && match[1]) {
+    const cleaned = match[1].replace(/^(check|view|show|dikhao|batao)\s+/i, '').trim();
+    if (cleaned && !['all', 'total', 'sab', 'pura', 'sabka'].includes(cleaned.toLowerCase())) {
+      return cleaned;
+    }
+  }
+  return '';
+}
+
 // Detect if query was initiated in Hindi
 export function detectLanguage(text = '') {
   const normalized = text.toLowerCase().trim();
   const hindiIndicators = [
     'banao', 'banaye', 'chahiye', 'kya', 'naam', 'kitna', 'kitni', 'keemat', 'hai', 'aur', 'ha', 'haan', 'nahi', 'karo', 'parcha', 'parchi', 'rasid', 'rupaye', 'ka', 'ki', 'ke',
-    'teen', 'chaar', 'paanch', 'chhe', 'saat', 'aath', 'nau', 'das',
-    'बिल', 'बनाओ', 'क्या', 'नाम', 'कितना', 'कितनी', 'कीमत', 'है', 'और', 'हाँ', 'नहीं', 'तीन', 'चार', 'पांच', 'पाँच'
+    'teen', 'chaar', 'paanch', 'chhe', 'saat', 'aath', 'nau', 'das', 'dalo', 'jodo', 'dikhao', 'batao', 'maal',
+    'बिल', 'बनाओ', 'क्या', 'नाम', 'कितना', 'कितनी', 'कीमत', 'है', 'और', 'हाँ', 'नहीं', 'तीन', 'चार', 'पांच', 'पाँच', 'स्टॉक'
   ];
 
   const isHindi = hindiIndicators.some((word) => normalized.includes(word));
@@ -213,7 +258,7 @@ export function isNegative(text = '') {
   return negativeWords.some((w) => norm === w || norm.startsWith(w));
 }
 
-// Natural Language One-Shot Extractor (Hindi & English)
+// Natural Language One-Shot Extractor for Invoice
 export function parseOneShotInvoice(text = '') {
   const str = text.trim();
   const result = {
@@ -226,7 +271,6 @@ export function parseOneShotInvoice(text = '') {
     hasFullDetails: false
   };
 
-  // 1. Customer extraction ("for [Name]", "to [Name]", "[Name] ke liye", "customer [Name]")
   const custMatch = 
     str.match(/(?:for|to|customer)\s+([A-Za-z0-9\s&.'-]+?)(?:,|\s+with|\s+product|\s+ke\s+liye|\s+\d+\s+|$)/i) ||
     str.match(/([A-Za-z0-9\s&.'-]+?)\s+(?:ke\s+liye|ka\s+bill)/i);
@@ -235,7 +279,6 @@ export function parseOneShotInvoice(text = '') {
     result.customerName = custMatch[1].trim();
   }
 
-  // 2. Quantity & Product extraction
   const qtyProductMatch = 
     str.match(/(\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s*(?:x|\s+units?\s+of|\s+pieces?\s+of|\s+piece|\s+nag|\s+)\s*([A-Za-z0-9\s-]+?)(?:\s+(?:at|@|for|me|mein|costing|price|rate|with|discount|$))/i);
 
@@ -249,13 +292,11 @@ export function parseOneShotInvoice(text = '') {
     if (qtyMatch) result.quantity = extractNumber(qtyMatch[1], 1);
   }
 
-  // 3. Price extraction
   const priceMatch = str.match(/(?:at|@|price|cost|rate|for|me|mein)\s*[$₹€£]?\s*([0-9A-Za-z\s]+?)(?:,|\s+with|\s+discount|$)/i);
   if (priceMatch) {
     result.price = extractNumber(priceMatch[1], 0);
   }
 
-  // 4. Discount extraction
   const discountMatch = str.match(/(?:discount|off|chhut)\s*[$₹€£]?\s*([0-9A-Za-z\s]+?)(%)?/i) ||
                         str.match(/([0-9A-Za-z\s]+?)(%)?\s*(?:discount|off|chhut)/i);
   if (discountMatch) {
@@ -277,7 +318,7 @@ export function parseOneShotInvoice(text = '') {
 // Multilingual Prompt Templates
 export const PROMPTS = {
   hi: {
-    welcome: "नमस्ते! मैं Billie हूँ, आपका वॉइस और टेक्स्ट इनवॉइस असिस्टेंट। बिल बनाने के लिए बोलें या लिखें: 'bill banao'.",
+    welcome: "नमस्ते! मैं Billie हूँ, आपका वॉइस और टेक्स्ट असिस्टेंट। बिल बनाने के लिए 'bill banao' बोलें, या स्टॉक देखने/जोड़ने के लिए 'stock check karo' या 'stock add karo' बोलें।",
     ask_customer: "Customer ka naam batao (kiske naam pe bill banana hai)?",
     ask_product: "Kya product hai?",
     ask_quantity: (product) => `"${product}" kitna piece ya quantity chahiye? (jaise 1, 2, 3, 4, 5...)`,
@@ -288,19 +329,32 @@ export const PROMPTS = {
     item_added: (name, qty, price, currency) => `✓ ${qty}x ${name} (${currency}${price}) add ho gaya.`,
     invoice_ready: (invoiceNum, cust, subtotal, discount, total, currency) => 
       `✨ ${cust} ka bill taiyar hai! Subtotal: ${currency}${subtotal}, Discount: -${currency}${discount}, Total: ${currency}${total}. Ab aap PDF download kar sakte hain.`,
-    cancelled: "Bill cancel ho gaya hai. Dobara 'bill banao' bolein jab bhi zaroorat ho.",
+    cancelled: "Cancel ho gaya hai. Dobara bolne ke liye ready hoon.",
+    
+    // Stock flow prompts
+    stock_ask_product: "Kya product ka stock add karna hai?",
+    stock_ask_quantity: (product) => `"${product}" ka kitna piece ya quantity add karna hai?`,
+    stock_ask_price: (product) => `"${product}" ka selling price / rate kitna rakhna hai? (ya purana rate continue karein)`,
+    stock_ask_more: "Aur kisi product ka stock add karna hai? ('haan' ya 'nahi' bolein)",
+    stock_added: (product, qty, total) => `✓ ${product} ka ${qty} piece stock add ho gaya! Ab total stock: ${total} piece hai.`,
+    stock_report_all: (count) => `Ye raha aapka stock report! Total ${count} products inventory me hain.`,
+    stock_report_single: (product, qty) => `"${product}" ka stock abhi ${qty} piece available hai.`,
+
     hints: {
-      idle: "Billie se bolein: 'bill banao' ya mic dabayein...",
+      idle: "Bolein: 'bill banao', 'stock check karo', ya 'stock add karo'...",
       customer: "Customer ka naam bataiye (jaise 'Ramesh Kumar')...",
       product: "Product ka naam bataiye (jaise 'Shirt' ya 'Laptop')...",
       quantity: "Quantity / piece bataiye (jaise 3, 4, 5, 'teen', 'char')...",
       price: "Price / rate bataiye (jaise 500, 1200)...",
       more_items: "'haan' ya 'nahi' bolein...",
-      discount: "Discount bataiye (jaise 10% ya 0)..."
+      discount: "Discount bataiye (jaise 10% ya 0)...",
+      stock_product: "Stock ke product ka naam bataiye...",
+      stock_qty: "Kitna stock add karna hai (jaise 10, 20)...",
+      stock_price: "Selling price / rate bataiye..."
     }
   },
   en: {
-    welcome: "Hello! I'm Billie, your voice & text invoice assistant. Say or type 'generate invoice' to create a bill.",
+    welcome: "Hello! I'm Billie, your voice & text assistant. Say 'generate invoice' to bill, or 'check stock' / 'add stock' to manage inventory.",
     ask_customer: "Who is the customer? (Please state or type customer name)",
     ask_product: "What product or service is this for?",
     ask_quantity: (product) => `How many units or pieces of "${product}"? (e.g. 1, 2, 5)`,
@@ -311,15 +365,28 @@ export const PROMPTS = {
     item_added: (name, qty, price, currency) => `✓ Added ${qty}x ${name} (${currency}${price}).`,
     invoice_ready: (invoiceNum, cust, subtotal, discount, total, currency) => 
       `✨ Invoice ${invoiceNum} generated for ${cust}! Subtotal: ${currency}${subtotal}, Discount: -${currency}${discount}, Total: ${currency}${total}. You can now download the PDF.`,
-    cancelled: "Cancelled. Say or type 'generate invoice' whenever you're ready!",
+    cancelled: "Cancelled. I'm ready whenever you need me!",
+
+    // Stock flow prompts
+    stock_ask_product: "Which product do you want to add stock for?",
+    stock_ask_quantity: (product) => `How many units of "${product}" to add to stock?`,
+    stock_ask_price: (product) => `What is the selling price per unit for "${product}"?`,
+    stock_ask_more: "Would you like to restock another product? (say 'yes' or 'no')",
+    stock_added: (product, qty, total) => `✓ Added ${qty} units of ${product}. Total stock is now ${total}.`,
+    stock_report_all: (count) => `Here is your stock report! You have ${count} products in inventory.`,
+    stock_report_single: (product, qty) => `"${product}" currently has ${qty} units in stock.`,
+
     hints: {
-      idle: "Ask Billie or type 'generate invoice' / 'bill banao'...",
+      idle: "Ask Billie: 'generate invoice', 'check stock', or 'add stock'...",
       customer: "Say or type Customer Name (e.g. 'Acme Corp')...",
       product: "Say or type Product name (e.g. 'Website Design')...",
       quantity: "Say or type Quantity (e.g. '2' or '5')...",
       price: "Say or type Unit Price (e.g. '500')...",
       more_items: "Say 'yes' to add more or 'no' to finish...",
-      discount: "Say or type Discount (e.g. '10%' or '0')..."
+      discount: "Say or type Discount (e.g. '10%' or '0')...",
+      stock_product: "Say or type product to restock...",
+      stock_qty: "Say or type quantity to add...",
+      stock_price: "Say or type selling price..."
     }
   }
 };

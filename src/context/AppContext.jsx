@@ -22,6 +22,45 @@ const DEFAULT_SETTINGS = {
   language: 'hi' // 'hi' (Hindi / Hinglish) | 'en' (English)
 };
 
+const DEFAULT_INVENTORY = [
+  {
+    id: 'prod_1',
+    name: 'T-Shirt',
+    quantity: 45,
+    price: 500,
+    costPrice: 320,
+    lowStockThreshold: 10,
+    updatedAt: new Date().toLocaleDateString()
+  },
+  {
+    id: 'prod_2',
+    name: 'Jeans',
+    quantity: 28,
+    price: 1200,
+    costPrice: 850,
+    lowStockThreshold: 5,
+    updatedAt: new Date().toLocaleDateString()
+  },
+  {
+    id: 'prod_3',
+    name: 'Formal Shirt',
+    quantity: 6, // Low stock warning!
+    price: 900,
+    costPrice: 600,
+    lowStockThreshold: 10,
+    updatedAt: new Date().toLocaleDateString()
+  },
+  {
+    id: 'prod_4',
+    name: 'Leather Belt',
+    quantity: 18,
+    price: 450,
+    costPrice: 220,
+    lowStockThreshold: 5,
+    updatedAt: new Date().toLocaleDateString()
+  }
+];
+
 export function AppProvider({ children }) {
   // 1. User Authentication & Profile
   const [user, setUser] = useState(() => {
@@ -85,7 +124,17 @@ export function AppProvider({ children }) {
     }
   });
 
-  // 4. PWA Installation state
+  // 4. Inventory Products State
+  const [inventory, setInventory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('billie_inventory');
+      return saved ? JSON.parse(saved) : DEFAULT_INVENTORY;
+    } catch {
+      return DEFAULT_INVENTORY;
+    }
+  });
+
+  // 5. PWA Installation state
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -104,6 +153,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('billie_invoices', JSON.stringify(invoices));
   }, [invoices]);
+
+  useEffect(() => {
+    localStorage.setItem('billie_inventory', JSON.stringify(inventory));
+  }, [inventory]);
 
   // Network online/offline listeners
   useEffect(() => {
@@ -198,6 +251,10 @@ export function AppProvider({ children }) {
 
   const addInvoice = (invoice) => {
     setInvoices((prev) => [invoice, ...prev]);
+    // Automatically deduct inventory stock for billed items
+    if (invoice.items && invoice.items.length > 0) {
+      reduceStockForInvoice(invoice.items);
+    }
   };
 
   const deleteInvoice = (id) => {
@@ -210,12 +267,87 @@ export function AppProvider({ children }) {
     return `${prefix}${String(count).padStart(3, '0')}`;
   };
 
+  // Inventory actions
+  const addOrUpdateStock = (name, quantityToAdd = 1, price = 0, costPrice = 0) => {
+    const normName = name.trim();
+    let updatedProduct = null;
+
+    setInventory((prev) => {
+      const existingIndex = prev.findIndex(
+        (item) => item.name.toLowerCase() === normName.toLowerCase()
+      );
+
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        const existing = updated[existingIndex];
+        const newQty = Math.max(0, (Number(existing.quantity) || 0) + Number(quantityToAdd));
+        updatedProduct = {
+          ...existing,
+          quantity: newQty,
+          price: price > 0 ? price : existing.price,
+          costPrice: costPrice > 0 ? costPrice : existing.costPrice,
+          updatedAt: new Date().toLocaleDateString()
+        };
+        updated[existingIndex] = updatedProduct;
+        return updated;
+      } else {
+        updatedProduct = {
+          id: `prod_${Date.now()}`,
+          name: normName,
+          quantity: Math.max(0, Number(quantityToAdd)),
+          price: Number(price) || 0,
+          costPrice: Number(costPrice) || 0,
+          lowStockThreshold: 5,
+          updatedAt: new Date().toLocaleDateString()
+        };
+        return [updatedProduct, ...prev];
+      }
+    });
+
+    return updatedProduct;
+  };
+
+  const updateProduct = (id, fields) => {
+    setInventory((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, ...fields, updatedAt: new Date().toLocaleDateString() }
+          : item
+      )
+    );
+  };
+
+  const deleteProduct = (id) => {
+    setInventory((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const reduceStockForInvoice = (billedItems = []) => {
+    setInventory((prev) => {
+      return prev.map((stockItem) => {
+        const billed = billedItems.find(
+          (b) => b.name && b.name.toLowerCase().trim() === stockItem.name.toLowerCase().trim()
+        );
+        if (billed) {
+          const billedQty = Number(billed.quantity) || 1;
+          const remaining = Math.max(0, stockItem.quantity - billedQty);
+          return {
+            ...stockItem,
+            quantity: remaining,
+            updatedAt: new Date().toLocaleDateString()
+          };
+        }
+        return stockItem;
+      });
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
         user,
         settings,
         invoices,
+        inventory,
         isInstallable,
         isInstalled,
         isOffline,
@@ -229,7 +361,11 @@ export function AppProvider({ children }) {
         setLanguage,
         addInvoice,
         deleteInvoice,
-        getNextInvoiceNumber
+        getNextInvoiceNumber,
+        addOrUpdateStock,
+        updateProduct,
+        deleteProduct,
+        reduceStockForInvoice
       }}
     >
       {children}

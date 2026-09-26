@@ -5,10 +5,12 @@ import BottomSearchBar from './components/BottomSearchBar';
 import InvoiceWizard from './components/InvoiceWizard';
 import ProfileModal from './components/ProfileModal';
 import SettingsModal from './components/SettingsModal';
+import InventoryModal from './components/InventoryModal';
 
 function BillieApp() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [promptHint, setPromptHint] = useState('');
 
@@ -30,6 +32,7 @@ function BillieApp() {
           externalQuery={submittedQuery}
           onPromptHintChange={setPromptHint}
           onResetExternalQuery={() => setSubmittedQuery('')}
+          onOpenInventory={() => setIsInventoryOpen(true)}
         />
       </main>
 
@@ -43,6 +46,12 @@ function BillieApp() {
       <ProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
+        onOpenInventory={() => setIsInventoryOpen(true)}
+      />
+
+      <InventoryModal
+        isOpen={isInventoryOpen}
+        onClose={() => setIsInventoryOpen(false)}
       />
 
       <SettingsModal

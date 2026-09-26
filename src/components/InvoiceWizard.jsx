@@ -1,10 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, Bot, User, Check, ArrowRight, RefreshCw, FileText, CornerDownLeft, PlusCircle } from 'lucide-react';
+import {
+  Sparkles,
+  Bot,
+  User,
+  Check,
+  ArrowRight,
+  RefreshCw,
+  FileText,
+  CornerDownLeft,
+  PlusCircle,
+  Package
+} from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
+import StockReportCard from './StockReportCard';
 import { useApp } from '../context/AppContext';
 import {
   isInvoiceIntent,
+  isAddStockIntent,
+  isCheckStockIntent,
+  extractProductFromStockQuery,
   detectLanguage,
   isAffirmative,
   isNegative,
@@ -18,30 +33,44 @@ import { speakText } from '../utils/speechRecognition';
 // Conversation step enums
 const STEPS = {
   IDLE: 'IDLE',
+  // Billing Flow
   ASK_CUSTOMER: 'ASK_CUSTOMER',
   ASK_PRODUCT: 'ASK_PRODUCT',
   ASK_QUANTITY: 'ASK_QUANTITY',
   ASK_PRICE: 'ASK_PRICE',
   ASK_MORE_ITEMS: 'ASK_MORE_ITEMS',
   ASK_DISCOUNT: 'ASK_DISCOUNT',
-  COMPLETED: 'COMPLETED'
+  COMPLETED: 'COMPLETED',
+
+  // Stock Management Flow
+  STOCK_ASK_PRODUCT: 'STOCK_ASK_PRODUCT',
+  STOCK_ASK_QUANTITY: 'STOCK_ASK_QUANTITY',
+  STOCK_ASK_PRICE: 'STOCK_ASK_PRICE',
+  STOCK_ASK_MORE: 'STOCK_ASK_MORE'
 };
 
-export default function InvoiceWizard({ externalQuery, onPromptHintChange, onResetExternalQuery }) {
+export default function InvoiceWizard({
+  externalQuery,
+  onPromptHintChange,
+  onResetExternalQuery,
+  onOpenInventory
+}) {
   const {
     user,
     settings,
+    inventory,
     addInvoice,
     getNextInvoiceNumber,
     setLanguage,
     isVoiceSessionActive,
-    setIsVoiceSessionActive
+    setIsVoiceSessionActive,
+    addOrUpdateStock
   } = useApp();
-  
-  // Local active conversation language: default from settings ('hi' or 'en')
+
+  // Active language
   const [lang, setLang] = useState(settings.language || 'hi');
   const [step, setStep] = useState(STEPS.IDLE);
-  
+
   const [messages, setMessages] = useState([
     {
       sender: 'billie',
@@ -50,7 +79,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     }
   ]);
 
-  // Current drafting state with multi-item support
+  // Invoice drafting state
   const [draftCustomer, setDraftCustomer] = useState('');
   const [draftItems, setDraftItems] = useState([]);
   const [currentItem, setCurrentItem] = useState({
@@ -59,8 +88,19 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     price: 0
   });
   const currentItemRef = useRef({ name: '', quantity: 1, price: 0 });
-
   const [finalInvoice, setFinalInvoice] = useState(null);
+
+  // Stock drafting state
+  const [draftStockItem, setDraftStockItem] = useState({
+    name: '',
+    quantity: 1,
+    price: 0
+  });
+  const draftStockRef = useRef({ name: '', quantity: 1, price: 0 });
+
+  // Home page active stock report card
+  const [activeStockReport, setActiveStockReport] = useState(null);
+
   const messagesEndRef = useRef(null);
 
   // Sync lang with settings
@@ -73,7 +113,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
   // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, step, finalInvoice]);
+  }, [messages, step, finalInvoice, activeStockReport]);
 
   // Handle incoming query from the bottom search bar (text or voice)
   useEffect(() => {
@@ -106,6 +146,18 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
       case STEPS.ASK_DISCOUNT:
         hint = p.hints.discount;
         break;
+      case STEPS.STOCK_ASK_PRODUCT:
+        hint = p.hints.stock_product;
+        break;
+      case STEPS.STOCK_ASK_QUANTITY:
+        hint = p.hints.stock_qty;
+        break;
+      case STEPS.STOCK_ASK_PRICE:
+        hint = p.hints.stock_price;
+        break;
+      case STEPS.STOCK_ASK_MORE:
+        hint = p.hints.more_items;
+        break;
       default:
         hint = p.hints.idle;
     }
@@ -128,7 +180,13 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
   };
 
   // Complete and finalize the invoice
-  const finalizeInvoice = (customerName, itemsList, discountVal = 0, discountType = 'percent', chosenLang = lang) => {
+  const finalizeInvoice = (
+    customerName,
+    itemsList,
+    discountVal = 0,
+    discountType = 'percent',
+    chosenLang = lang
+  ) => {
     const totals = calculateInvoiceTotals(itemsList, settings.defaultTaxRate || 0);
     const invoiceNum = getNextInvoiceNumber();
     const currency = settings.currency || '₹';
@@ -191,7 +249,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     // Detect if this message was in Hindi or English
     const detected = detectLanguage(trimmed);
     let activeLang = lang;
-    if (isInvoiceIntent(trimmed)) {
+    if (isInvoiceIntent(trimmed) || isAddStockIntent(trimmed) || isCheckStockIntent(trimmed)) {
       activeLang = detected;
       setLang(detected);
       setLanguage(detected);
@@ -213,7 +271,55 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
       return;
     }
 
-    // 1. One-Shot NLP check (e.g. "Ramesh ke liye 2 Laptops 1200 me 10% discount ke sath bill banao")
+    // -------------------------------------------------------------
+    // FLOW 3: "check stock" or "stock dikhao" -> Show Card & Report
+    // -------------------------------------------------------------
+    if (isCheckStockIntent(trimmed)) {
+      const prodName = extractProductFromStockQuery(trimmed);
+      let replyText = '';
+
+      if (prodName) {
+        const found = inventory.find((i) =>
+          i.name.toLowerCase().includes(prodName.toLowerCase())
+        );
+        if (found) {
+          replyText = p.stock_report_single(found.name, found.quantity);
+          setActiveStockReport({ filteredProduct: found.name });
+        } else {
+          replyText =
+            activeLang === 'hi'
+              ? `"${prodName}" का स्टॉक इन्वेंटरी में नहीं मिला। आप 'stock add karo' बोलकर नया स्टॉक जोड़ सकते हैं।`
+              : `"${prodName}" was not found in inventory. You can say 'add stock' to add it.`;
+          setActiveStockReport({ filteredProduct: '' });
+        }
+      } else {
+        replyText = p.stock_report_all(inventory.length);
+        setActiveStockReport({ filteredProduct: '' });
+      }
+
+      setStep(STEPS.IDLE);
+      // Turn off hands-free voice once report is delivered
+      replyBillie(replyText, activeLang, () => {
+        setIsVoiceSessionActive(false);
+      });
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // FLOW 1: "stock add karo" or "add stock" -> Conversational Add
+    // -------------------------------------------------------------
+    if (isAddStockIntent(trimmed) && step === STEPS.IDLE) {
+      setFinalInvoice(null);
+      draftStockRef.current = { name: '', quantity: 1, price: 0 };
+      setDraftStockItem({ name: '', quantity: 1, price: 0 });
+      setStep(STEPS.STOCK_ASK_PRODUCT);
+      replyBillie(p.stock_ask_product, activeLang);
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // BILLING: One-Shot Invoice Check
+    // -------------------------------------------------------------
     const oneShot = parseOneShotInvoice(trimmed);
     if (oneShot.hasFullDetails) {
       finalizeInvoice(
@@ -234,19 +340,23 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
       return;
     }
 
-    // 2. Trigger invoice creation from IDLE, COMPLETED, or explicit intent
+    // -------------------------------------------------------------
+    // BILLING: Start Invoice from IDLE or explicit intent
+    // -------------------------------------------------------------
     if (step === STEPS.IDLE || step === STEPS.COMPLETED || isInvoiceIntent(trimmed)) {
       if (isInvoiceIntent(trimmed)) {
         setDraftCustomer(oneShot.customerName || '');
         setDraftItems([]);
         setCurrentItem({ name: '', quantity: 1, price: 0 });
         setFinalInvoice(null);
+        setActiveStockReport(null);
 
         if (oneShot.customerName) {
           setStep(STEPS.ASK_PRODUCT);
-          const reply = activeLang === 'hi' 
-            ? `ठीक है, ${oneShot.customerName} के लिए बिल बनाते हैं! ${p.ask_product}`
-            : `Got it, invoicing for ${oneShot.customerName}! ${p.ask_product}`;
+          const reply =
+            activeLang === 'hi'
+              ? `ठीक है, ${oneShot.customerName} के लिए बिल बनाते हैं! ${p.ask_product}`
+              : `Got it, invoicing for ${oneShot.customerName}! ${p.ask_product}`;
           replyBillie(reply, activeLang);
         } else {
           setStep(STEPS.ASK_CUSTOMER);
@@ -256,9 +366,11 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
       }
     }
 
-    // 3. Step-by-Step Interactive Conversational Flow
+    // -------------------------------------------------------------
+    // ACTIVE STEP-BY-STEP CONVERSATIONAL ROUTER
+    // -------------------------------------------------------------
     switch (step) {
-      // Step 1: Customer Name
+      // ----------------- BILLING STEPS -----------------
       case STEPS.ASK_CUSTOMER: {
         const cleanedCustomer = trimmed
           .replace(/^(customer\s*name\s*is|customer\s*is|naam\s*hai|for|kiske\s*liye)\s+/i, '')
@@ -266,14 +378,14 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
         setDraftCustomer(cleanedCustomer);
         setStep(STEPS.ASK_PRODUCT);
 
-        const reply = activeLang === 'hi'
-          ? `बढ़िया, ${cleanedCustomer} के लिए बिल बनाते हैं! ${p.ask_product}`
-          : `Great, billing ${cleanedCustomer}! ${p.ask_product}`;
+        const reply =
+          activeLang === 'hi'
+            ? `बढ़िया, ${cleanedCustomer} के लिए बिल बनाते हैं! ${p.ask_product}`
+            : `Great, billing ${cleanedCustomer}! ${p.ask_product}`;
         replyBillie(reply, activeLang);
         break;
       }
 
-      // Step 2: Product Name
       case STEPS.ASK_PRODUCT: {
         const prod = trimmed.replace(/^(product\s*is|item\s*is|service\s*is)\s+/i, '').trim();
         currentItemRef.current.name = prod;
@@ -283,7 +395,6 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
         break;
       }
 
-      // Step 3: Quantity
       case STEPS.ASK_QUANTITY: {
         const qty = extractNumber(trimmed, 1);
         currentItemRef.current.quantity = qty;
@@ -294,13 +405,14 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
         break;
       }
 
-      // Step 4: Unit Price
       case STEPS.ASK_PRICE: {
         const price = extractNumber(trimmed, 0);
         const qty = currentItemRef.current.quantity || currentItem.quantity || 1;
-        const prodName = currentItemRef.current.name || currentItem.name || (activeLang === 'hi' ? 'प्रोडक्ट' : 'Product');
-        
-        // Add this item to draft items list
+        const prodName =
+          currentItemRef.current.name ||
+          currentItem.name ||
+          (activeLang === 'hi' ? 'प्रोडक्ट' : 'Product');
+
         const newItem = {
           name: prodName,
           quantity: qty,
@@ -313,26 +425,25 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
         currentItemRef.current = { name: '', quantity: 1, price: 0 };
         setCurrentItem({ name: '', quantity: 1, price: 0 });
 
-        // Move to Ask More Items step!
         setStep(STEPS.ASK_MORE_ITEMS);
-
-        const confirmationMsg = p.item_added(newItem.name, newItem.quantity, newItem.price, settings.currency || '₹');
+        const confirmationMsg = p.item_added(
+          newItem.name,
+          newItem.quantity,
+          newItem.price,
+          settings.currency || '₹'
+        );
         replyBillie(`${confirmationMsg} ${p.ask_more_items}`, activeLang);
         break;
       }
 
-      // Step 5: "Aur kuch add karna hai?"
       case STEPS.ASK_MORE_ITEMS: {
         if (isAffirmative(trimmed)) {
-          // User wants to add another item
           setStep(STEPS.ASK_PRODUCT);
           replyBillie(p.ask_next_product, activeLang);
         } else if (isNegative(trimmed)) {
-          // User is finished adding items -> proceed to discount
           setStep(STEPS.ASK_DISCOUNT);
           replyBillie(p.ask_discount, activeLang);
         } else {
-          // Check if user directly provided another product name e.g. "Mouse"
           if (trimmed.length > 1) {
             currentItemRef.current.name = trimmed;
             setCurrentItem((prev) => ({ ...prev, name: trimmed }));
@@ -345,15 +456,24 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
         break;
       }
 
-      // Step 6: Discount & Final Calculation
       case STEPS.ASK_DISCOUNT: {
         let discount = 0;
         let discountType = 'percent';
 
         const normTrim = trimmed.toLowerCase();
-        if (isNegative(trimmed) || normTrim === '0' || normTrim === 'zero' || normTrim === 'kuch nahi' || normTrim === 'shunya') {
+        if (
+          isNegative(trimmed) ||
+          normTrim === '0' ||
+          normTrim === 'zero' ||
+          normTrim === 'kuch nahi' ||
+          normTrim === 'shunya'
+        ) {
           discount = 0;
-        } else if (trimmed.includes('%') || normTrim.includes('percent') || normTrim.includes('pratishat')) {
+        } else if (
+          trimmed.includes('%') ||
+          normTrim.includes('percent') ||
+          normTrim.includes('pratishat')
+        ) {
           discount = extractNumber(trimmed, 0);
           discountType = 'percent';
         } else {
@@ -365,11 +485,92 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
         break;
       }
 
+      // ----------------- STOCK MANAGEMENT STEPS -----------------
+      case STEPS.STOCK_ASK_PRODUCT: {
+        const prod = trimmed
+          .replace(/^(product\s*is|maal\s*hai|item\s*hai|naam\s*hai)\s+/i, '')
+          .trim();
+        draftStockRef.current.name = prod;
+        setDraftStockItem((prev) => ({ ...prev, name: prod }));
+        setStep(STEPS.STOCK_ASK_QUANTITY);
+        replyBillie(p.stock_ask_quantity(prod), activeLang);
+        break;
+      }
+
+      case STEPS.STOCK_ASK_QUANTITY: {
+        const qty = extractNumber(trimmed, 1);
+        draftStockRef.current.quantity = qty;
+        setDraftStockItem((prev) => ({ ...prev, quantity: qty }));
+        setStep(STEPS.STOCK_ASK_PRICE);
+        const prodName =
+          draftStockRef.current.name || (activeLang === 'hi' ? 'प्रोडक्ट' : 'Product');
+        replyBillie(p.stock_ask_price(prodName), activeLang);
+        break;
+      }
+
+      case STEPS.STOCK_ASK_PRICE: {
+        let price = 0;
+        const normTrim = trimmed.toLowerCase();
+        if (!['purana rate', 'same', 'same rate', 'purana', 'purani'].includes(normTrim)) {
+          price = extractNumber(trimmed, 0);
+        }
+        draftStockRef.current.price = price;
+        const finalProdName = draftStockRef.current.name || 'Product';
+        const finalQty = draftStockRef.current.quantity || 1;
+
+        // Add or update stock in context
+        addOrUpdateStock(finalProdName, finalQty, price);
+
+        // Find updated total
+        const existingItem = inventory.find(
+          (i) => i.name.toLowerCase() === finalProdName.toLowerCase()
+        );
+        const newTotal = (existingItem?.quantity || 0) + finalQty;
+
+        // Show live card for immediate visual confirmation
+        setActiveStockReport({ filteredProduct: finalProdName });
+
+        setStep(STEPS.STOCK_ASK_MORE);
+        const addedMsg = p.stock_added(finalProdName, finalQty, newTotal);
+        replyBillie(`${addedMsg} ${p.stock_ask_more}`, activeLang);
+        break;
+      }
+
+      case STEPS.STOCK_ASK_MORE: {
+        if (isAffirmative(trimmed)) {
+          // Add another stock item
+          draftStockRef.current = { name: '', quantity: 1, price: 0 };
+          setDraftStockItem({ name: '', quantity: 1, price: 0 });
+          setStep(STEPS.STOCK_ASK_PRODUCT);
+          replyBillie(p.stock_ask_product, activeLang);
+        } else if (isNegative(trimmed)) {
+          // Finished adding stock
+          setStep(STEPS.IDLE);
+          const finishMsg =
+            activeLang === 'hi'
+              ? 'बहुत बढ़िया! स्टॉक सफलतापूर्वक अपडेट हो गया है। आप नीचे कार्ड में स्टॉक देख और बदल सकते हैं।'
+              : 'Great! Stock has been successfully updated. You can view and edit it in the report card.';
+          replyBillie(finishMsg, activeLang, () => {
+            setIsVoiceSessionActive(false);
+          });
+        } else {
+          if (trimmed.length > 1) {
+            draftStockRef.current = { name: trimmed, quantity: 1, price: 0 };
+            setDraftStockItem({ name: trimmed, quantity: 1, price: 0 });
+            setStep(STEPS.STOCK_ASK_QUANTITY);
+            replyBillie(p.stock_ask_quantity(trimmed), activeLang);
+          } else {
+            replyBillie(p.stock_ask_more, activeLang);
+          }
+        }
+        break;
+      }
+
       default: {
         replyBillie(
           activeLang === 'hi'
-            ? "मैं तैयार हूँ! नया बिल बनाने के लिए 'bill banao' बोलें या लिखें।"
-            : "I'm ready! Say or type 'generate invoice' to create a bill.",
+            ? "मैं तैयार हूँ! बिल बनाने के लिए 'bill banao' बोलें, या स्टॉक के लिए 'stock check karo' या 'stock add karo' बोलें।"
+            : "I'm ready! Say 'generate invoice' to bill, or 'check stock' / 'add stock' for inventory.",
           activeLang
         );
         break;
@@ -384,6 +585,8 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     setDraftItems([]);
     currentItemRef.current = { name: '', quantity: 1, price: 0 };
     setCurrentItem({ name: '', quantity: 1, price: 0 });
+    draftStockRef.current = { name: '', quantity: 1, price: 0 };
+    setDraftStockItem({ name: '', quantity: 1, price: 0 });
     setIsVoiceSessionActive(false);
   };
 
@@ -391,27 +594,34 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     handleUserMessage(text);
   };
 
-  const currentTotal = draftItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+  const currentTotal = draftItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
 
   return (
     <div className="billie-main-container">
-      {/* Hero Welcome Card if IDLE */}
-      {step === STEPS.IDLE && !finalInvoice && (
+      {/* Hero Welcome Card if IDLE and no active card */}
+      {step === STEPS.IDLE && !finalInvoice && !activeStockReport && (
         <div className="hero-assistant-card animate-fade-in">
           <div className="hero-avatar">
             <Sparkles size={32} className="text-white" />
           </div>
           <h2 className="hero-title">
-            {lang === 'hi' ? 'नमस्ते! किसके नाम बिल बनाना है?' : 'What can I bill for you today?'}
+            {lang === 'hi'
+              ? 'नमस्ते! बिलिंग और इन्वेंटरी में क्या मदद करूँ?'
+              : 'What can I bill or manage for you today?'}
           </h2>
           <p className="hero-subtitle">
             {lang === 'hi' ? (
               <>
-                माइक दबाकर बोलें या टाइप करें: <span className="highlight-pill">bill banao</span>. Billie आपसे कस्टमर का नाम, प्रोडक्ट, क्वांटिटी, प्राइस और डिस्काउंट पूछकर तुरंत PDF बिल तैयार कर देगा!
+                माइक दबाकर बोलें या लिखें:{' '}
+                <span className="highlight-pill">bill banao</span>,{' '}
+                <span className="highlight-pill">stock check karo</span>, या{' '}
+                <span className="highlight-pill">stock add karo</span>. Billie तुरंत जवाब देगा!
               </>
             ) : (
               <>
-                Say or type <span className="highlight-pill">generate invoice</span> or <span className="highlight-pill">bill banao</span>. I'll prompt you step-by-step and produce an instant PDF!
+                Say or type <span className="highlight-pill">generate invoice</span>,{' '}
+                <span className="highlight-pill">check stock</span>, or{' '}
+                <span className="highlight-pill">add stock</span>. Hands-free voice enabled!
               </>
             )}
           </p>
@@ -424,7 +634,25 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
               className="suggestion-chip active-sparkle m3-ripple"
             >
               <Sparkles size={14} />
-              <span>🇮🇳 bill banao (नया बिल)</span>
+              <span>🇮🇳 bill banao (बिल)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => triggerChip('stock check karo')}
+              className="suggestion-chip m3-ripple"
+            >
+              <Package size={14} className="text-blue-500" />
+              <span>📦 stock check karo</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => triggerChip('stock add karo')}
+              className="suggestion-chip m3-ripple"
+            >
+              <PlusCircle size={14} className="text-emerald-500" />
+              <span>➕ stock add karo</span>
             </button>
 
             <button
@@ -436,21 +664,16 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
               <span>🇬🇧 generate invoice</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => triggerChip('Ramesh ke liye 2 Shirt 500 rate me 10% discount ke sath bill banao')}
-              className="suggestion-chip m3-ripple"
-            >
-              <span>⚡ Ramesh (2 Shirt @ ₹500, 10% off)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => triggerChip('generate invoice for Acme Corp, 2 Laptops at 1200 with 10% discount')}
-              className="suggestion-chip m3-ripple"
-            >
-              <span>💼 Acme Corp (2 Laptops @ $1200)</span>
-            </button>
+            {onOpenInventory && (
+              <button
+                type="button"
+                onClick={onOpenInventory}
+                className="suggestion-chip m3-ripple"
+              >
+                <Package size={14} />
+                <span>📋 {lang === 'hi' ? 'इन्वेंटरी लिस्ट' : 'All Inventory'}</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -473,7 +696,12 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
               <div className={`message-bubble ${isBillie ? 'assistant-bubble' : 'user-bubble'}`}>
                 <p className="message-content">{msg.text}</p>
                 <span className="bubble-time">
-                  {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  {msg.timestamp
+                    ? new Date(msg.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    : ''}
                 </span>
               </div>
 
@@ -486,72 +714,148 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
           );
         })}
 
-        {/* Live Drafting Progress Card during active creation */}
-        {step !== STEPS.IDLE && step !== STEPS.COMPLETED && (
+        {/* Live Drafting Progress Card during active invoice creation */}
+        {step !== STEPS.IDLE &&
+          step !== STEPS.COMPLETED &&
+          !step.startsWith('STOCK_') && (
+            <div className="draft-live-progress animate-slide-up">
+              <div className="progress-steps-row">
+                <span className={`step-badge ${draftCustomer ? 'done' : 'active'}`}>
+                  1. {lang === 'hi' ? 'ग्राहक' : 'Customer'} {draftCustomer && '✓'}
+                </span>
+                <span
+                  className={`step-badge ${draftItems.length > 0 ? 'done' : step === STEPS.ASK_PRODUCT ? 'active' : ''}`}
+                >
+                  2. {lang === 'hi' ? 'प्रोडक्ट' : 'Product'} {draftItems.length > 0 && '✓'}
+                </span>
+                <span
+                  className={`step-badge ${step === STEPS.ASK_QUANTITY ? 'active' : draftItems.length > 0 ? 'done' : ''}`}
+                >
+                  3. {lang === 'hi' ? 'मात्रा' : 'Qty'} {draftItems.length > 0 && '✓'}
+                </span>
+                <span
+                  className={`step-badge ${step === STEPS.ASK_PRICE ? 'active' : draftItems.length > 0 ? 'done' : ''}`}
+                >
+                  4. {lang === 'hi' ? 'प्राइस' : 'Price'} {draftItems.length > 0 && '✓'}
+                </span>
+                <span className={`step-badge ${step === STEPS.ASK_MORE_ITEMS ? 'active' : ''}`}>
+                  5. {lang === 'hi' ? 'और आइटम?' : 'More Items?'}
+                </span>
+                <span className={`step-badge ${step === STEPS.ASK_DISCOUNT ? 'active' : ''}`}>
+                  6. {lang === 'hi' ? 'डिस्काउंट' : 'Discount'}
+                </span>
+              </div>
+
+              <div className="live-preview-box">
+                <div className="preview-item">
+                  <span className="label">
+                    {lang === 'hi' ? 'ग्राहक (Customer):' : 'Customer:'}
+                  </span>
+                  <span className="val font-semibold">
+                    {draftCustomer || (lang === 'hi' ? 'नाम पूछ रहे हैं...' : 'Waiting...')}
+                  </span>
+                </div>
+
+                {draftItems.length > 0 && (
+                  <div className="items-list-draft">
+                    <span className="label">
+                      {lang === 'hi' ? 'आइटम्स लिस्ट (Items Added):' : 'Items Added:'}
+                    </span>
+                    {draftItems.map((it, idx) => (
+                      <div key={idx} className="draft-single-item">
+                        <span>
+                          • {it.name} ({it.quantity} × {settings.currency || '₹'}
+                          {it.price})
+                        </span>
+                        <span className="font-semibold">
+                          {settings.currency || '₹'}
+                          {(it.quantity * it.price).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="draft-subtotal-row">
+                      <span>
+                        {lang === 'hi' ? 'वर्तमान सबटोटल (Subtotal):' : 'Current Subtotal:'}
+                      </span>
+                      <span className="val font-bold text-blue-600">
+                        {settings.currency || '₹'}
+                        {currentTotal.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {currentItem.name && (
+                  <div className="preview-item mt-1 text-slate-500">
+                    <span className="label">{lang === 'hi' ? 'नया आइटम:' : 'Adding:'}</span>
+                    <span className="val">
+                      {currentItem.name} (Qty: {currentItem.quantity})
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+        {/* Live Drafting Progress Card during active Stock addition */}
+        {step.startsWith('STOCK_') && (
           <div className="draft-live-progress animate-slide-up">
             <div className="progress-steps-row">
-              <span className={`step-badge ${draftCustomer ? 'done' : 'active'}`}>
-                1. {lang === 'hi' ? 'ग्राहक' : 'Customer'} {draftCustomer && '✓'}
+              <span className={`step-badge ${draftStockItem.name ? 'done' : 'active'}`}>
+                1. {lang === 'hi' ? 'प्रोडक्ट' : 'Product'} {draftStockItem.name && '✓'}
               </span>
-              <span className={`step-badge ${draftItems.length > 0 ? 'done' : step === STEPS.ASK_PRODUCT ? 'active' : ''}`}>
-                2. {lang === 'hi' ? 'प्रोडक्ट' : 'Product'} {draftItems.length > 0 && '✓'}
+              <span
+                className={`step-badge ${step === STEPS.STOCK_ASK_QUANTITY ? 'active' : draftStockItem.quantity > 0 && step !== STEPS.STOCK_ASK_PRODUCT ? 'done' : ''}`}
+              >
+                2. {lang === 'hi' ? 'स्टॉक मात्रा' : 'Qty to Add'} {draftStockItem.quantity > 0 && step !== STEPS.STOCK_ASK_QUANTITY && '✓'}
               </span>
-              <span className={`step-badge ${step === STEPS.ASK_QUANTITY ? 'active' : draftItems.length > 0 ? 'done' : ''}`}>
-                3. {lang === 'hi' ? 'मात्रा' : 'Qty'} {draftItems.length > 0 && '✓'}
+              <span
+                className={`step-badge ${step === STEPS.STOCK_ASK_PRICE ? 'active' : step === STEPS.STOCK_ASK_MORE ? 'done' : ''}`}
+              >
+                3. {lang === 'hi' ? 'सेलिंग प्राइस' : 'Price'}
               </span>
-              <span className={`step-badge ${step === STEPS.ASK_PRICE ? 'active' : draftItems.length > 0 ? 'done' : ''}`}>
-                4. {lang === 'hi' ? 'प्राइस' : 'Price'} {draftItems.length > 0 && '✓'}
-              </span>
-              <span className={`step-badge ${step === STEPS.ASK_MORE_ITEMS ? 'active' : ''}`}>
-                5. {lang === 'hi' ? 'और आइटम?' : 'More Items?'}
-              </span>
-              <span className={`step-badge ${step === STEPS.ASK_DISCOUNT ? 'active' : ''}`}>
-                6. {lang === 'hi' ? 'डिस्काउंट' : 'Discount'}
+              <span className={`step-badge ${step === STEPS.STOCK_ASK_MORE ? 'active' : ''}`}>
+                4. {lang === 'hi' ? 'और स्टॉक जोड़ें?' : 'More?'}
               </span>
             </div>
 
-            {/* Live calculation preview */}
             <div className="live-preview-box">
               <div className="preview-item">
-                <span className="label">{lang === 'hi' ? 'ग्राहक (Customer):' : 'Customer:'}</span>
-                <span className="val font-semibold">{draftCustomer || (lang === 'hi' ? 'नाम पूछ रहे हैं...' : 'Waiting...')}</span>
+                <span className="label">
+                  {lang === 'hi' ? 'स्टॉक प्रोडक्ट:' : 'Restock Product:'}
+                </span>
+                <span className="val font-semibold">
+                  {draftStockItem.name || (lang === 'hi' ? 'नाम पूछ रहे हैं...' : 'Waiting for name...')}
+                </span>
               </div>
-
-              {draftItems.length > 0 && (
-                <div className="items-list-draft">
-                  <span className="label">{lang === 'hi' ? 'आइटम्स लिस्ट (Items Added):' : 'Items Added:'}</span>
-                  {draftItems.map((it, idx) => (
-                    <div key={idx} className="draft-single-item">
-                      <span>• {it.name} ({it.quantity} × {settings.currency || '₹'}{it.price})</span>
-                      <span className="font-semibold">{settings.currency || '₹'}{(it.quantity * it.price).toFixed(2)}</span>
-                    </div>
-                  ))}
-                  <div className="draft-subtotal-row">
-                    <span>{lang === 'hi' ? 'वर्तमान सबटोटल (Subtotal):' : 'Current Subtotal:'}</span>
-                    <span className="val font-bold text-blue-600">
-                      {settings.currency || '₹'}{currentTotal.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {currentItem.name && (
-                <div className="preview-item mt-1 text-slate-500">
-                  <span className="label">{lang === 'hi' ? 'नया आइटम:' : 'Adding:'}</span>
-                  <span className="val">{currentItem.name} (Qty: {currentItem.quantity})</span>
+              {draftStockItem.quantity > 0 && (
+                <div className="preview-item mt-1">
+                  <span className="label">
+                    {lang === 'hi' ? 'जोड़ने वाली मात्रा:' : 'Adding Quantity:'}
+                  </span>
+                  <span className="val font-bold text-blue-600">
+                    +{draftStockItem.quantity} pcs
+                  </span>
                 </div>
               )}
             </div>
           </div>
         )}
 
+        {/* Live Stock Report Card on Home Screen */}
+        {activeStockReport && (
+          <div className="my-3">
+            <StockReportCard
+              filteredProduct={activeStockReport.filteredProduct}
+              onClose={() => setActiveStockReport(null)}
+              onAddStockClick={() => handleUserMessage('stock add karo')}
+            />
+          </div>
+        )}
+
         {/* Finalized Invoice Card with PDF Download */}
         {finalInvoice && (
-          <InvoiceCard
-            invoice={finalInvoice}
-            onReset={resetWizard}
-            isDraft={false}
-          />
+          <InvoiceCard invoice={finalInvoice} onReset={resetWizard} isDraft={false} />
         )}
 
         <div ref={messagesEndRef} />

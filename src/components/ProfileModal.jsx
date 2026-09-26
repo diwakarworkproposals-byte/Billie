@@ -14,10 +14,11 @@ import {
   CheckCircle,
   Wifi,
   Sparkles,
-  Smartphone
+  Smartphone,
+  Package
 } from 'lucide-react';
 
-export default function ProfileModal({ isOpen, onClose }) {
+export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
   const {
     user,
     login,
@@ -26,7 +27,9 @@ export default function ProfileModal({ isOpen, onClose }) {
     isInstallable,
     isInstalled,
     installPWA,
-    isOffline
+    isOffline,
+    inventory,
+    settings
   } = useApp();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -271,6 +274,36 @@ export default function ProfileModal({ isOpen, onClose }) {
                   <span>Save Profile Details</span>
                 </button>
               </form>
+
+              {/* Inventory Management Card */}
+              <div className="profile-inventory-card mt-5">
+                <div className="profile-inventory-header">
+                  <div className="profile-inventory-icon-box">
+                    <Package size={22} className="text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="profile-inventory-title">
+                      {settings.language === 'hi' ? '📦 इन्वेंटरी एवं स्टॉक प्रबंधन' : '📦 Inventory & Stock'}
+                    </h4>
+                    <p className="profile-inventory-desc">
+                      {settings.language === 'hi'
+                        ? `${inventory.length} प्रोडक्ट्स उपलब्ध • स्टॉक जांचें और एडिट करें`
+                        : `${inventory.length} products listed • View, restock & edit prices`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      if (onOpenInventory) onOpenInventory();
+                    }}
+                    className="m3-button-tonal text-xs py-2 px-3.5 flex items-center gap-1.5"
+                  >
+                    <Package size={15} />
+                    <span>{settings.language === 'hi' ? 'इन्वेंटरी' : 'Inventory'}</span>
+                  </button>
+                </div>
+              </div>
 
               {/* PWA Download / Offline Mode Card */}
               <div className="pwa-download-card">
