@@ -10,6 +10,7 @@ import {
   isNegative,
   parseOneShotInvoice,
   calculateInvoiceTotals,
+  extractNumber,
   PROMPTS
 } from '../utils/invoiceParser';
 import { speakText } from '../utils/speechRecognition';
@@ -49,6 +50,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     quantity: 1,
     price: 0
   });
+  const currentItemRef = useRef({ name: '', quantity: 1, price: 0 });
 
   const [finalInvoice, setFinalInvoice] = useState(null);
   const messagesEndRef = useRef(null);
@@ -261,6 +263,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
       // Step 2: Product Name
       case STEPS.ASK_PRODUCT: {
         const prod = trimmed.replace(/^(product\s*is|item\s*is|service\s*is)\s+/i, '').trim();
+        currentItemRef.current.name = prod;
         setCurrentItem((prev) => ({ ...prev, name: prod }));
         setStep(STEPS.ASK_QUANTITY);
         replyBillie(p.ask_quantity(prod), activeLang);
@@ -269,29 +272,32 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
 
       // Step 3: Quantity
       case STEPS.ASK_QUANTITY: {
-        const numMatch = trimmed.match(/\d+/);
-        const qty = numMatch ? parseInt(numMatch[0], 10) : 1;
+        const qty = extractNumber(trimmed, 1);
+        currentItemRef.current.quantity = qty;
         setCurrentItem((prev) => ({ ...prev, quantity: qty }));
         setStep(STEPS.ASK_PRICE);
-        replyBillie(p.ask_price(currentItem.name || 'item'), activeLang);
+        const prodName = currentItemRef.current.name || currentItem.name || 'item';
+        replyBillie(p.ask_price(prodName), activeLang);
         break;
       }
 
       // Step 4: Unit Price
       case STEPS.ASK_PRICE: {
-        const numMatch = trimmed.match(/(\d+(?:\.\d+)?)/);
-        const price = numMatch ? parseFloat(numMatch[1]) : 0;
+        const price = extractNumber(trimmed, 0);
+        const qty = currentItemRef.current.quantity || currentItem.quantity || 1;
+        const prodName = currentItemRef.current.name || currentItem.name || (activeLang === 'hi' ? 'प्रोडक्ट' : 'Product');
         
         // Add this item to draft items list
         const newItem = {
-          name: currentItem.name || (activeLang === 'hi' ? 'प्रोडक्ट' : 'Product'),
-          quantity: currentItem.quantity || 1,
+          name: prodName,
+          quantity: qty,
           price: price,
           discount: 0
         };
 
         const updatedItems = [...draftItems, newItem];
         setDraftItems(updatedItems);
+        currentItemRef.current = { name: '', quantity: 1, price: 0 };
         setCurrentItem({ name: '', quantity: 1, price: 0 });
 
         // Move to Ask More Items step!
@@ -315,6 +321,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
         } else {
           // Check if user directly provided another product name e.g. "Mouse"
           if (trimmed.length > 1) {
+            currentItemRef.current.name = trimmed;
             setCurrentItem((prev) => ({ ...prev, name: trimmed }));
             setStep(STEPS.ASK_QUANTITY);
             replyBillie(p.ask_quantity(trimmed), activeLang);
@@ -330,15 +337,14 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
         let discount = 0;
         let discountType = 'percent';
 
-        if (isNegative(trimmed) || trimmed === '0' || trimmed.toLowerCase() === 'zero') {
+        const normTrim = trimmed.toLowerCase();
+        if (isNegative(trimmed) || normTrim === '0' || normTrim === 'zero' || normTrim === 'kuch nahi' || normTrim === 'shunya') {
           discount = 0;
-        } else if (trimmed.includes('%')) {
-          const num = trimmed.match(/(\d+(?:\.\d+)?)/);
-          discount = num ? parseFloat(num[1]) : 0;
+        } else if (trimmed.includes('%') || normTrim.includes('percent') || normTrim.includes('pratishat')) {
+          discount = extractNumber(trimmed, 0);
           discountType = 'percent';
         } else {
-          const num = trimmed.match(/(\d+(?:\.\d+)?)/);
-          discount = num ? parseFloat(num[1]) : 0;
+          discount = extractNumber(trimmed, 0);
           discountType = discount > 0 && discount <= 50 ? 'percent' : 'flat';
         }
 
@@ -363,6 +369,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     setFinalInvoice(null);
     setDraftCustomer('');
     setDraftItems([]);
+    currentItemRef.current = { name: '', quantity: 1, price: 0 };
     setCurrentItem({ name: '', quantity: 1, price: 0 });
   };
 
