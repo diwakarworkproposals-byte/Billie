@@ -30,15 +30,16 @@ export const SUBSCRIPTION_PLANS = {
 };
 
 export const DEFAULT_ADMIN = {
-  id: 'admin_master',
-  name: 'Billie Super Admin',
-  email: 'admin@billie.io',
-  password: 'admin',
+  id: 'admin_diwakar',
+  name: 'Diwakar',
+  username: 'Diwakar',
+  email: 'Diwakar',
+  password: 'Diwakar@123',
   role: 'admin',
-  businessName: 'Billie HQ Operations',
+  businessName: 'Billie Admin HQ',
   phone: '+91 99999 00000',
-  address: 'Connaught Place, Central Delhi',
-  taxId: '07BILLIE1234A1Z0'
+  address: 'New Delhi, India',
+  taxId: '07DIWAKAR1234A1Z0'
 };
 
 const INITIAL_USERS = [
@@ -338,17 +339,18 @@ export function AppProvider({ children }) {
       return { success: false, error: 'Email/ID aur Password dono likhna zaroori hai.' };
     }
 
-    // A. Master Admin Check
+    // A. Master Admin Check - Only particular credentials: User Name: Diwakar | Password: Diwakar@123
     if (
-      (cleanId === 'admin@billie.io' || cleanId === 'admin') &&
-      (cleanPass === 'admin' || cleanPass === 'admin123')
+      (cleanId === 'diwakar' || cleanId === 'diwakar@billie.io') &&
+      password.trim() === 'Diwakar@123'
     ) {
       const adminSession = {
         isLoggedIn: true,
         role: 'admin',
         id: DEFAULT_ADMIN.id,
-        name: DEFAULT_ADMIN.name,
-        email: DEFAULT_ADMIN.email,
+        name: 'Diwakar',
+        username: 'Diwakar',
+        email: 'Diwakar',
         businessName: DEFAULT_ADMIN.businessName,
         phone: DEFAULT_ADMIN.phone,
         address: DEFAULT_ADMIN.address,

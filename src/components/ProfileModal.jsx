@@ -200,7 +200,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                       required
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="e.g. rajesh@store.com or admin@billie.io"
+                      placeholder="e.g. rajesh@store.com or Diwakar"
                       className="m3-text-field"
                     />
                   </div>
@@ -238,12 +238,12 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                 <div className="demo-pills-grid">
                   <button
                     type="button"
-                    onClick={() => handleQuickDemoLogin('admin@billie.io', 'admin')}
+                    onClick={() => handleQuickDemoLogin('Diwakar', 'Diwakar@123')}
                     className="demo-account-pill admin"
-                    title="Super Admin Dashboard with Full Subscription Control"
+                    title="Super Admin Dashboard (User Name: Diwakar / Pass: Diwakar@123)"
                   >
                     <ShieldCheck size={14} />
-                    <span>👑 Admin (admin@billie.io / admin)</span>
+                    <span>👑 Admin (Diwakar / Diwakar@123)</span>
                   </button>
 
                   <button
@@ -560,12 +560,12 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                     type="button"
                     onClick={() => {
                       logout();
-                      setLoginEmail('admin@billie.io');
-                      setLoginPass('admin');
+                      setLoginEmail('Diwakar');
+                      setLoginPass('Diwakar@123');
                     }}
                     className="text-xs text-slate-500 hover:text-blue-600 font-semibold"
                   >
-                    🔑 {isHindi ? 'एडमिन लॉगिन करें (Admin Login)' : 'Switch to Admin Login'}
+                    🔑 {isHindi ? 'एडमिन लॉगिन करें (Diwakar)' : 'Switch to Admin Login (Diwakar)'}
                   </button>
                 </div>
               )}
