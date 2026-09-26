@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Send, Sparkles, X, Volume2, Globe } from 'lucide-react';
-import { useSpeechRecognition } from '../utils/speechRecognition';
+import { useSpeechRecognition, stopSpeaking } from '../utils/speechRecognition';
 import { useApp } from '../context/AppContext';
 
 export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }) {
-  const { settings, setLanguage } = useApp();
+  const {
+    settings,
+    setLanguage,
+    isVoiceSessionActive,
+    setIsVoiceSessionActive
+  } = useApp();
+
   const [inputText, setInputText] = useState('');
   const inputRef = useRef(null);
 
@@ -28,21 +34,52 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
     }
   }, [transcript]);
 
-  // When speech recognition ends and there's captured text, auto-submit
+  // When speech recognition ends
   useEffect(() => {
-    if (!isListening && transcript.trim().length > 0) {
-      const captured = transcript.trim();
-      resetTranscript();
-      onQuerySubmit(captured);
-      setInputText('');
+    if (!isListening) {
+      // CASE A: User spoke something -> auto-submit!
+      if (transcript.trim().length > 0) {
+        const captured = transcript.trim();
+        resetTranscript();
+        onQuerySubmit(captured);
+        setInputText('');
+      } else if (isVoiceSessionActive) {
+        // CASE B: User paused / silence occurred while voice session is active
+        // Keep mic open unless Billie is currently speaking
+        const restartTimer = setTimeout(() => {
+          if (
+            isVoiceSessionActive &&
+            typeof window !== 'undefined' &&
+            !window.__BILLIE_TTS_SPEAKING
+          ) {
+            startListening();
+          }
+        }, 300);
+        return () => clearTimeout(restartTimer);
+      }
     }
-  }, [isListening, transcript, onQuerySubmit, resetTranscript]);
+  }, [isListening, transcript, isVoiceSessionActive, onQuerySubmit, resetTranscript, startListening]);
+
+  // Listen for Billie to finish speaking -> automatically re-open microphone!
+  useEffect(() => {
+    const handleBillieSpeechEnd = () => {
+      if (isVoiceSessionActive) {
+        setTimeout(() => {
+          startListening();
+        }, 250);
+      }
+    };
+
+    window.addEventListener('billie-tts-end', handleBillieSpeechEnd);
+    return () => {
+      window.removeEventListener('billie-tts-end', handleBillieSpeechEnd);
+    };
+  }, [isVoiceSessionActive, startListening]);
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
     if (isListening) {
       stopListening();
-      return;
     }
     const query = inputText.trim();
     if (!query) return;
@@ -53,10 +90,16 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
   };
 
   const handleMicToggle = () => {
-    if (isListening) {
+    if (isVoiceSessionActive || isListening) {
+      // Turn off hands-free voice session
+      setIsVoiceSessionActive(false);
       stopListening();
+      stopSpeaking();
     } else {
+      // Start hands-free voice session
+      setIsVoiceSessionActive(true);
       setInputText('');
+      resetTranscript();
       startListening();
     }
   };
@@ -78,8 +121,8 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
 
   return (
     <div className="bottom-search-wrapper">
-      {/* Speech Listening Pulse Banner */}
-      {isListening && (
+      {/* Speech Listening Pulse Banner (Hands-Free Active) */}
+      {(isListening || isVoiceSessionActive) && (
         <div className="speech-listening-banner animate-fade-in">
           <div className="pulse-indicator">
             <span className="pulse-ring" />
@@ -88,14 +131,17 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           <span className="listening-text">
             {transcript
               ? `"${transcript}"`
-              : (isHindi ? 'सुन रहे हैं... बोलिए "bill banao" ya customer details' : 'Listening... Say "bill banao" or customer details')}
+              : (isHindi
+                  ? '🎙️ हैंड्स-फ्री मोड चालू है: बोलिए (माइक पर क्लिक करके रोक सकते हैं)'
+                  : '🎙️ Hands-free mode active: Speak your answer...')}
           </span>
           <button
             type="button"
-            onClick={stopListening}
+            onClick={handleMicToggle}
             className="stop-speech-chip"
+            title="Stop hands-free voice mode"
           >
-            {isHindi ? 'हो गया' : 'Done'}
+            {isHindi ? 'रोकें' : 'Stop'}
           </button>
         </div>
       )}
@@ -104,14 +150,21 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
       {speechError && (
         <div className="speech-error-banner animate-fade-in">
           <span>{speechError}</span>
-          <button type="button" onClick={() => {}} className="dismiss-btn">
+          <button
+            type="button"
+            onClick={() => setIsVoiceSessionActive(false)}
+            className="dismiss-btn"
+          >
             <X size={14} />
           </button>
         </div>
       )}
 
       {/* Floating Center Search Bar */}
-      <form onSubmit={handleSubmit} className={`bottom-search-bar ${isListening ? 'listening-active' : ''}`}>
+      <form
+        onSubmit={handleSubmit}
+        className={`bottom-search-bar ${isListening || isVoiceSessionActive ? 'listening-active' : ''}`}
+      >
         <div className="search-leading-icon">
           <Sparkles className="sparkle-icon" size={19} />
         </div>
@@ -133,8 +186,8 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           onChange={(e) => setInputText(e.target.value)}
           placeholder={
             activePromptHint ||
-            (isListening
-              ? (isHindi ? 'आपकी आवाज सुन रहे हैं...' : 'Listening to your voice...')
+            (isVoiceSessionActive
+              ? (isHindi ? 'लगातार सुन रहे हैं... अपना जवाब बोलें' : 'Listening hands-free... speak your reply')
               : defaultPlaceholder)
           }
           className="search-input"
@@ -156,11 +209,15 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
         <button
           type="button"
           onClick={handleMicToggle}
-          className={`mic-button ${isListening ? 'active' : ''}`}
-          title={isListening ? 'Stop listening' : `Start speaking (${isHindi ? 'Hindi Voice' : 'English Voice'})`}
+          className={`mic-button ${isListening || isVoiceSessionActive ? 'active' : ''}`}
+          title={
+            isVoiceSessionActive
+              ? 'Stop hands-free voice'
+              : `Start speaking (${isHindi ? 'Hindi Voice' : 'English Voice'})`
+          }
           aria-label="Microphone"
         >
-          {isListening ? (
+          {isListening || isVoiceSessionActive ? (
             <div className="mic-listening-waves">
               <span className="wave-bar w1" />
               <span className="wave-bar w2" />

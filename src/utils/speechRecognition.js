@@ -32,13 +32,15 @@ export function useSpeechRecognition(langCode = 'hi-IN') {
       recognition.onerror = (event) => {
         console.warn('[Billie Voice] Speech recognition error:', event.error);
         if (event.error === 'not-allowed') {
-          setError('Microphone permission was denied. Please allow microphone access.');
+          setError('Microphone permission was denied. Please allow microphone access in browser settings.');
+          setIsListening(false);
         } else if (event.error === 'no-speech') {
-          // No speech detected
+          // No speech detected during window
+          setIsListening(false);
         } else {
           setError(`Voice input error: ${event.error}`);
+          setIsListening(false);
         }
-        setIsListening(false);
       };
 
       recognition.onend = () => {
@@ -52,7 +54,11 @@ export function useSpeechRecognition(langCode = 'hi-IN') {
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
       }
     };
   }, [langCode]);
@@ -62,6 +68,10 @@ export function useSpeechRecognition(langCode = 'hi-IN') {
       setError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
+    // If Billie TTS is speaking, wait until speech finishes
+    if (typeof window !== 'undefined' && window.__BILLIE_TTS_SPEAKING) {
+      return;
+    }
     if (recognitionRef.current) {
       try {
         setTranscript('');
@@ -69,25 +79,22 @@ export function useSpeechRecognition(langCode = 'hi-IN') {
         recognitionRef.current.lang = langCode;
         recognitionRef.current.start();
       } catch (err) {
-        console.warn('Speech recognition restart caught:', err);
-        recognitionRef.current.stop();
-        setTimeout(() => {
-          try {
-            recognitionRef.current.lang = langCode;
-            recognitionRef.current.start();
-          } catch (e) {
-            setError('Could not start microphone. Please try again.');
-          }
-        }, 150);
+        // Recognition might already be started or stopping
+        console.warn('Speech recognition start attempt:', err);
       }
     }
   }, [isSupported, langCode]);
 
   const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
     }
-  }, [isListening]);
+    setIsListening(false);
+  }, []);
 
   const resetTranscript = useCallback(() => {
     setTranscript('');
@@ -106,27 +113,59 @@ export function useSpeechRecognition(langCode = 'hi-IN') {
 }
 
 // Text-to-speech helper with Hindi & English voice selection
-export function speakText(text, lang = 'hi') {
+export function speakText(text, lang = 'hi', onEnd = null) {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+      window.__BILLIE_TTS_SPEAKING = true;
+      window.dispatchEvent(new CustomEvent('billie-tts-start'));
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+
+      const targetLang = lang === 'hi' ? 'hi-IN' : 'en-US';
+      utterance.lang = targetLang;
+
+      // Pick matching Hindi or English voice
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        const match = voices.find(
+          (v) => v.lang === targetLang || v.lang.startsWith(targetLang.split('-')[0])
+        );
+        if (match) {
+          utterance.voice = match;
+        }
+      }
+
+      utterance.onend = () => {
+        window.__BILLIE_TTS_SPEAKING = false;
+        window.dispatchEvent(new CustomEvent('billie-tts-end'));
+        if (onEnd) onEnd();
+      };
+
+      utterance.onerror = (e) => {
+        console.warn('Speech synthesis utterance error:', e);
+        window.__BILLIE_TTS_SPEAKING = false;
+        window.dispatchEvent(new CustomEvent('billie-tts-end'));
+        if (onEnd) onEnd();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('Speech synthesis failed:', err);
+      window.__BILLIE_TTS_SPEAKING = false;
+      window.dispatchEvent(new CustomEvent('billie-tts-end'));
+      if (onEnd) onEnd();
+    }
+  } else if (onEnd) {
+    onEnd();
+  }
+}
+
+export function stopSpeaking() {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95; // slightly slower for clearer diction
-    utterance.pitch = 1.0;
-
-    const targetLang = lang === 'hi' ? 'hi-IN' : 'en-US';
-    utterance.lang = targetLang;
-
-    // Pick appropriate voice if available
-    const voices = window.speechSynthesis.getVoices();
-    if (voices && voices.length > 0) {
-      const match = voices.find(
-        (v) => v.lang === targetLang || v.lang.startsWith(targetLang.split('-')[0])
-      );
-      if (match) {
-        utterance.voice = match;
-      }
-    }
-
-    window.speechSynthesis.speak(utterance);
+    window.__BILLIE_TTS_SPEAKING = false;
   }
 }

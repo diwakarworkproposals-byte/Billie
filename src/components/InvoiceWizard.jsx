@@ -28,7 +28,15 @@ const STEPS = {
 };
 
 export default function InvoiceWizard({ externalQuery, onPromptHintChange, onResetExternalQuery }) {
-  const { user, settings, addInvoice, getNextInvoiceNumber, setLanguage } = useApp();
+  const {
+    user,
+    settings,
+    addInvoice,
+    getNextInvoiceNumber,
+    setLanguage,
+    isVoiceSessionActive,
+    setIsVoiceSessionActive
+  } = useApp();
   
   // Local active conversation language: default from settings ('hi' or 'en')
   const [lang, setLang] = useState(settings.language || 'hi');
@@ -107,13 +115,15 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     }
   }, [step, lang, onPromptHintChange]);
 
-  const replyBillie = (text, targetLang = lang) => {
+  const replyBillie = (text, targetLang = lang, onEndCallback = null) => {
     setMessages((prev) => [
       ...prev,
       { sender: 'billie', text, timestamp: new Date() }
     ]);
     if (settings.voiceFeedback) {
-      speakText(text, targetLang);
+      speakText(text, targetLang, onEndCallback);
+    } else if (onEndCallback) {
+      onEndCallback();
     }
   };
 
@@ -157,7 +167,10 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
       currency
     );
 
-    replyBillie(msg, chosenLang);
+    // Final message spoken -> task is finished, turn off hands-free voice!
+    replyBillie(msg, chosenLang, () => {
+      setIsVoiceSessionActive(false);
+    });
 
     // Trigger celebration confetti
     try {
@@ -371,6 +384,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     setDraftItems([]);
     currentItemRef.current = { name: '', quantity: 1, price: 0 };
     setCurrentItem({ name: '', quantity: 1, price: 0 });
+    setIsVoiceSessionActive(false);
   };
 
   const triggerChip = (text) => {

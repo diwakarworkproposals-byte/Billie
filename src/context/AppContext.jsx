@@ -90,6 +90,7 @@ export function AppProvider({ children }) {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isVoiceSessionActive, setIsVoiceSessionActive] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('billie_user', JSON.stringify(user));
@@ -218,6 +219,8 @@ export function AppProvider({ children }) {
         isInstallable,
         isInstalled,
         isOffline,
+        isVoiceSessionActive,
+        setIsVoiceSessionActive,
         installPWA,
         login,
         logout,
