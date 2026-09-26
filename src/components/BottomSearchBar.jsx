@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, Sparkles, X, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Send, Sparkles, X, Volume2, Globe } from 'lucide-react';
 import { useSpeechRecognition } from '../utils/speechRecognition';
+import { useApp } from '../context/AppContext';
 
 export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }) {
+  const { settings, setLanguage } = useApp();
   const [inputText, setInputText] = useState('');
   const inputRef = useRef(null);
+
+  const isHindi = settings.language === 'hi';
+  const langCode = isHindi ? 'hi-IN' : 'en-US';
 
   const {
     isListening,
@@ -14,7 +19,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
     startListening,
     stopListening,
     resetTranscript
-  } = useSpeechRecognition();
+  } = useSpeechRecognition(langCode);
 
   // Synchronize speech transcript to input field
   useEffect(() => {
@@ -23,12 +28,11 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
     }
   }, [transcript]);
 
-  // When speech recognition ends and there's captured text, auto-submit or focus
+  // When speech recognition ends and there's captured text, auto-submit
   useEffect(() => {
     if (!isListening && transcript.trim().length > 0) {
       const captured = transcript.trim();
       resetTranscript();
-      // Auto-submit after voice finish for a hands-free conversational flow
       onQuerySubmit(captured);
       setInputText('');
     }
@@ -63,6 +67,15 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
     if (inputRef.current) inputRef.current.focus();
   };
 
+  const toggleLanguage = () => {
+    const nextLang = isHindi ? 'en' : 'hi';
+    setLanguage(nextLang);
+  };
+
+  const defaultPlaceholder = isHindi
+    ? "Billie se bolein ya type karein 'bill banao'..."
+    : "Ask Billie or type 'generate invoice' / 'bill banao'...";
+
   return (
     <div className="bottom-search-wrapper">
       {/* Speech Listening Pulse Banner */}
@@ -73,14 +86,16 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
             <span className="pulse-dot" />
           </div>
           <span className="listening-text">
-            {transcript ? `"${transcript}"` : 'Listening... Say "Generate invoice" or customer details'}
+            {transcript
+              ? `"${transcript}"`
+              : (isHindi ? 'सुन रहे हैं... बोलिए "bill banao" ya customer details' : 'Listening... Say "bill banao" or customer details')}
           </span>
           <button
             type="button"
             onClick={stopListening}
             className="stop-speech-chip"
           >
-            Done
+            {isHindi ? 'हो गया' : 'Done'}
           </button>
         </div>
       )}
@@ -101,6 +116,16 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           <Sparkles className="sparkle-icon" size={19} />
         </div>
 
+        {/* Quick Language Toggle Pill */}
+        <button
+          type="button"
+          onClick={toggleLanguage}
+          className="lang-quick-toggle m3-ripple"
+          title={`Switch Voice Language (Current: ${isHindi ? 'Hindi' : 'English'})`}
+        >
+          <span>{isHindi ? '🇮🇳 HI' : '🇬🇧 EN'}</span>
+        </button>
+
         <input
           ref={inputRef}
           type="text"
@@ -109,8 +134,8 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           placeholder={
             activePromptHint ||
             (isListening
-              ? 'Listening to your voice...'
-              : "Ask Billie or type 'generate invoice'...")
+              ? (isHindi ? 'आपकी आवाज सुन रहे हैं...' : 'Listening to your voice...')
+              : defaultPlaceholder)
           }
           className="search-input"
           aria-label="Billie search and voice prompt"
@@ -132,7 +157,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           type="button"
           onClick={handleMicToggle}
           className={`mic-button ${isListening ? 'active' : ''}`}
-          title={isListening ? 'Stop listening' : 'Start speaking (Voice command)'}
+          title={isListening ? 'Stop listening' : `Start speaking (${isHindi ? 'Hindi Voice' : 'English Voice'})`}
           aria-label="Microphone"
         >
           {isListening ? (

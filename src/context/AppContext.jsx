@@ -4,21 +4,22 @@ const AppContext = createContext(null);
 
 const DEFAULT_USER = {
   isLoggedIn: true,
-  name: 'Alex Morgan',
+  name: 'Alex Sharma',
   email: 'alex@apexstudio.io',
   businessName: 'Apex Studio & Commerce',
-  phone: '+1 (555) 019-2834',
-  address: '742 Evergreen Terrace, Suite 100',
-  taxId: 'TAX-8849-US'
+  phone: '+91 98765 43210',
+  address: 'Shop 12, Main Market, New Delhi',
+  taxId: 'GSTIN07AAAAA0000A1Z5'
 };
 
 const DEFAULT_SETTINGS = {
-  currency: '$',
+  currency: '₹',
   defaultTaxRate: 5,
   defaultDiscount: 0,
   invoicePrefix: 'INV-2026-',
   voiceFeedback: true,
-  theme: 'light'
+  theme: 'light',
+  language: 'hi' // 'hi' (Hindi / Hinglish) | 'en' (English)
 };
 
 export function AppProvider({ children }) {
@@ -50,8 +51,8 @@ export function AppProvider({ children }) {
         {
           id: 'inv_demo_1',
           invoiceNumber: 'INV-2026-001',
-          customerName: 'Acme Global Corp',
-          customerEmail: 'billing@acme.com',
+          customerName: 'Rajesh Enterprises',
+          customerEmail: 'rajesh@enterprise.in',
           date: new Date(Date.now() - 86400000 * 2).toLocaleDateString(),
           dueDate: 'Net 15 Days',
           product: 'PWA Web Design & Development',
@@ -64,7 +65,7 @@ export function AppProvider({ children }) {
           taxRate: 5,
           taxAmount: 60,
           total: 1260,
-          currency: '$',
+          currency: '₹',
           items: [
             {
               name: 'PWA Web Design & Development',
@@ -158,15 +159,15 @@ export function AppProvider({ children }) {
   };
 
   // Auth actions
-  const login = (email, name = 'Alex Morgan', businessName = 'My Business') => {
+  const login = (email, name = 'Alex Sharma', businessName = 'My Business') => {
     setUser({
       isLoggedIn: true,
       name,
       email,
       businessName,
-      phone: '+1 (555) 019-2834',
-      address: '100 Market St, Suite 200',
-      taxId: 'TAX-00123'
+      phone: '+91 98765 43210',
+      address: 'Shop 12, Main Market, New Delhi',
+      taxId: 'GSTIN07AAAAA0000A1Z5'
     });
   };
 
@@ -188,6 +189,10 @@ export function AppProvider({ children }) {
 
   const updateSettings = (updatedFields) => {
     setSettings((prev) => ({ ...prev, ...updatedFields }));
+  };
+
+  const setLanguage = (lang) => {
+    updateSettings({ language: lang });
   };
 
   const addInvoice = (invoice) => {
@@ -218,6 +223,7 @@ export function AppProvider({ children }) {
         logout,
         updateProfile,
         updateSettings,
+        setLanguage,
         addInvoice,
         deleteInvoice,
         getNextInvoiceNumber

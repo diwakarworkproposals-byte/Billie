@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, Bot, User, Check, ArrowRight, RefreshCw, FileText, CornerDownLeft } from 'lucide-react';
+import { Sparkles, Bot, User, Check, ArrowRight, RefreshCw, FileText, CornerDownLeft, PlusCircle } from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
 import { useApp } from '../context/AppContext';
-import { isInvoiceIntent, parseOneShotInvoice, calculateInvoiceTotals } from '../utils/invoiceParser';
+import {
+  isInvoiceIntent,
+  detectLanguage,
+  isAffirmative,
+  isNegative,
+  parseOneShotInvoice,
+  calculateInvoiceTotals,
+  PROMPTS
+} from '../utils/invoiceParser';
 import { speakText } from '../utils/speechRecognition';
 
 // Conversation step enums
@@ -13,34 +21,44 @@ const STEPS = {
   ASK_PRODUCT: 'ASK_PRODUCT',
   ASK_QUANTITY: 'ASK_QUANTITY',
   ASK_PRICE: 'ASK_PRICE',
+  ASK_MORE_ITEMS: 'ASK_MORE_ITEMS',
   ASK_DISCOUNT: 'ASK_DISCOUNT',
   COMPLETED: 'COMPLETED'
 };
 
 export default function InvoiceWizard({ externalQuery, onPromptHintChange, onResetExternalQuery }) {
-  const { user, settings, addInvoice, getNextInvoiceNumber } = useApp();
+  const { user, settings, addInvoice, getNextInvoiceNumber, setLanguage } = useApp();
+  
+  // Local active conversation language: default from settings ('hi' or 'en')
+  const [lang, setLang] = useState(settings.language || 'hi');
   const [step, setStep] = useState(STEPS.IDLE);
+  
   const [messages, setMessages] = useState([
     {
       sender: 'billie',
-      text: "Hello! I'm Billie, your voice & text invoice assistant. Say or type 'generate invoice' to create a bill.",
+      text: PROMPTS[settings.language || 'hi'].welcome,
       timestamp: new Date()
     }
   ]);
 
-  // Current drafting state
-  const [draftInvoice, setDraftInvoice] = useState({
-    customerName: '',
-    product: '',
+  // Current drafting state with multi-item support
+  const [draftCustomer, setDraftCustomer] = useState('');
+  const [draftItems, setDraftItems] = useState([]);
+  const [currentItem, setCurrentItem] = useState({
+    name: '',
     quantity: 1,
-    price: 0,
-    discount: 0,
-    discountType: 'percent',
-    taxRate: settings.defaultTaxRate || 0
+    price: 0
   });
 
   const [finalInvoice, setFinalInvoice] = useState(null);
   const messagesEndRef = useRef(null);
+
+  // Sync lang with settings
+  useEffect(() => {
+    if (settings.language) {
+      setLang(settings.language);
+    }
+  }, [settings.language]);
 
   // Auto-scroll messages
   useEffect(() => {
@@ -54,65 +72,72 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     if (onResetExternalQuery) onResetExternalQuery();
   }, [externalQuery]);
 
-  // Update prompt hint based on current step
+  // Update prompt hint based on current step and active language
   useEffect(() => {
-    let hint = '';
+    const p = PROMPTS[lang] || PROMPTS.hi;
+    let hint = p.hints.idle;
+
     switch (step) {
       case STEPS.ASK_CUSTOMER:
-        hint = "Say or type Customer Name (e.g., 'Acme Corp')...";
+        hint = p.hints.customer;
         break;
       case STEPS.ASK_PRODUCT:
-        hint = "Say or type Product/Service (e.g., 'Website Design')...";
+        hint = p.hints.product;
         break;
       case STEPS.ASK_QUANTITY:
-        hint = "Say or type Quantity (e.g., '2' or '5')...";
+        hint = p.hints.quantity;
         break;
       case STEPS.ASK_PRICE:
-        hint = `Say or type Price per unit (e.g., '${settings.currency || '$'}500')...`;
+        hint = p.hints.price;
+        break;
+      case STEPS.ASK_MORE_ITEMS:
+        hint = p.hints.more_items;
         break;
       case STEPS.ASK_DISCOUNT:
-        hint = "Say or type Discount (e.g., '10%' or '0')...";
+        hint = p.hints.discount;
         break;
       default:
-        hint = "Ask Billie or type 'generate invoice'...";
+        hint = p.hints.idle;
     }
+
     if (onPromptHintChange) {
       onPromptHintChange(hint);
     }
-  }, [step, settings.currency, onPromptHintChange]);
+  }, [step, lang, onPromptHintChange]);
+
+  const replyBillie = (text, targetLang = lang) => {
+    setMessages((prev) => [
+      ...prev,
+      { sender: 'billie', text, timestamp: new Date() }
+    ]);
+    if (settings.voiceFeedback) {
+      speakText(text, targetLang);
+    }
+  };
 
   // Complete and finalize the invoice
-  const finalizeInvoice = (dataToFinalize) => {
-    const rawItems = [
-      {
-        name: dataToFinalize.product || 'Standard Service',
-        quantity: Math.max(1, Number(dataToFinalize.quantity) || 1),
-        price: Math.max(0, Number(dataToFinalize.price) || 0),
-        discount: Number(dataToFinalize.discount) || 0,
-        discountType: dataToFinalize.discountType || 'percent'
-      }
-    ];
-
-    const totals = calculateInvoiceTotals(rawItems, settings.defaultTaxRate || 0);
+  const finalizeInvoice = (customerName, itemsList, discountVal = 0, discountType = 'percent', chosenLang = lang) => {
+    const totals = calculateInvoiceTotals(itemsList, settings.defaultTaxRate || 0);
     const invoiceNum = getNextInvoiceNumber();
+    const currency = settings.currency || '₹';
 
     const completeInvoice = {
       id: `inv_${Date.now()}`,
       invoiceNumber: invoiceNum,
-      customerName: dataToFinalize.customerName || 'Valued Customer',
+      customerName: customerName || (chosenLang === 'hi' ? 'सम्मानित ग्राहक' : 'Valued Customer'),
       date: new Date().toLocaleDateString(),
-      dueDate: 'Due on Receipt',
-      product: rawItems[0].name,
-      quantity: rawItems[0].quantity,
-      price: rawItems[0].price,
-      discount: rawItems[0].discount,
-      discountType: rawItems[0].discountType,
+      dueDate: chosenLang === 'hi' ? 'तुरंत देय (Due on Receipt)' : 'Due on Receipt',
+      product: itemsList.length > 0 ? itemsList.map((i) => i.name).join(', ') : 'Standard Service',
+      quantity: itemsList.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
+      price: itemsList[0]?.price || 0,
+      discount: discountVal,
+      discountType: discountType,
       subtotal: totals.subtotal,
       discountAmount: totals.totalDiscount,
       taxRate: totals.taxRate,
       taxAmount: totals.taxAmount,
       total: totals.grandTotal,
-      currency: settings.currency || '$',
+      currency: currency,
       items: totals.items
     };
 
@@ -120,26 +145,27 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     addInvoice(completeInvoice);
     setStep(STEPS.COMPLETED);
 
-    // Add assistant celebration message
-    const msg = `✨ Invoice ${invoiceNum} generated for ${completeInvoice.customerName}! Subtotal: ${settings.currency}${totals.subtotal.toFixed(2)}, Discount: -${settings.currency}${totals.totalDiscount.toFixed(2)}, Total: ${settings.currency}${totals.grandTotal.toFixed(2)}.`;
-    setMessages((prev) => [
-      ...prev,
-      { sender: 'billie', text: msg, timestamp: new Date() }
-    ]);
+    const p = PROMPTS[chosenLang] || PROMPTS.hi;
+    const msg = p.invoice_ready(
+      invoiceNum,
+      completeInvoice.customerName,
+      totals.subtotal.toFixed(2),
+      totals.totalDiscount.toFixed(2),
+      totals.grandTotal.toFixed(2),
+      currency
+    );
 
-    if (settings.voiceFeedback) {
-      speakText(`Invoice generated for ${completeInvoice.customerName}. Total is ${totals.grandTotal.toFixed(2)}.`);
-    }
+    replyBillie(msg, chosenLang);
 
-    // Trigger joyful celebration confetti
+    // Trigger celebration confetti
     try {
       confetti({
-        particleCount: 65,
-        spread: 60,
+        particleCount: 70,
+        spread: 65,
         origin: { y: 0.75 }
       });
-    } catch (e) {
-      // Ignore confetti error if any
+    } catch {
+      // safe fallback
     }
   };
 
@@ -147,110 +173,166 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
     const trimmed = userText.trim();
     if (!trimmed) return;
 
+    // Detect if this message was in Hindi or English
+    const detected = detectLanguage(trimmed);
+    let activeLang = lang;
+    if (isInvoiceIntent(trimmed)) {
+      activeLang = detected;
+      setLang(detected);
+      setLanguage(detected);
+    }
+
+    const p = PROMPTS[activeLang] || PROMPTS.hi;
+
     // Append user message
     setMessages((prev) => [
       ...prev,
       { sender: 'user', text: trimmed, timestamp: new Date() }
     ]);
 
-    // Check if user is asking for a brand new invoice or reset
-    if (trimmed.toLowerCase() === 'reset' || trimmed.toLowerCase() === 'cancel') {
+    // Check reset / cancel
+    const norm = trimmed.toLowerCase();
+    if (['reset', 'cancel', 'band karo', 'radd karo', 'chhodo'].includes(norm)) {
       resetWizard();
-      setMessages((prev) => [
-        ...prev,
-        { sender: 'billie', text: "Cancelled. Say or type 'generate invoice' whenever you're ready!", timestamp: new Date() }
-      ]);
+      replyBillie(p.cancelled, activeLang);
       return;
     }
 
-    // 1. One-Shot Intent Check (e.g. "generate invoice for Acme Corp, 2 Laptops at 1200 with 10% discount")
+    // 1. One-Shot NLP check (e.g. "Ramesh ke liye 2 Laptops 1200 me 10% discount ke sath bill banao")
     const oneShot = parseOneShotInvoice(trimmed);
     if (oneShot.hasFullDetails) {
-      finalizeInvoice(oneShot);
+      finalizeInvoice(
+        oneShot.customerName,
+        [
+          {
+            name: oneShot.product,
+            quantity: oneShot.quantity,
+            price: oneShot.price,
+            discount: oneShot.discount,
+            discountType: oneShot.discountType
+          }
+        ],
+        oneShot.discount,
+        oneShot.discountType,
+        activeLang
+      );
       return;
     }
 
-    // 2. Trigger "generate invoice" keyword from IDLE or COMPLETED
+    // 2. Trigger invoice creation from IDLE, COMPLETED, or explicit intent
     if (step === STEPS.IDLE || step === STEPS.COMPLETED || isInvoiceIntent(trimmed)) {
       if (isInvoiceIntent(trimmed)) {
-        // If customer was partially mentioned:
-        if (oneShot.customerName) {
-          setDraftInvoice((prev) => ({ ...prev, customerName: oneShot.customerName }));
-          setStep(STEPS.ASK_PRODUCT);
-          const reply = `Got it, invoicing for ${oneShot.customerName}! What is the product or service name?`;
-          setMessages((prev) => [...prev, { sender: 'billie', text: reply, timestamp: new Date() }]);
-          if (settings.voiceFeedback) speakText(reply);
-          return;
-        }
-
-        // Start step 1: ask Customer Name
-        setDraftInvoice({
-          customerName: '',
-          product: '',
-          quantity: 1,
-          price: 0,
-          discount: 0,
-          discountType: 'percent',
-          taxRate: settings.defaultTaxRate || 0
-        });
+        setDraftCustomer(oneShot.customerName || '');
+        setDraftItems([]);
+        setCurrentItem({ name: '', quantity: 1, price: 0 });
         setFinalInvoice(null);
-        setStep(STEPS.ASK_CUSTOMER);
-        const reply = "Let's create a new invoice! Who is the customer? (Please state or type customer name)";
-        setMessages((prev) => [...prev, { sender: 'billie', text: reply, timestamp: new Date() }]);
-        if (settings.voiceFeedback) speakText(reply);
+
+        if (oneShot.customerName) {
+          setStep(STEPS.ASK_PRODUCT);
+          const reply = activeLang === 'hi' 
+            ? `ठीक है, ${oneShot.customerName} के लिए बिल बनाते हैं! ${p.ask_product}`
+            : `Got it, invoicing for ${oneShot.customerName}! ${p.ask_product}`;
+          replyBillie(reply, activeLang);
+        } else {
+          setStep(STEPS.ASK_CUSTOMER);
+          replyBillie(p.ask_customer, activeLang);
+        }
         return;
       }
     }
 
-    // 3. Step-by-Step Flow:
+    // 3. Step-by-Step Interactive Conversational Flow
     switch (step) {
+      // Step 1: Customer Name
       case STEPS.ASK_CUSTOMER: {
-        const customer = trimmed.replace(/^(customer\s*name\s*is|customer\s*is|for)\s+/i, '').trim();
-        setDraftInvoice((prev) => ({ ...prev, customerName: customer }));
+        const cleanedCustomer = trimmed
+          .replace(/^(customer\s*name\s*is|customer\s*is|naam\s*hai|for|kiske\s*liye)\s+/i, '')
+          .trim();
+        setDraftCustomer(cleanedCustomer);
         setStep(STEPS.ASK_PRODUCT);
-        const reply = `Great, billing ${customer}! What product or service are you charging for?`;
-        setMessages((prev) => [...prev, { sender: 'billie', text: reply, timestamp: new Date() }]);
-        if (settings.voiceFeedback) speakText(reply);
+
+        const reply = activeLang === 'hi'
+          ? `बढ़िया, ${cleanedCustomer} के लिए बिल बनाते हैं! ${p.ask_product}`
+          : `Great, billing ${cleanedCustomer}! ${p.ask_product}`;
+        replyBillie(reply, activeLang);
         break;
       }
 
+      // Step 2: Product Name
       case STEPS.ASK_PRODUCT: {
         const prod = trimmed.replace(/^(product\s*is|item\s*is|service\s*is)\s+/i, '').trim();
-        setDraftInvoice((prev) => ({ ...prev, product: prod }));
+        setCurrentItem((prev) => ({ ...prev, name: prod }));
         setStep(STEPS.ASK_QUANTITY);
-        const reply = `Got it: "${prod}". How many units or hours? (e.g., 1, 2, 5)`;
-        setMessages((prev) => [...prev, { sender: 'billie', text: reply, timestamp: new Date() }]);
-        if (settings.voiceFeedback) speakText(reply);
+        replyBillie(p.ask_quantity(prod), activeLang);
         break;
       }
 
+      // Step 3: Quantity
       case STEPS.ASK_QUANTITY: {
         const numMatch = trimmed.match(/\d+/);
         const qty = numMatch ? parseInt(numMatch[0], 10) : 1;
-        setDraftInvoice((prev) => ({ ...prev, quantity: qty }));
+        setCurrentItem((prev) => ({ ...prev, quantity: qty }));
         setStep(STEPS.ASK_PRICE);
-        const reply = `Quantity set to ${qty}. What is the price per unit in ${settings.currency || '$'}?`;
-        setMessages((prev) => [...prev, { sender: 'billie', text: reply, timestamp: new Date() }]);
-        if (settings.voiceFeedback) speakText(reply);
+        replyBillie(p.ask_price(currentItem.name || 'item'), activeLang);
         break;
       }
 
+      // Step 4: Unit Price
       case STEPS.ASK_PRICE: {
         const numMatch = trimmed.match(/(\d+(?:\.\d+)?)/);
         const price = numMatch ? parseFloat(numMatch[1]) : 0;
-        setDraftInvoice((prev) => ({ ...prev, price }));
-        setStep(STEPS.ASK_DISCOUNT);
-        const reply = `Unit price: ${settings.currency || '$'}${price}. Any discount? (Type/say '10%' or flat amount, or '0' for none)`;
-        setMessages((prev) => [...prev, { sender: 'billie', text: reply, timestamp: new Date() }]);
-        if (settings.voiceFeedback) speakText(reply);
+        
+        // Add this item to draft items list
+        const newItem = {
+          name: currentItem.name || (activeLang === 'hi' ? 'प्रोडक्ट' : 'Product'),
+          quantity: currentItem.quantity || 1,
+          price: price,
+          discount: 0
+        };
+
+        const updatedItems = [...draftItems, newItem];
+        setDraftItems(updatedItems);
+        setCurrentItem({ name: '', quantity: 1, price: 0 });
+
+        // Move to Ask More Items step!
+        setStep(STEPS.ASK_MORE_ITEMS);
+
+        const confirmationMsg = p.item_added(newItem.name, newItem.quantity, newItem.price, settings.currency || '₹');
+        replyBillie(`${confirmationMsg} ${p.ask_more_items}`, activeLang);
         break;
       }
 
+      // Step 5: "Aur kuch add karna hai?"
+      case STEPS.ASK_MORE_ITEMS: {
+        if (isAffirmative(trimmed)) {
+          // User wants to add another item
+          setStep(STEPS.ASK_PRODUCT);
+          replyBillie(p.ask_next_product, activeLang);
+        } else if (isNegative(trimmed)) {
+          // User is finished adding items -> proceed to discount
+          setStep(STEPS.ASK_DISCOUNT);
+          replyBillie(p.ask_discount, activeLang);
+        } else {
+          // Check if user directly provided another product name e.g. "Mouse"
+          if (trimmed.length > 1) {
+            setCurrentItem((prev) => ({ ...prev, name: trimmed }));
+            setStep(STEPS.ASK_QUANTITY);
+            replyBillie(p.ask_quantity(trimmed), activeLang);
+          } else {
+            replyBillie(p.ask_more_items, activeLang);
+          }
+        }
+        break;
+      }
+
+      // Step 6: Discount & Final Calculation
       case STEPS.ASK_DISCOUNT: {
         let discount = 0;
         let discountType = 'percent';
 
-        if (trimmed.includes('%')) {
+        if (isNegative(trimmed) || trimmed === '0' || trimmed.toLowerCase() === 'zero') {
+          discount = 0;
+        } else if (trimmed.includes('%')) {
           const num = trimmed.match(/(\d+(?:\.\d+)?)/);
           discount = num ? parseFloat(num[1]) : 0;
           discountType = 'percent';
@@ -260,21 +342,17 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
           discountType = discount > 0 && discount <= 50 ? 'percent' : 'flat';
         }
 
-        const completedData = {
-          ...draftInvoice,
-          discount,
-          discountType
-        };
-
-        finalizeInvoice(completedData);
+        finalizeInvoice(draftCustomer, draftItems, discount, discountType, activeLang);
         break;
       }
 
       default: {
-        // Unknown or idle input
-        const reply = "I'm ready! Say or type 'generate invoice' to create a bill, or try an example below.";
-        setMessages((prev) => [...prev, { sender: 'billie', text: reply, timestamp: new Date() }]);
-        if (settings.voiceFeedback) speakText(reply);
+        replyBillie(
+          activeLang === 'hi'
+            ? "मैं तैयार हूँ! नया बिल बनाने के लिए 'bill banao' बोलें या लिखें।"
+            : "I'm ready! Say or type 'generate invoice' to create a bill.",
+          activeLang
+        );
         break;
       }
     }
@@ -283,43 +361,66 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
   const resetWizard = () => {
     setStep(STEPS.IDLE);
     setFinalInvoice(null);
-    setDraftInvoice({
-      customerName: '',
-      product: '',
-      quantity: 1,
-      price: 0,
-      discount: 0,
-      discountType: 'percent',
-      taxRate: settings.defaultTaxRate || 0
-    });
+    setDraftCustomer('');
+    setDraftItems([]);
+    setCurrentItem({ name: '', quantity: 1, price: 0 });
   };
 
   const triggerChip = (text) => {
     handleUserMessage(text);
   };
 
+  const currentTotal = draftItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+
   return (
     <div className="billie-main-container">
-      {/* Hero Welcome if IDLE with few messages */}
+      {/* Hero Welcome Card if IDLE */}
       {step === STEPS.IDLE && !finalInvoice && (
         <div className="hero-assistant-card animate-fade-in">
           <div className="hero-avatar">
             <Sparkles size={32} className="text-white" />
           </div>
-          <h2 className="hero-title">What can I bill for you?</h2>
+          <h2 className="hero-title">
+            {lang === 'hi' ? 'नमस्ते! किसके नाम बिल बनाना है?' : 'What can I bill for you today?'}
+          </h2>
           <p className="hero-subtitle">
-            Say or type <span className="highlight-pill">generate invoice</span> to start. I'll prompt you for customer name, product, quantity, price, and discount to calculate your subtotal and produce an instant PDF!
+            {lang === 'hi' ? (
+              <>
+                माइक दबाकर बोलें या टाइप करें: <span className="highlight-pill">bill banao</span>. Billie आपसे कस्टमर का नाम, प्रोडक्ट, क्वांटिटी, प्राइस और डिस्काउंट पूछकर तुरंत PDF बिल तैयार कर देगा!
+              </>
+            ) : (
+              <>
+                Say or type <span className="highlight-pill">generate invoice</span> or <span className="highlight-pill">bill banao</span>. I'll prompt you step-by-step and produce an instant PDF!
+              </>
+            )}
           </p>
 
-          {/* Quick preset suggestions */}
+          {/* Quick Preset Suggestion Chips */}
           <div className="suggestion-chips-container">
             <button
               type="button"
-              onClick={() => triggerChip('generate invoice')}
+              onClick={() => triggerChip('bill banao')}
               className="suggestion-chip active-sparkle m3-ripple"
             >
               <Sparkles size={14} />
-              <span>generate invoice</span>
+              <span>🇮🇳 bill banao (नया बिल)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => triggerChip('generate invoice')}
+              className="suggestion-chip m3-ripple"
+            >
+              <Sparkles size={14} />
+              <span>🇬🇧 generate invoice</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => triggerChip('Ramesh ke liye 2 Shirt 500 rate me 10% discount ke sath bill banao')}
+              className="suggestion-chip m3-ripple"
+            >
+              <span>⚡ Ramesh (2 Shirt @ ₹500, 10% off)</span>
             </button>
 
             <button
@@ -327,15 +428,7 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
               onClick={() => triggerChip('generate invoice for Acme Corp, 2 Laptops at 1200 with 10% discount')}
               className="suggestion-chip m3-ripple"
             >
-              <span>⚡ Acme Corp (2 Laptops @ $1200, 10% off)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => triggerChip('generate invoice for Sarah Miller, 5 Hours Consulting at 80 with 0 discount')}
-              className="suggestion-chip m3-ripple"
-            >
-              <span>💼 Sarah Miller (5h Consulting @ $80)</span>
+              <span>💼 Acme Corp (2 Laptops @ $1200)</span>
             </button>
           </div>
         </div>
@@ -372,43 +465,61 @@ export default function InvoiceWizard({ externalQuery, onPromptHintChange, onRes
           );
         })}
 
-        {/* Live Drafting Preview Card during interactive flow */}
+        {/* Live Drafting Progress Card during active creation */}
         {step !== STEPS.IDLE && step !== STEPS.COMPLETED && (
           <div className="draft-live-progress animate-slide-up">
             <div className="progress-steps-row">
-              <span className={`step-badge ${draftInvoice.customerName ? 'done' : 'active'}`}>
-                1. Customer {draftInvoice.customerName && '✓'}
+              <span className={`step-badge ${draftCustomer ? 'done' : 'active'}`}>
+                1. {lang === 'hi' ? 'ग्राहक' : 'Customer'} {draftCustomer && '✓'}
               </span>
-              <span className={`step-badge ${draftInvoice.product ? 'done' : step === STEPS.ASK_PRODUCT ? 'active' : ''}`}>
-                2. Product {draftInvoice.product && '✓'}
+              <span className={`step-badge ${draftItems.length > 0 ? 'done' : step === STEPS.ASK_PRODUCT ? 'active' : ''}`}>
+                2. {lang === 'hi' ? 'प्रोडक्ट' : 'Product'} {draftItems.length > 0 && '✓'}
               </span>
-              <span className={`step-badge ${draftInvoice.quantity ? 'done' : step === STEPS.ASK_QUANTITY ? 'active' : ''}`}>
-                3. Qty {draftInvoice.quantity > 0 && step !== STEPS.ASK_QUANTITY && '✓'}
+              <span className={`step-badge ${step === STEPS.ASK_QUANTITY ? 'active' : draftItems.length > 0 ? 'done' : ''}`}>
+                3. {lang === 'hi' ? 'मात्रा' : 'Qty'} {draftItems.length > 0 && '✓'}
               </span>
-              <span className={`step-badge ${draftInvoice.price > 0 ? 'done' : step === STEPS.ASK_PRICE ? 'active' : ''}`}>
-                4. Price {draftInvoice.price > 0 && '✓'}
+              <span className={`step-badge ${step === STEPS.ASK_PRICE ? 'active' : draftItems.length > 0 ? 'done' : ''}`}>
+                4. {lang === 'hi' ? 'प्राइस' : 'Price'} {draftItems.length > 0 && '✓'}
+              </span>
+              <span className={`step-badge ${step === STEPS.ASK_MORE_ITEMS ? 'active' : ''}`}>
+                5. {lang === 'hi' ? 'और आइटम?' : 'More Items?'}
               </span>
               <span className={`step-badge ${step === STEPS.ASK_DISCOUNT ? 'active' : ''}`}>
-                5. Discount
+                6. {lang === 'hi' ? 'डिस्काउंट' : 'Discount'}
               </span>
             </div>
 
             {/* Live calculation preview */}
             <div className="live-preview-box">
               <div className="preview-item">
-                <span className="label">Customer:</span>
-                <span className="val">{draftInvoice.customerName || 'Waiting...'}</span>
+                <span className="label">{lang === 'hi' ? 'ग्राहक (Customer):' : 'Customer:'}</span>
+                <span className="val font-semibold">{draftCustomer || (lang === 'hi' ? 'नाम पूछ रहे हैं...' : 'Waiting...')}</span>
               </div>
-              <div className="preview-item">
-                <span className="label">Product:</span>
-                <span className="val">{draftInvoice.product || 'Waiting...'}</span>
-              </div>
-              <div className="preview-item">
-                <span className="label">Calculation:</span>
-                <span className="val font-semibold">
-                  {draftInvoice.quantity} × {settings.currency || '$'}{draftInvoice.price} = {settings.currency || '$'}{(draftInvoice.quantity * draftInvoice.price).toFixed(2)}
-                </span>
-              </div>
+
+              {draftItems.length > 0 && (
+                <div className="items-list-draft">
+                  <span className="label">{lang === 'hi' ? 'आइटम्स लिस्ट (Items Added):' : 'Items Added:'}</span>
+                  {draftItems.map((it, idx) => (
+                    <div key={idx} className="draft-single-item">
+                      <span>• {it.name} ({it.quantity} × {settings.currency || '₹'}{it.price})</span>
+                      <span className="font-semibold">{settings.currency || '₹'}{(it.quantity * it.price).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="draft-subtotal-row">
+                    <span>{lang === 'hi' ? 'वर्तमान सबटोटल (Subtotal):' : 'Current Subtotal:'}</span>
+                    <span className="val font-bold text-blue-600">
+                      {settings.currency || '₹'}{currentTotal.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {currentItem.name && (
+                <div className="preview-item mt-1 text-slate-500">
+                  <span className="label">{lang === 'hi' ? 'नया आइटम:' : 'Adding:'}</span>
+                  <span className="val">{currentItem.name} (Qty: {currentItem.quantity})</span>
+                </div>
+              )}
             </div>
           </div>
         )}

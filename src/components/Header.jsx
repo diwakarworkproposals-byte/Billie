@@ -1,9 +1,14 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, User, Wifi, WifiOff, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Settings, User, Wifi, WifiOff, Sparkles, CheckCircle2, Languages } from 'lucide-react';
 
 export default function Header({ onOpenProfile, onOpenSettings }) {
-  const { user, isOffline, isInstalled } = useApp();
+  const { user, isOffline, isInstalled, settings, setLanguage } = useApp();
+  const isHindi = settings.language === 'hi';
+
+  const toggleLanguage = () => {
+    setLanguage(isHindi ? 'en' : 'hi');
+  };
 
   return (
     <header className="billie-header">
@@ -17,7 +22,7 @@ export default function Header({ onOpenProfile, onOpenSettings }) {
               <h1 className="brand-name">Billie</h1>
               <span className="pwa-badge">PWA</span>
             </div>
-            <p className="brand-subtitle">Smart Invoice Assistant</p>
+            <p className="brand-subtitle">{isHindi ? 'स्मार्ट इनवॉइस असिस्टेंट' : 'Smart Invoice Assistant'}</p>
           </div>
         </div>
 
@@ -26,24 +31,35 @@ export default function Header({ onOpenProfile, onOpenSettings }) {
           {isOffline ? (
             <>
               <WifiOff size={13} />
-              <span>Offline Mode</span>
+              <span>{isHindi ? 'ऑफ़लाइन' : 'Offline'}</span>
             </>
           ) : (
             <>
               <Wifi size={13} />
-              <span>{isInstalled ? 'Installed App' : 'Offline Ready'}</span>
+              <span>{isInstalled ? (isHindi ? 'इंस्टॉल्ड' : 'Installed') : (isHindi ? 'ऑफ़लाइन रेडी' : 'Offline Ready')}</span>
             </>
           )}
         </div>
       </div>
 
       <div className="header-right">
+        {/* Language Switcher */}
+        <button
+          type="button"
+          onClick={toggleLanguage}
+          className="header-lang-btn m3-ripple"
+          title={`Switch language / भाषा बदलें (${isHindi ? 'हिंदी' : 'English'})`}
+        >
+          <Languages size={16} />
+          <span>{isHindi ? 'हिंदी' : 'English'}</span>
+        </button>
+
         {/* Settings Button */}
         <button
           type="button"
           onClick={onOpenSettings}
           className="icon-button m3-ripple"
-          title="App Settings & History"
+          title={isHindi ? 'सेटिंग्स और हिस्ट्री' : 'Settings & History'}
           aria-label="Settings"
         >
           <Settings size={20} />
@@ -68,7 +84,7 @@ export default function Header({ onOpenProfile, onOpenSettings }) {
             </div>
           )}
           <span className="profile-name-text">
-            {user.isLoggedIn ? user.name.split(' ')[0] : 'Sign In'}
+            {user.isLoggedIn ? user.name.split(' ')[0] : (isHindi ? 'लॉग इन' : 'Sign In')}
           </span>
         </button>
       </div>

@@ -189,6 +189,27 @@ html, body {
   gap: 10px;
 }
 
+.header-lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-lang-btn:hover {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-color: var(--md-primary);
+}
+
 .icon-button {
   width: 40px;
   height: 40px;
@@ -495,6 +516,31 @@ html, body {
   font-weight: 500;
 }
 
+.items-list-draft {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--md-outline);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.draft-single-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--md-on-surface);
+}
+
+.draft-subtotal-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--md-outline-variant);
+  font-size: 0.86rem;
+}
+
 /* Material Invoice Card */
 .invoice-material-card {
   background-color: var(--md-surface-container);
@@ -756,6 +802,28 @@ html, body {
   color: var(--md-primary);
   display: flex;
   align-items: center;
+}
+
+.lang-quick-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline);
+  background-color: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.lang-quick-toggle:hover {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-color: var(--md-primary);
 }
 
 .search-input {
