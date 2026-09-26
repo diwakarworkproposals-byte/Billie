@@ -2,15 +2,118 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AppContext = createContext(null);
 
-const DEFAULT_USER = {
-  isLoggedIn: true,
-  name: 'Alex Sharma',
-  email: 'alex@apexstudio.io',
-  businessName: 'Apex Studio & Commerce',
-  phone: '+91 98765 43210',
-  address: 'Shop 12, Main Market, New Delhi',
-  taxId: 'GSTIN07AAAAA0000A1Z5'
+export const SUBSCRIPTION_PLANS = {
+  monthly: {
+    id: 'monthly',
+    name: 'Monthly Pro Plan',
+    nameHi: 'मासिक प्रो प्लान (1 महीना)',
+    basePrice: 999,
+    gstRate: 18,
+    gstAmount: 179.82,
+    totalPrice: 1178.82,
+    durationDays: 30,
+    tag: 'Standard Plan',
+    billingCycle: 'Per Month'
+  },
+  six_months: {
+    id: 'six_months',
+    name: '6-Months Super Saver',
+    nameHi: '6 महीने का सुपर सेवर प्लान',
+    basePrice: 4999,
+    gstRate: 18,
+    gstAmount: 899.82,
+    totalPrice: 5898.82,
+    durationDays: 180,
+    tag: 'Best Value (Save ~₹1,074)',
+    billingCycle: 'Per 6 Months'
+  }
 };
+
+export const DEFAULT_ADMIN = {
+  id: 'admin_master',
+  name: 'Billie Super Admin',
+  email: 'admin@billie.io',
+  password: 'admin',
+  role: 'admin',
+  businessName: 'Billie HQ Operations',
+  phone: '+91 99999 00000',
+  address: 'Connaught Place, Central Delhi',
+  taxId: '07BILLIE1234A1Z0'
+};
+
+const INITIAL_USERS = [
+  {
+    id: 'usr_101',
+    name: 'Rajesh Sharma',
+    email: 'rajesh@store.com',
+    password: 'user123',
+    role: 'user',
+    businessName: 'Rajesh Garments & Retail',
+    phone: '+91 98112 23344',
+    address: 'Shop 14, Karol Bagh, New Delhi',
+    taxId: '07AAAAA0000A1Z5',
+    subscription: {
+      planId: 'monthly',
+      planName: 'Monthly Pro (₹999 + 18% GST)',
+      basePrice: 999,
+      gstRate: 18,
+      gstAmount: 179.82,
+      totalPaid: 1178.82,
+      status: 'active', // 'active' | 'expired' | 'suspended'
+      startDate: new Date(Date.now() - 86400000 * 10).toISOString(),
+      expiryDate: new Date(Date.now() + 86400000 * 20).toISOString()
+    },
+    createdAt: new Date(Date.now() - 86400000 * 10).toLocaleDateString()
+  },
+  {
+    id: 'usr_102',
+    name: 'Pooja Verma',
+    email: 'pooja@boutique.in',
+    password: 'user123',
+    role: 'user',
+    businessName: 'Pooja Fashion Boutique',
+    phone: '+91 98991 12233',
+    address: 'Plot 22, Sector 18, Noida',
+    taxId: '09BBBBB1111B2Z6',
+    subscription: {
+      planId: 'six_months',
+      planName: '6-Months Super Saver (₹4,999 + 18% GST)',
+      basePrice: 4999,
+      gstRate: 18,
+      gstAmount: 899.82,
+      totalPaid: 5898.82,
+      status: 'active',
+      startDate: new Date(Date.now() - 86400000 * 45).toISOString(),
+      expiryDate: new Date(Date.now() + 86400000 * 135).toISOString()
+    },
+    createdAt: new Date(Date.now() - 86400000 * 45).toLocaleDateString()
+  },
+  {
+    id: 'usr_103',
+    name: 'Vikas Kumar',
+    email: 'vikas@hardware.com',
+    password: 'user123',
+    role: 'user',
+    businessName: 'Vikas Electricals & Hardware',
+    phone: '+91 97110 55667',
+    address: 'Main Market, Jaipur, Rajasthan',
+    taxId: '08CCCCC2222C3Z7',
+    subscription: {
+      planId: 'monthly',
+      planName: 'Monthly Pro (₹999 + 18% GST)',
+      basePrice: 999,
+      gstRate: 18,
+      gstAmount: 179.82,
+      totalPaid: 1178.82,
+      status: 'expired', // Expired account to demonstrate subscription control
+      startDate: new Date(Date.now() - 86400000 * 40).toISOString(),
+      expiryDate: new Date(Date.now() - 86400000 * 10).toISOString()
+    },
+    createdAt: new Date(Date.now() - 86400000 * 40).toLocaleDateString()
+  }
+];
+
+const DEFAULT_USER = INITIAL_USERS[0];
 
 const DEFAULT_SETTINGS = {
   currency: '₹',
@@ -62,17 +165,27 @@ const DEFAULT_INVENTORY = [
 ];
 
 export function AppProvider({ children }) {
-  // 1. User Authentication & Profile
-  const [user, setUser] = useState(() => {
+  // 1. Registered Users Database (Managed by Admin)
+  const [users, setUsers] = useState(() => {
     try {
-      const saved = localStorage.getItem('billie_user');
-      return saved ? JSON.parse(saved) : DEFAULT_USER;
+      const saved = localStorage.getItem('billie_users_db');
+      return saved ? JSON.parse(saved) : INITIAL_USERS;
     } catch {
-      return DEFAULT_USER;
+      return INITIAL_USERS;
     }
   });
 
-  // 2. App Settings
+  // 2. Active Logged-in User State
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('billie_user');
+      return saved ? JSON.parse(saved) : { ...DEFAULT_USER, isLoggedIn: true };
+    } catch {
+      return { ...DEFAULT_USER, isLoggedIn: true };
+    }
+  });
+
+  // 3. App Settings
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_settings');
@@ -82,7 +195,7 @@ export function AppProvider({ children }) {
     }
   });
 
-  // 3. Saved Invoices History
+  // 4. Saved Invoices History
   const [invoices, setInvoices] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_invoices');
@@ -124,7 +237,7 @@ export function AppProvider({ children }) {
     }
   });
 
-  // 4. Inventory Products State
+  // 5. Inventory Products State
   const [inventory, setInventory] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_inventory');
@@ -134,12 +247,17 @@ export function AppProvider({ children }) {
     }
   });
 
-  // 5. PWA Installation state
+  // 6. PWA Installation & Session state
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isVoiceSessionActive, setIsVoiceSessionActive] = useState(false);
+
+  // Persistence effects
+  useEffect(() => {
+    localStorage.setItem('billie_users_db', JSON.stringify(users));
+  }, [users]);
 
   useEffect(() => {
     localStorage.setItem('billie_user', JSON.stringify(user));
@@ -173,12 +291,10 @@ export function AppProvider({ children }) {
       setIsInstalled(true);
     }
 
-    // Handle beforeinstallprompt
     const handleBeforeInstall = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
-      console.log('[Billie PWA] beforeinstallprompt captured!');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
@@ -187,7 +303,6 @@ export function AppProvider({ children }) {
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
-      console.log('[Billie PWA] App successfully installed!');
     });
 
     return () => {
@@ -212,22 +327,101 @@ export function AppProvider({ children }) {
     return null;
   };
 
-  // Auth actions
-  const login = (email, name = 'Alex Sharma', businessName = 'My Business') => {
-    setUser({
+  // -------------------------------------------------------------
+  // CREDENTIAL AUTHENTICATION & LOGIN (Requirement 1 & 2)
+  // -------------------------------------------------------------
+  const authenticate = (emailOrId, password) => {
+    const cleanId = (emailOrId || '').trim().toLowerCase();
+    const cleanPass = (password || '').trim();
+
+    if (!cleanId || !cleanPass) {
+      return { success: false, error: 'Email/ID aur Password dono likhna zaroori hai.' };
+    }
+
+    // A. Master Admin Check
+    if (
+      (cleanId === 'admin@billie.io' || cleanId === 'admin') &&
+      (cleanPass === 'admin' || cleanPass === 'admin123')
+    ) {
+      const adminSession = {
+        isLoggedIn: true,
+        role: 'admin',
+        id: DEFAULT_ADMIN.id,
+        name: DEFAULT_ADMIN.name,
+        email: DEFAULT_ADMIN.email,
+        businessName: DEFAULT_ADMIN.businessName,
+        phone: DEFAULT_ADMIN.phone,
+        address: DEFAULT_ADMIN.address,
+        taxId: DEFAULT_ADMIN.taxId,
+        subscription: {
+          status: 'active',
+          planName: 'Super Admin Master Access',
+          expiryDate: new Date(Date.now() + 86400000 * 3650).toISOString()
+        }
+      };
+      setUser(adminSession);
+      return { success: true, isAdmin: true, user: adminSession };
+    }
+
+    // B. User Credentials Verification from registered users list
+    const found = users.find(
+      (u) =>
+        u.email.toLowerCase() === cleanId ||
+        (u.id && u.id.toLowerCase() === cleanId) ||
+        (u.phone && u.phone.replace(/[\s+-]/g, '') === cleanId.replace(/[\s+-]/g, ''))
+    );
+
+    if (!found) {
+      return {
+        success: false,
+        error: 'Ye User ID / Email registered nahi hai. Kripya Admin se ID aur Password create karwayen.'
+      };
+    }
+
+    if (found.password !== cleanPass) {
+      return {
+        success: false,
+        error: 'Password galat hai! Kripya sahi password enter karein ya Admin se reset karwayen.'
+      };
+    }
+
+    // C. Subscription Expiration / Suspension check (Requirement 3 & 4)
+    const isSuspended = found.subscription?.status === 'suspended';
+    const isExpired =
+      found.subscription?.status === 'expired' ||
+      new Date(found.subscription?.expiryDate) < new Date();
+
+    const loggedUser = {
       isLoggedIn: true,
-      name,
-      email,
-      businessName,
-      phone: '+91 98765 43210',
-      address: 'Shop 12, Main Market, New Delhi',
-      taxId: 'GSTIN07AAAAA0000A1Z5'
-    });
+      role: 'user',
+      id: found.id,
+      name: found.name,
+      email: found.email,
+      businessName: found.businessName,
+      phone: found.phone,
+      address: found.address,
+      taxId: found.taxId,
+      subscription: {
+        ...found.subscription,
+        status: isSuspended ? 'suspended' : isExpired ? 'expired' : 'active'
+      }
+    };
+
+    setUser(loggedUser);
+
+    return {
+      success: true,
+      isAdmin: false,
+      isExpired,
+      isSuspended,
+      user: loggedUser
+    };
   };
 
   const logout = () => {
     setUser({
       isLoggedIn: false,
+      role: 'guest',
       name: 'Guest User',
       email: '',
       businessName: '',
@@ -238,7 +432,141 @@ export function AppProvider({ children }) {
   };
 
   const updateProfile = (updatedFields) => {
-    setUser((prev) => ({ ...prev, ...updatedFields }));
+    setUser((prev) => {
+      const updated = { ...prev, ...updatedFields };
+      // Also update in users database if user has an id
+      if (prev.id) {
+        setUsers((prevUsers) =>
+          prevUsers.map((u) => (u.id === prev.id ? { ...u, ...updatedFields } : u))
+        );
+      }
+      return updated;
+    });
+  };
+
+  // -------------------------------------------------------------
+  // ADMIN DASHBOARD USER & SUBSCRIPTION MANAGEMENT (Requirement 1, 3, 4)
+  // -------------------------------------------------------------
+  const addUser = ({
+    name,
+    email,
+    password,
+    businessName = '',
+    phone = '',
+    address = '',
+    taxId = '',
+    planId = 'monthly' // 'monthly' (₹999+GST) | 'six_months' (₹4999+GST)
+  }) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      return { success: false, error: 'Is email se user pehle se registered hai.' };
+    }
+
+    const plan = SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.monthly;
+    const now = new Date();
+    const expiry = new Date(now.getTime() + plan.durationDays * 86400000);
+
+    const newUser = {
+      id: `usr_${Date.now()}`,
+      name: name.trim(),
+      email: cleanEmail,
+      password: password.trim() || 'user123',
+      role: 'user',
+      businessName: businessName.trim() || `${name}'s Business`,
+      phone: phone.trim(),
+      address: address.trim(),
+      taxId: taxId.trim(),
+      subscription: {
+        planId: plan.id,
+        planName: `${plan.name} (₹${plan.basePrice} + ${plan.gstRate}% GST)`,
+        basePrice: plan.basePrice,
+        gstRate: plan.gstRate,
+        gstAmount: plan.gstAmount,
+        totalPaid: plan.totalPrice,
+        status: 'active',
+        startDate: now.toISOString(),
+        expiryDate: expiry.toISOString()
+      },
+      createdAt: now.toLocaleDateString()
+    };
+
+    setUsers((prev) => [newUser, ...prev]);
+    return { success: true, user: newUser };
+  };
+
+  const updateUser = (userId, updatedFields) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, ...updatedFields } : u))
+    );
+    // If the currently logged in user is being updated, sync state
+    if (user.id === userId) {
+      setUser((prev) => ({ ...prev, ...updatedFields }));
+    }
+  };
+
+  const deleteUser = (userId) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+    if (user.id === userId) {
+      logout();
+    }
+  };
+
+  // Renew / Extend Subscription
+  const renewSubscription = (userId, planId = 'monthly') => {
+    const plan = SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.monthly;
+
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+
+        const currentExpiry = new Date(u.subscription?.expiryDate || Date.now());
+        const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
+        const newExpiry = new Date(baseDate.getTime() + plan.durationDays * 86400000);
+
+        const updatedSubscription = {
+          planId: plan.id,
+          planName: `${plan.name} (₹${plan.basePrice} + ${plan.gstRate}% GST)`,
+          basePrice: plan.basePrice,
+          gstRate: plan.gstRate,
+          gstAmount: plan.gstAmount,
+          totalPaid: (Number(u.subscription?.totalPaid) || 0) + plan.totalPrice,
+          status: 'active',
+          startDate: new Date().toISOString(),
+          expiryDate: newExpiry.toISOString(),
+          lastRenewedAt: new Date().toLocaleDateString()
+        };
+
+        const updatedUser = { ...u, subscription: updatedSubscription };
+        if (user.id === userId) {
+          setUser((curr) => ({ ...curr, subscription: updatedSubscription }));
+        }
+        return updatedUser;
+      })
+    );
+  };
+
+  // Toggle user status (active, suspended, expired)
+  const toggleUserStatus = (userId, newStatus) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+        const updated = {
+          ...u,
+          subscription: {
+            ...u.subscription,
+            status: newStatus
+          }
+        };
+        if (user.id === userId) {
+          setUser((curr) => ({
+            ...curr,
+            subscription: { ...curr.subscription, status: newStatus }
+          }));
+        }
+        return updated;
+      })
+    );
   };
 
   const updateSettings = (updatedFields) => {
@@ -251,7 +579,6 @@ export function AppProvider({ children }) {
 
   const addInvoice = (invoice) => {
     setInvoices((prev) => [invoice, ...prev]);
-    // Automatically deduct inventory stock for billed items
     if (invoice.items && invoice.items.length > 0) {
       reduceStockForInvoice(invoice.items);
     }
@@ -345,6 +672,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider
       value={{
         user,
+        users,
         settings,
         invoices,
         inventory,
@@ -354,9 +682,14 @@ export function AppProvider({ children }) {
         isVoiceSessionActive,
         setIsVoiceSessionActive,
         installPWA,
-        login,
+        authenticate,
         logout,
         updateProfile,
+        addUser,
+        updateUser,
+        deleteUser,
+        renewSubscription,
+        toggleUserStatus,
         updateSettings,
         setLanguage,
         addInvoice,

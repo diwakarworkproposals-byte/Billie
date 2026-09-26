@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { useApp, SUBSCRIPTION_PLANS } from '../context/AppContext';
 import {
   X,
   User,
@@ -15,13 +15,19 @@ import {
   Wifi,
   Sparkles,
   Smartphone,
-  Package
+  Package,
+  ShieldCheck,
+  Key,
+  AlertTriangle,
+  CreditCard,
+  Calendar,
+  Check
 } from 'lucide-react';
 
-export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
+export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenAdmin }) {
   const {
     user,
-    login,
+    authenticate,
     logout,
     updateProfile,
     isInstallable,
@@ -32,7 +38,9 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
     settings
   } = useApp();
 
-  const [isEditing, setIsEditing] = useState(false);
+  const isHindi = settings.language === 'hi';
+  const currency = settings.currency || '₹';
+
   const [formData, setFormData] = useState({
     name: user.name || '',
     businessName: user.businessName || '',
@@ -42,27 +50,68 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
     taxId: user.taxId || ''
   });
 
+  // Sync formData with user changes
+  useEffect(() => {
+    setFormData({
+      name: user.name || '',
+      businessName: user.businessName || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      address: user.address || '',
+      taxId: user.taxId || ''
+    });
+  }, [user]);
+
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPass, setLoginPass] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authWarning, setAuthWarning] = useState('');
 
   if (!isOpen) return null;
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
     updateProfile(formData);
-    setIsEditing(false);
+    alert(isHindi ? '✓ प्रोफाइल डिटेल्स सेव हो गई हैं!' : '✓ Profile details saved!');
   };
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    if (loginEmail) {
-      login(loginEmail, 'Alex Morgan', 'Apex Studio');
+    setAuthError('');
+    setAuthWarning('');
+
+    const res = authenticate(loginEmail, loginPass);
+    if (!res.success) {
+      setAuthError(res.error);
+      return;
+    }
+
+    if (res.isAdmin) {
+      onClose();
+      if (onOpenAdmin) onOpenAdmin();
+      return;
+    }
+
+    if (res.isExpired) {
+      setAuthWarning(
+        isHindi
+          ? 'चेतावनी: आपका सब्सक्रिप्शन समाप्त हो चुका है! बिलिंग और सेवा जारी रखने के लिए एडमिन से संपर्क करके ₹999/माह या ₹4,999/6 माह प्लान रिन्यू करवाएं।'
+          : 'Warning: Your subscription has expired! Please contact your administrator to renew your plan (₹999/mo or ₹4,999/6mo + 18% GST).'
+      );
     }
   };
 
-  const handleDemoLogin = () => {
-    login('alex@apexstudio.io', 'Alex Morgan', 'Apex Studio & Commerce');
+  const handleQuickDemoLogin = (email, pass) => {
+    setLoginEmail(email);
+    setLoginPass(pass);
+    setAuthError('');
+    setAuthWarning('');
+    const res = authenticate(email, pass);
+    if (res.success && res.isAdmin) {
+      onClose();
+      if (onOpenAdmin) onOpenAdmin();
+    }
   };
 
   const handleInstallClick = async () => {
@@ -72,6 +121,12 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
       alert("To install Billie:\n• Chrome/Edge: Look for the install icon (⊕) in the browser address bar.\n• iOS Safari: Tap Share -> 'Add to Home Screen'.");
     }
   };
+
+  // Subscription calculation
+  const sub = user.subscription;
+  const isSubExpired = sub?.status === 'expired' || (sub?.expiryDate && new Date(sub.expiryDate) < new Date());
+  const expiryDateObj = sub?.expiryDate ? new Date(sub.expiryDate) : null;
+  const daysRemaining = expiryDateObj ? Math.ceil((expiryDateObj - new Date()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
     <div className="modal-backdrop animate-fade-in" onClick={onClose}>
@@ -86,12 +141,12 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
         <div className="dialog-header">
           <div className="dialog-title-group">
             <h2 id="profile-dialog-title" className="dialog-title">
-              {user.isLoggedIn ? 'Business Profile' : 'Sign In to Billie'}
+              {user.isLoggedIn ? (user.role === 'admin' ? '🛡️ Billie Admin Profile' : 'Business Profile') : 'Sign In to Billie'}
             </h2>
             <p className="dialog-subtitle">
               {user.isLoggedIn
-                ? 'Manage your invoice branding and offline PWA settings'
-                : 'Log in to save invoices and sync business details'}
+                ? (user.role === 'admin' ? 'Super Admin Mode • Full Subscription Control' : 'Manage your business details, subscription & offline PWA')
+                : 'Enter your credentials created by the administrator'}
             </p>
           </div>
           <button
@@ -106,68 +161,125 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
 
         {/* Dialog Body */}
         <div className="dialog-body custom-scrollbar">
-          {/* CASE 1: Logged Out -> Login Page */}
+          {/* CASE 1: Logged Out -> Login Page with Credential Authentication */}
           {!user.isLoggedIn ? (
             <div className="login-form-container">
               <div className="login-hero-badge">
                 <Sparkles size={28} className="text-blue-500" />
               </div>
-              <h3 className="login-heading">Welcome Back to Billie</h3>
+              <h3 className="login-heading">
+                {isHindi ? 'Billie में साइन इन करें' : 'Sign In to Billie'}
+              </h3>
               <p className="login-description">
-                Sign in to manage your company details, default currency, and past invoices.
+                {isHindi
+                  ? 'एडमिन द्वारा बनाई गई लॉगिन आईडी (Email) और पासवर्ड से लॉगिन करें।'
+                  : 'Enter your User ID / Email and Password created by the administrator.'}
               </p>
+
+              {authError && (
+                <div className="form-error-alert mb-3 animate-slide-up">
+                  <AlertTriangle size={16} className="flex-shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              {authWarning && (
+                <div className="form-warning-alert mb-3 animate-slide-up">
+                  <AlertTriangle size={16} className="flex-shrink-0" />
+                  <span>{authWarning}</span>
+                </div>
+              )}
 
               <form onSubmit={handleLoginSubmit} className="material-form">
                 <div className="form-group">
-                  <label className="form-label">Email Address</label>
+                  <label className="form-label">{isHindi ? 'लॉगिन आईडी / ईमेल' : 'Login ID / Email Address'}</label>
                   <div className="input-with-icon">
                     <Mail size={18} className="input-icon" />
                     <input
-                      type="email"
+                      type="text"
                       required
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="merchant@business.com"
+                      placeholder="e.g. rajesh@store.com or admin@billie.io"
                       className="m3-text-field"
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Password</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginPass}
-                    onChange={(e) => setLoginPass(e.target.value)}
-                    className="m3-text-field"
-                  />
+                  <label className="form-label">{isHindi ? 'पासवर्ड' : 'Password'}</label>
+                  <div className="input-with-icon">
+                    <Key size={18} className="input-icon" />
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={loginPass}
+                      onChange={(e) => setLoginPass(e.target.value)}
+                      className="m3-text-field"
+                    />
+                  </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="m3-button-filled w-full m3-ripple"
+                  className="m3-button-filled w-full m3-ripple mt-2"
                 >
                   <LogIn size={18} />
-                  <span>Sign In</span>
-                </button>
-
-                <div className="demo-login-divider">
-                  <span>OR</span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  className="m3-button-tonal w-full m3-ripple"
-                >
-                  <Sparkles size={18} />
-                  <span>Quick Demo Sign In (1-Tap)</span>
+                  <span>{isHindi ? 'प्रमाणित करें और साइन इन करें' : 'Authenticate & Sign In'}</span>
                 </button>
               </form>
+
+              {/* 1-Tap Quick Credentials Demo Pills */}
+              <div className="demo-accounts-box mt-4">
+                <span className="demo-accounts-title">
+                  {isHindi ? '⚡ टेस्ट अकाउंट्स (1-क्लिक ऑटो लॉगिन):' : '⚡ Quick Test Credentials (1-Tap):'}
+                </span>
+                <div className="demo-pills-grid">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemoLogin('admin@billie.io', 'admin')}
+                    className="demo-account-pill admin"
+                    title="Super Admin Dashboard with Full Subscription Control"
+                  >
+                    <ShieldCheck size={14} />
+                    <span>👑 Admin (admin@billie.io / admin)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemoLogin('rajesh@store.com', 'user123')}
+                    className="demo-account-pill"
+                    title="Active Monthly Plan User (₹999 + GST)"
+                  >
+                    <User size={14} />
+                    <span>👤 Rajesh (Monthly Plan)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemoLogin('pooja@boutique.in', 'user123')}
+                    className="demo-account-pill featured"
+                    title="Active 6-Months Plan User (₹4,999 + GST)"
+                  >
+                    <Sparkles size={14} />
+                    <span>💎 Pooja (6-Months Plan)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemoLogin('vikas@hardware.com', 'user123')}
+                    className="demo-account-pill expired"
+                    title="Expired Subscription User"
+                  >
+                    <AlertTriangle size={14} />
+                    <span>⚠️ Vikas (Expired Subscription)</span>
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
-            /* CASE 2: Logged In -> Profile Settings & PWA Download */
+            /* CASE 2: Logged In -> Profile Settings, Subscription & Inventory */
             <div className="profile-details-view">
               {/* Profile Avatar Card */}
               <div className="profile-identity-card">
@@ -175,17 +287,141 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
                   <span>{user.name ? user.name.charAt(0).toUpperCase() : 'B'}</span>
                 </div>
                 <div className="profile-identity-text">
-                  <h3 className="profile-user-name">{user.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="profile-user-name">{user.name}</h3>
+                    {user.role === 'admin' ? (
+                      <span className="admin-status-badge">Super Admin</span>
+                    ) : (
+                      <span className={`sub-status-pill ${isSubExpired ? 'expired' : 'active'}`}>
+                        {isSubExpired ? (isHindi ? 'सब्सक्रिप्शन समाप्त' : 'Expired') : (isHindi ? 'सक्रिय प्लान' : 'Active Plan')}
+                      </span>
+                    )}
+                  </div>
                   <span className="profile-business-tag">{user.businessName || 'Business Owner'}</span>
                   <span className="profile-email-sub">{user.email}</span>
                 </div>
               </div>
 
-              {/* Form / Details */}
+              {/* ADMIN SHORTCUT: Open Admin Dashboard */}
+              {user.role === 'admin' && (
+                <div className="admin-quick-portal-banner mt-4">
+                  <div className="flex items-center gap-3">
+                    <div className="admin-icon-pill">
+                      <ShieldCheck size={22} className="text-amber-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                        {isHindi ? 'Billie एडमिन डैशबोर्ड' : 'Billie Super Admin Portal'}
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        {isHindi
+                          ? 'यूजर आईडी/पासवर्ड बनाएं और ₹999/माह व ₹4,999/6 माह सब्सक्रिप्शन मैनेज करें'
+                          : 'Manage users, credentials and subscriptions'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      if (onOpenAdmin) onOpenAdmin();
+                    }}
+                    className="m3-button-filled text-xs py-2 px-3 flex items-center gap-1.5"
+                  >
+                    <ShieldCheck size={15} />
+                    <span>{isHindi ? 'एडमिन पोर्टल खोलें' : 'Open Admin Portal'}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* USER SUBSCRIPTION DETAILS CARD (Requirement 3 & 4) */}
+              {user.role !== 'admin' && (
+                <div className={`user-subscription-card mt-4 ${isSubExpired ? 'expired' : 'active'}`}>
+                  <div className="sub-card-header">
+                    <div className="flex items-center gap-2">
+                      <CreditCard size={18} className={isSubExpired ? 'text-rose-500' : 'text-blue-500'} />
+                      <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                        {isHindi ? 'मेरा सब्सक्रिप्शन प्लान' : 'My Subscription Plan'}
+                      </span>
+                    </div>
+                    <span className={`sub-status-pill ${isSubExpired ? 'expired' : 'active'}`}>
+                      {isSubExpired ? (isHindi ? 'समाप्त (Expired)' : 'Expired') : (isHindi ? 'सक्रिय (Active)' : 'Active')}
+                    </span>
+                  </div>
+
+                  <div className="sub-card-content mt-2">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+                        {sub?.planName || 'Monthly Pro'}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-500">
+                        {expiryDateObj ? `${isHindi ? 'समाप्ति: ' : 'Expires: '}${expiryDateObj.toLocaleDateString()}` : ''}
+                      </span>
+                    </div>
+
+                    <div className="sub-pricing-row mt-1 text-xs text-slate-500">
+                      <span>{currency}{sub?.basePrice || 999} + 18% GST ({currency}{sub?.gstAmount || 179.82})</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">
+                        Total Paid: {currency}{sub?.totalPaid ? Number(sub.totalPaid).toFixed(0) : '1,179'}
+                      </span>
+                    </div>
+
+                    <div className="sub-countdown-bar mt-2">
+                      <span className={`text-xs font-bold ${daysRemaining <= 5 ? (daysRemaining <= 0 ? 'text-rose-600' : 'text-amber-600') : 'text-emerald-600'}`}>
+                        {daysRemaining > 0
+                          ? `⏱️ ${daysRemaining} ${isHindi ? 'दिन बाकी हैं' : 'days remaining'}`
+                          : `⚠️ ${isHindi ? 'सब्सक्रिप्शन समाप्त हो चुका है' : 'Subscription has expired'}`}
+                      </span>
+                    </div>
+
+                    {isSubExpired && (
+                      <div className="sub-expired-notice mt-2">
+                        <span>
+                          {isHindi
+                            ? 'रिन्यू करने के लिए एडमिन से संपर्क करें: ₹999 + GST (1 माह) या ₹4,999 + GST (6 माह)।'
+                            : 'To renew, contact your admin: ₹999+GST (1 mo) or ₹4,999+GST (6 mo).'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Inventory Management Card */}
+              <div className="profile-inventory-card mt-4">
+                <div className="profile-inventory-header">
+                  <div className="profile-inventory-icon-box">
+                    <Package size={22} className="text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="profile-inventory-title">
+                      {isHindi ? '📦 इन्वेंटरी एवं स्टॉक प्रबंधन' : '📦 Inventory & Stock'}
+                    </h4>
+                    <p className="profile-inventory-desc">
+                      {isHindi
+                        ? `${inventory.length} प्रोडक्ट्स उपलब्ध • स्टॉक जांचें और एडिट करें`
+                        : `${inventory.length} products listed • View, restock & edit prices`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      if (onOpenInventory) onOpenInventory();
+                    }}
+                    className="m3-button-tonal text-xs py-2 px-3.5 flex items-center gap-1.5"
+                  >
+                    <Package size={15} />
+                    <span>{isHindi ? 'इन्वेंटरी' : 'Inventory'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Business Profile Details Form */}
               <form onSubmit={handleSaveProfile} className="material-form mt-4">
                 <div className="form-grid-2">
                   <div className="form-group">
-                    <label className="form-label">Full Name</label>
+                    <label className="form-label">{isHindi ? 'पूरा नाम' : 'Full Name'}</label>
                     <div className="input-with-icon">
                       <User size={16} className="input-icon" />
                       <input
@@ -198,7 +434,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Business / Company Name</label>
+                    <label className="form-label">{isHindi ? 'बिज़नेस / दुकान का नाम' : 'Business / Company Name'}</label>
                     <div className="input-with-icon">
                       <Building size={16} className="input-icon" />
                       <input
@@ -213,7 +449,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
 
                 <div className="form-grid-2">
                   <div className="form-group">
-                    <label className="form-label">Business Email</label>
+                    <label className="form-label">{isHindi ? 'ईमेल आईडी' : 'Business Email'}</label>
                     <div className="input-with-icon">
                       <Mail size={16} className="input-icon" />
                       <input
@@ -226,7 +462,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Business Phone</label>
+                    <label className="form-label">{isHindi ? 'फोन नंबर' : 'Business Phone'}</label>
                     <div className="input-with-icon">
                       <Phone size={16} className="input-icon" />
                       <input
@@ -240,28 +476,28 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Business Address (Shown on Invoice)</label>
+                  <label className="form-label">{isHindi ? 'बिज़नेस का पता (बिल पर दिखेगा)' : 'Business Address (Shown on Invoice)'}</label>
                   <div className="input-with-icon">
                     <MapPin size={16} className="input-icon" />
                     <input
                       type="text"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="Street, City, State, ZIP"
+                      placeholder="Shop 12, Main Market, Delhi"
                       className="m3-text-field"
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Tax ID / GSTIN / VAT Number</label>
+                  <label className="form-label">{isHindi ? 'GSTIN / VAT / टैक्स आईडी' : 'Tax ID / GSTIN Number'}</label>
                   <div className="input-with-icon">
                     <FileCheck size={16} className="input-icon" />
                     <input
                       type="text"
                       value={formData.taxId}
                       onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
-                      placeholder="e.g. VAT-12345678"
+                      placeholder="e.g. 07AAAAA0000A1Z5"
                       className="m3-text-field"
                     />
                   </div>
@@ -271,42 +507,12 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
                   type="submit"
                   className="m3-button-filled w-full m3-ripple"
                 >
-                  <span>Save Profile Details</span>
+                  <span>{isHindi ? 'प्रोफाइल विवरण सेव करें' : 'Save Profile Details'}</span>
                 </button>
               </form>
 
-              {/* Inventory Management Card */}
-              <div className="profile-inventory-card mt-5">
-                <div className="profile-inventory-header">
-                  <div className="profile-inventory-icon-box">
-                    <Package size={22} className="text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="profile-inventory-title">
-                      {settings.language === 'hi' ? '📦 इन्वेंटरी एवं स्टॉक प्रबंधन' : '📦 Inventory & Stock'}
-                    </h4>
-                    <p className="profile-inventory-desc">
-                      {settings.language === 'hi'
-                        ? `${inventory.length} प्रोडक्ट्स उपलब्ध • स्टॉक जांचें और एडिट करें`
-                        : `${inventory.length} products listed • View, restock & edit prices`}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      if (onOpenInventory) onOpenInventory();
-                    }}
-                    className="m3-button-tonal text-xs py-2 px-3.5 flex items-center gap-1.5"
-                  >
-                    <Package size={15} />
-                    <span>{settings.language === 'hi' ? 'इन्वेंटरी' : 'Inventory'}</span>
-                  </button>
-                </div>
-              </div>
-
               {/* PWA Download / Offline Mode Card */}
-              <div className="pwa-download-card">
+              <div className="pwa-download-card mt-4">
                 <div className="pwa-card-header">
                   <div className="pwa-icon-box">
                     <Smartphone size={22} className="text-blue-600" />
@@ -347,8 +553,25 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
                 )}
               </div>
 
+              {/* Switch to Admin Portal link if not currently logged in as admin */}
+              {user.role !== 'admin' && (
+                <div className="text-center mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setLoginEmail('admin@billie.io');
+                      setLoginPass('admin');
+                    }}
+                    className="text-xs text-slate-500 hover:text-blue-600 font-semibold"
+                  >
+                    🔑 {isHindi ? 'एडमिन लॉगिन करें (Admin Login)' : 'Switch to Admin Login'}
+                  </button>
+                </div>
+              )}
+
               {/* Logout Button */}
-              <div className="logout-section mt-6">
+              <div className="logout-section mt-5">
                 <button
                   type="button"
                   onClick={() => {
@@ -358,7 +581,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory }) {
                   className="logout-button m3-ripple"
                 >
                   <LogOut size={17} />
-                  <span>Log Out</span>
+                  <span>{isHindi ? 'लॉग आउट (Log Out)' : 'Log Out'}</span>
                 </button>
               </div>
             </div>

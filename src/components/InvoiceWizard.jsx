@@ -10,7 +10,8 @@ import {
   FileText,
   CornerDownLeft,
   PlusCircle,
-  Package
+  Package,
+  ShieldCheck
 } from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
 import StockReportCard from './StockReportCard';
@@ -53,7 +54,8 @@ export default function InvoiceWizard({
   externalQuery,
   onPromptHintChange,
   onResetExternalQuery,
-  onOpenInventory
+  onOpenInventory,
+  onOpenAdmin
 }) {
   const {
     user,
@@ -268,6 +270,23 @@ export default function InvoiceWizard({
     if (['reset', 'cancel', 'band karo', 'radd karo', 'chhodo'].includes(norm)) {
       resetWizard();
       replyBillie(p.cancelled, activeLang);
+      return;
+    }
+
+    // Check admin portal trigger (voice or text)
+    if (
+      ['admin', 'admin portal', 'admin dashboard', 'open admin', 'admin panel', 'एडमिन', 'एडमिन पोर्टल', 'एडमिन डैशबोर्ड', 'subscription', 'manage subscription'].some(
+        (k) => norm === k || norm.includes(k)
+      )
+    ) {
+      if (onOpenAdmin) onOpenAdmin();
+      replyBillie(
+        activeLang === 'hi'
+          ? 'एडमिन डैशबोर्ड खोल दिया गया है। यहाँ से आप नए यूजर क्रेडेंशियल्स (आईडी, पासवर्ड) बना सकते हैं और ₹999/माह या ₹4,999/6 माह सब्सक्रिप्शन मैनेज कर सकते हैं।'
+          : 'Opening Admin Dashboard. You can provision users, create ID/passwords, and manage ₹999/mo or ₹4,999/6mo subscriptions here.',
+        activeLang,
+        () => setIsVoiceSessionActive(false)
+      );
       return;
     }
 
@@ -671,7 +690,18 @@ export default function InvoiceWizard({
                 className="suggestion-chip m3-ripple"
               >
                 <Package size={14} />
-                <span>📋 {lang === 'hi' ? 'इन्वेंटरी लिस्ट' : 'All Inventory'}</span>
+                <span>📋 {lang === 'hi' ? 'इन्वेंटरी' : 'Inventory'}</span>
+              </button>
+            )}
+
+            {onOpenAdmin && (
+              <button
+                type="button"
+                onClick={onOpenAdmin}
+                className="suggestion-chip m3-ripple"
+              >
+                <ShieldCheck size={14} className="text-amber-500" />
+                <span>🛡️ {lang === 'hi' ? 'एडमिन पोर्टल' : 'Admin Portal'}</span>
               </button>
             )}
           </div>

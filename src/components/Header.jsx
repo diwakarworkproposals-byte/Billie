@@ -1,8 +1,8 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, User, Wifi, WifiOff, Sparkles, CheckCircle2, Languages } from 'lucide-react';
+import { Settings, User, Wifi, WifiOff, Sparkles, CheckCircle2, Languages, ShieldCheck } from 'lucide-react';
 
-export default function Header({ onOpenProfile, onOpenSettings }) {
+export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin }) {
   const { user, isOffline, isInstalled, settings, setLanguage } = useApp();
   const isHindi = settings.language === 'hi';
 
@@ -43,6 +43,18 @@ export default function Header({ onOpenProfile, onOpenSettings }) {
       </div>
 
       <div className="header-right">
+        {/* Admin Portal Button */}
+        <button
+          type="button"
+          onClick={onOpenAdmin}
+          className={`header-admin-btn m3-ripple ${user.role === 'admin' ? 'active-admin' : ''}`}
+          title={isHindi ? 'एडमिन पोर्टल: यूजर और ₹999/माह या ₹4,999/6 माह सब्सक्रिप्शन' : 'Admin Portal: Users & Subscriptions'}
+        >
+          <ShieldCheck size={16} className="text-amber-500" />
+          <span>{isHindi ? 'एडमिन' : 'Admin'}</span>
+          {user.role === 'admin' && <span className="admin-dot-indicator" />}
+        </button>
+
         {/* Language Switcher */}
         <button
           type="button"
