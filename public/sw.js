@@ -1,19 +1,21 @@
-const CACHE_NAME = 'billie-cache-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/favicon.svg',
-  '/icon.svg',
-  '/icon-192.png',
-  '/icon-512.png'
-];
+const CACHE_NAME = 'billie-cache-v2';
 
-// Install: Cache critical static assets
+// Install: Cache critical static assets relative to current scope
 self.addEventListener('install', (event) => {
+  const scope = self.registration.scope;
+  const assetsToCache = [
+    scope,
+    `${scope}index.html`,
+    `${scope}manifest.webmanifest`,
+    `${scope}favicon.svg`,
+    `${scope}icon.svg`,
+    `${scope}icon-192.png`,
+    `${scope}icon-512.png`
+  ];
+
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
+      return cache.addAll(assetsToCache).catch((err) => {
         console.warn('[Billie SW] Pre-caching partial warning:', err);
       });
     }).then(() => self.skipWaiting())
@@ -33,12 +35,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network first for navigation with offline fallback, Stale-while-revalidate for assets
+// Fetch: Stale-while-revalidate for assets, Network-first for navigation
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-
-  // Non-GET requests should bypass cache
   if (request.method !== 'GET') return;
+
+  const scope = self.registration.scope;
 
   // For HTML navigation requests
   if (request.mode === 'navigate') {
@@ -55,7 +57,10 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
-          const cachedResponse = await cache.match('/index.html') || await cache.match('/');
+          const cachedResponse = 
+            await cache.match(`${scope}index.html`) || 
+            await cache.match(scope) ||
+            await cache.match(request);
           return cachedResponse || new Response('Offline: Billie is ready offline.', {
             headers: { 'Content-Type': 'text/html' }
           });
@@ -75,10 +80,7 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      }).catch((err) => {
-        // Network failed; return cached response if available
-        return cachedResponse;
-      });
+      }).catch(() => cachedResponse);
 
       return cachedResponse || fetchPromise;
     })
