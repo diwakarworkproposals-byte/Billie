@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="billie-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A73E8"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Background squircle -->
+  <rect x="32" y="32" width="448" height="448" rx="104" fill="url(#billie-grad)" filter="url(#shadow)" />
+
+  <!-- Inner Subtle Glow -->
+  <rect x="34" y="34" width="444" height="444" rx="102" stroke="white" stroke-width="2" stroke-opacity="0.25" fill="none" />
+
+  <!-- Receipt/Invoice Card Graphic -->
+  <g transform="translate(112, 100)">
+    <!-- Invoice Page -->
+    <path d="M40 20 C40 10, 50 0, 60 0 L228 0 C238 0, 248 10, 248 20 L248 280 C248 290, 238 300, 228 300 L60 300 C50 300, 40 290, 40 280 Z" fill="white" fill-opacity="0.95" />
+    
+    <!-- Cutout header badge -->
+    <circle cx="95" cy="55" r="22" fill="#1A73E8" />
+    <text x="95" y="63" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="900" fill="white" text-anchor="middle">B</text>
+
+    <!-- Header line -->
+    <rect x="130" y="44" width="85" height="10" rx="5" fill="#94A3B8" />
+    <rect x="130" y="60" width="55" height="8" rx="4" fill="#CBD5E1" />
+
+    <!-- Separator -->
+    <line x1="65" y1="95" x2="225" y2="95" stroke="#E2E8F0" stroke-width="3" stroke-dasharray="6 4" />
+
+    <!-- Items list lines -->
+    <rect x="65" y="120" width="100" height="12" rx="6" fill="#64748B" />
+    <rect x="185" y="120" width="40" height="12" rx="6" fill="#1A73E8" />
+
+    <rect x="65" y="148" width="80" height="10" rx="5" fill="#94A3B8" />
+    <rect x="185" y="148" width="40" height="10" rx="5" fill="#64748B" />
+
+    <rect x="65" y="172" width="90" height="10" rx="5" fill="#94A3B8" />
+    <rect x="185" y="172" width="40" height="10" rx="5" fill="#64748B" />
+
+    <line x1="65" y1="205" x2="225" y2="205" stroke="#E2E8F0" stroke-width="2" />
+
+    <!-- Subtotal & Total -->
+    <rect x="65" y="222" width="60" height="10" rx="5" fill="#94A3B8" />
+    <rect x="175" y="222" width="50" height="10" rx="5" fill="#64748B" />
+
+    <rect x="65" y="248" width="70" height="16" rx="8" fill="#0F172A" />
+    <rect x="165" y="248" width="60" height="16" rx="8" fill="#10B981" />
+  </g>
+
+  <!-- Voice Soundwave / Sparkle accent in corner -->
+  <g transform="translate(340, 340)">
+    <circle cx="28" cy="28" r="44" fill="#2563EB" filter="url(#shadow)"/>
+    <path d="M28 14 C29 14, 30 15, 30 17 L30 39 C30 40, 29 41, 28 41 C27 41, 26 40, 26 39 L26 17 C26 15, 27 14, 28 14 Z" fill="white" />
+    <path d="M18 20 C19 20, 20 21, 20 22 L20 34 C20 35, 19 36, 18 36 C17 36, 16 35, 16 34 L16 22 C16 21, 17 20, 18 20 Z" fill="white" fill-opacity="0.8" />
+    <path d="M38 20 C39 20, 40 21, 40 22 L40 34 C40 35, 39 36, 38 36 C37 36, 36 35, 36 34 L36 22 C36 21, 37 20, 38 20 Z" fill="white" fill-opacity="0.8" />
+  </g>
+</svg>
