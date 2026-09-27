@@ -54,7 +54,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           ) {
             startListening();
           }
-        }, 300);
+        }, 200);
         return () => clearTimeout(restartTimer);
       }
     }
@@ -66,7 +66,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
       if (isVoiceSessionActive) {
         setTimeout(() => {
           startListening();
-        }, 250);
+        }, 200);
       }
     };
 
@@ -75,6 +75,25 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
       window.removeEventListener('billie-tts-end', handleBillieSpeechEnd);
     };
   }, [isVoiceSessionActive, startListening]);
+
+  // Continuous listening watchdog: ensures microphone is immediately reactivated whenever it stops,
+  // unless Billie is speaking TTS or user manually paused.
+  useEffect(() => {
+    if (!isVoiceSessionActive) return;
+
+    const watchdog = setInterval(() => {
+      if (
+        isVoiceSessionActive &&
+        !isListening &&
+        typeof window !== 'undefined' &&
+        !window.__BILLIE_TTS_SPEAKING
+      ) {
+        startListening();
+      }
+    }, 400);
+
+    return () => clearInterval(watchdog);
+  }, [isVoiceSessionActive, isListening, startListening]);
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();

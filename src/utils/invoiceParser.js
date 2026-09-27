@@ -342,6 +342,48 @@ export function parseOneShotInvoice(text = '') {
   return result;
 }
 
+// Direct voice command to edit or adjust stock:
+// e.g. "T-shirt ka stock 20 kar do", "Jeans me 5 add karo", "Shirt 15 piece kar do", "set Jeans to 30"
+export function parseStockUpdateCommand(text = '', inventory = []) {
+  if (!text || !inventory || inventory.length === 0) return null;
+  const norm = text.toLowerCase().trim();
+
+  // Check if text has editing indicators
+  const hasEditVerb = [
+    'kar do', 'kardo', 'kar de', 'set karo', 'bana do', 'update karo',
+    'badha do', 'add karo', 'jod do', 'plus karo', 'badhao', 'set stock', 'update stock', 'change to'
+  ].some((v) => norm.includes(v));
+
+  if (!hasEditVerb) return null;
+
+  const isAddition = ['add', 'jod', 'plus', 'badha'].some((v) => norm.includes(v));
+
+  // Extract quantity from text
+  const qty = extractNumber(norm, null);
+  if (qty === null || qty <= 0) return null;
+
+  // Match against known inventory items
+  let matchedItem = null;
+  for (const item of inventory) {
+    const itemName = item.name.toLowerCase();
+    const itemWords = itemName.split(/\s+/);
+    if (norm.includes(itemName) || itemWords.some((w) => w.length > 3 && norm.includes(w))) {
+      matchedItem = item;
+      break;
+    }
+  }
+
+  if (matchedItem) {
+    return {
+      product: matchedItem,
+      quantity: qty,
+      isAddition
+    };
+  }
+
+  return null;
+}
+
 // Multilingual Prompt Templates
 export const PROMPTS = {
   hi: {
@@ -364,8 +406,9 @@ export const PROMPTS = {
     stock_ask_price: (product) => `"${product}" ka selling price / rate kitna rakhna hai? (ya purana rate continue karein)`,
     stock_ask_more: "Aur kisi product ka stock add karna hai? ('haan' ya 'nahi' bolein)",
     stock_added: (product, qty, total) => `✓ ${product} ka ${qty} piece stock add ho gaya! Ab total stock: ${total} piece hai.`,
-    stock_report_all: (count) => `Ye raha aapka stock report! Total ${count} products inventory me hain.`,
-    stock_report_single: (product, qty) => `"${product}" ka stock abhi ${qty} piece available hai.`,
+    stock_updated: (product, newQty) => `✓ ${product} का स्टॉक अब ${newQty} पीस अपडेट हो गया है!`,
+    stock_report_all: (count) => `Ye raha aapka stock report! Total ${count} products inventory me hain. Kisi product ka naam bolkar stock dekh sakte hain ya stock badha sakte hain.`,
+    stock_report_single: (product, qty) => `"${product}" ka stock abhi ${qty} piece available hai. Stock badhane ke liye 'stock add karo' ya quantity bol sakte hain.`,
 
     hints: {
       idle: "Bolein: 'bill banao', 'stock check karo', ya 'stock add karo'...",
@@ -400,8 +443,9 @@ export const PROMPTS = {
     stock_ask_price: (product) => `What is the selling price per unit for "${product}"?`,
     stock_ask_more: "Would you like to restock another product? (say 'yes' or 'no')",
     stock_added: (product, qty, total) => `✓ Added ${qty} units of ${product}. Total stock is now ${total}.`,
-    stock_report_all: (count) => `Here is your stock report! You have ${count} products in inventory.`,
-    stock_report_single: (product, qty) => `"${product}" currently has ${qty} units in stock.`,
+    stock_updated: (product, newQty) => `✓ Updated stock of ${product} to ${newQty} units!`,
+    stock_report_all: (count) => `Here is your stock report! You have ${count} products in inventory. You can say any product name to view or update stock.`,
+    stock_report_single: (product, qty) => `"${product}" currently has ${qty} units in stock. Say 'add stock' or a quantity to update.`,
 
     hints: {
       idle: "Ask Billie: 'generate invoice', 'check stock', or 'add stock'...",

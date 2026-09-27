@@ -25,6 +25,7 @@ import {
   isReportingIntent,
   detectReportType,
   extractProductFromStockQuery,
+  parseStockUpdateCommand,
   detectLanguage,
   isAffirmative,
   isNegative,
@@ -71,7 +72,8 @@ export default function InvoiceWizard({
     setLanguage,
     isVoiceSessionActive,
     setIsVoiceSessionActive,
-    addOrUpdateStock
+    addOrUpdateStock,
+    updateProduct
   } = useApp();
 
   // Active language
@@ -184,8 +186,12 @@ export default function InvoiceWizard({
     ]);
     if (settings.voiceFeedback) {
       speakText(text, targetLang, onEndCallback);
-    } else if (onEndCallback) {
-      onEndCallback();
+    } else {
+      if (onEndCallback) onEndCallback();
+      // Even if TTS audio is muted, signal speech end so hands-free mic opens automatically
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('billie-tts-end'));
+      }, 250);
     }
   };
 
@@ -275,8 +281,9 @@ export default function InvoiceWizard({
 
     // Check reset / cancel
     const norm = trimmed.toLowerCase();
-    if (['reset', 'cancel', 'band karo', 'radd karo', 'chhodo'].includes(norm)) {
+    if (['reset', 'cancel', 'band karo', 'radd karo', 'chhodo', 'stop', 'chup', 'bas karo'].includes(norm)) {
       resetWizard();
+      setIsVoiceSessionActive(false);
       replyBillie(p.cancelled, activeLang);
       return;
     }
@@ -325,10 +332,25 @@ export default function InvoiceWizard({
       }
 
       setStep(STEPS.IDLE);
-      // Turn off hands-free voice once report is delivered
-      replyBillie(replyText, activeLang, () => {
-        setIsVoiceSessionActive(false);
-      });
+      // Hands-free continuous listening: Keep mic open so user can ask next query!
+      setIsVoiceSessionActive(true);
+      replyBillie(replyText, activeLang);
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // DIRECT STOCK EDIT BY VOICE: e.g. "Jeans ka stock 20 kar do"
+    // -------------------------------------------------------------
+    const stockUpdateCmd = parseStockUpdateCommand(trimmed, inventory);
+    if (stockUpdateCmd) {
+      const { product, quantity, isAddition } = stockUpdateCmd;
+      const newQty = isAddition ? (product.quantity + quantity) : quantity;
+      updateProduct(product.id, { quantity: newQty });
+      setActiveStockReport({ filteredProduct: product.name });
+      setStep(STEPS.IDLE);
+      setIsVoiceSessionActive(true);
+      const msg = p.stock_updated(product.name, newQty);
+      replyBillie(msg, activeLang);
       return;
     }
 
@@ -351,21 +373,21 @@ export default function InvoiceWizard({
               ? 'Here is your Supplier Purchase & Accounting Ledger report. You can switch between Sales and Purchase from the dropdown.'
               : 'Here is your Daily Sales & Net Profit report. You can switch between Sales and Purchase from the dropdown.');
 
-      replyBillie(replyText, activeLang, () => {
-        setIsVoiceSessionActive(false);
-      });
+      setIsVoiceSessionActive(true);
+      replyBillie(replyText, activeLang);
       return;
     }
 
     // -------------------------------------------------------------
     // FLOW 1: "stock add karo" or "add stock" -> Conversational Add
     // -------------------------------------------------------------
-    if (isAddStockIntent(trimmed) && step === STEPS.IDLE) {
+    if (isAddStockIntent(trimmed) && (step === STEPS.IDLE || step === STEPS.COMPLETED)) {
       setFinalInvoice(null);
       setActiveReporting(null);
       draftStockRef.current = { name: '', quantity: 1, price: 0 };
       setDraftStockItem({ name: '', quantity: 1, price: 0 });
       setStep(STEPS.STOCK_ASK_PRODUCT);
+      setIsVoiceSessionActive(true);
       replyBillie(p.stock_ask_product, activeLang);
       return;
     }
@@ -403,6 +425,7 @@ export default function InvoiceWizard({
         setCurrentItem({ name: '', quantity: 1, price: 0 });
         setFinalInvoice(null);
         setActiveStockReport(null);
+        setIsVoiceSessionActive(true);
 
         if (oneShot.customerName) {
           setStep(STEPS.ASK_PRODUCT);
@@ -590,11 +613,26 @@ export default function InvoiceWizard({
       }
 
       case STEPS.STOCK_ASK_MORE: {
+        if (isInvoiceIntent(trimmed)) {
+          resetWizard();
+          setStep(STEPS.ASK_CUSTOMER);
+          setIsVoiceSessionActive(true);
+          replyBillie(p.ask_customer, activeLang);
+          break;
+        }
+        if (isCheckStockIntent(trimmed)) {
+          setStep(STEPS.IDLE);
+          setIsVoiceSessionActive(true);
+          setActiveStockReport({ filteredProduct: '' });
+          replyBillie(p.stock_report_all(inventory.length), activeLang);
+          break;
+        }
         if (isAffirmative(trimmed)) {
           // Add another stock item
           draftStockRef.current = { name: '', quantity: 1, price: 0 };
           setDraftStockItem({ name: '', quantity: 1, price: 0 });
           setStep(STEPS.STOCK_ASK_PRODUCT);
+          setIsVoiceSessionActive(true);
           replyBillie(p.stock_ask_product, activeLang);
         } else if (isNegative(trimmed)) {
           // Finished adding stock
@@ -611,8 +649,10 @@ export default function InvoiceWizard({
             draftStockRef.current = { name: trimmed, quantity: 1, price: 0 };
             setDraftStockItem({ name: trimmed, quantity: 1, price: 0 });
             setStep(STEPS.STOCK_ASK_QUANTITY);
+            setIsVoiceSessionActive(true);
             replyBillie(p.stock_ask_quantity(trimmed), activeLang);
           } else {
+            setIsVoiceSessionActive(true);
             replyBillie(p.stock_ask_more, activeLang);
           }
         }
@@ -640,10 +680,10 @@ export default function InvoiceWizard({
     setCurrentItem({ name: '', quantity: 1, price: 0 });
     draftStockRef.current = { name: '', quantity: 1, price: 0 };
     setDraftStockItem({ name: '', quantity: 1, price: 0 });
-    setIsVoiceSessionActive(false);
   };
 
   const triggerChip = (text) => {
+    setIsVoiceSessionActive(true);
     handleUserMessage(text);
   };
 
@@ -731,9 +771,8 @@ export default function InvoiceWizard({
             <button
               type="button"
               onClick={() => {
-                setActiveReporting({ mode: 'sales' });
-                setActiveStockReport(null);
-                setFinalInvoice(null);
+                setIsVoiceSessionActive(true);
+                handleUserMessage('sales report');
               }}
               className="suggestion-chip active-report-chip m3-ripple"
             >
@@ -925,7 +964,10 @@ export default function InvoiceWizard({
             <StockReportCard
               filteredProduct={activeStockReport.filteredProduct}
               onClose={() => setActiveStockReport(null)}
-              onAddStockClick={() => handleUserMessage('stock add karo')}
+              onAddStockClick={() => {
+                setIsVoiceSessionActive(true);
+                handleUserMessage('stock add karo');
+              }}
             />
           </div>
         )}
