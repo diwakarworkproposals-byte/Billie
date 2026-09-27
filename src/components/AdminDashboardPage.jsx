@@ -7,7 +7,6 @@ import {
   Calendar,
   AlertTriangle,
   CheckCircle,
-  Plus,
   Search,
   Key,
   Eye,
@@ -22,13 +21,11 @@ import {
   Sparkles,
   Check,
   Clock,
-  DollarSign,
   Lock,
   UserCheck,
   ArrowLeft,
   Store,
   LogOut,
-  ChevronRight,
   TrendingUp,
   UserPlus,
   X,
@@ -79,7 +76,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
   const [editShowPass, setEditShowPass] = useState(false);
 
   const isHindi = settings.language === 'hi';
-  const currency = '₹'; // Billie's subscription is in INR
+  const currency = '₹';
   const isAuthorizedAdmin = user.isLoggedIn && user.role === 'admin';
 
   const handleAdminGateLogin = (e) => {
@@ -243,7 +240,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
     return matchesSearch && matchesStatus && matchesPlan;
   });
 
-  // Analytics Metrics
+  // Metrics
   const totalUsersCount = users.length;
   const activeSubsCount = users.filter((u) => {
     const isExp =
@@ -265,9 +262,8 @@ export default function AdminDashboardPage({ onBackToStore }) {
             className="admin-back-btn m3-ripple"
             title={isHindi ? 'Billie स्टोर ऐप पर वापस जाएं' : 'Back to Billie Store'}
           >
-            <ArrowLeft size={17} />
-            <span className="hidden sm:inline">{isHindi ? 'स्टोर ऐप पर वापस' : 'Back to App'}</span>
-            <span className="sm:hidden">{isHindi ? 'वापस' : 'Back'}</span>
+            <ArrowLeft size={16} />
+            <span className="back-btn-text">{isHindi ? 'वापस' : 'Back'}</span>
           </button>
 
           <div className="admin-brand-cluster">
@@ -275,15 +271,10 @@ export default function AdminDashboardPage({ onBackToStore }) {
               <ShieldCheck size={20} className="text-amber-500" />
             </div>
             <div className="admin-brand-info">
-              <div className="flex items-center gap-2">
-                <h1 className="admin-brand-title">Billie Admin</h1>
+              <div className="admin-brand-title-wrap">
+                <span className="admin-brand-title">Billie Admin</span>
                 <span className="admin-badge-super">Diwakar Edition</span>
               </div>
-              <p className="admin-brand-desc hidden md:block">
-                {isHindi
-                  ? 'यूजर क्रेडेंशियल्स प्रोविजनिंग एवं ₹999/माह व ₹4,999/6 माह सब्सक्रिप्शन प्रबंधन'
-                  : 'User Credentials Provisioning & ₹999/mo or ₹4,999/6mo Subscription Engine'}
-              </p>
             </div>
           </div>
         </div>
@@ -294,9 +285,9 @@ export default function AdminDashboardPage({ onBackToStore }) {
               <div className="admin-avatar-small">
                 <span>D</span>
               </div>
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-100">Diwakar</span>
-                <span className="text-[10px] text-amber-600 font-semibold uppercase">Super Admin</span>
+              <div className="admin-user-info-text">
+                <span className="admin-user-name">Diwakar</span>
+                <span className="admin-user-role">Super Admin</span>
               </div>
             </div>
           )}
@@ -311,7 +302,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
             title="Log Out"
           >
             <LogOut size={15} />
-            <span className="hidden sm:inline">{isHindi ? 'लॉग आउट' : 'Log Out'}</span>
+            <span className="logout-btn-text">{isHindi ? 'लॉग आउट' : 'Log Out'}</span>
           </button>
         </div>
       </header>
@@ -336,7 +327,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
 
               {adminAuthError && (
                 <div className="form-error-alert mb-4 w-full animate-slide-up">
-                  <AlertTriangle size={16} className="flex-shrink-0" />
+                  <AlertTriangle size={16} />
                   <span>{adminAuthError}</span>
                 </div>
               )}
@@ -374,20 +365,21 @@ export default function AdminDashboardPage({ onBackToStore }) {
 
                 <button
                   type="submit"
-                  className="m3-button-filled w-full mt-4 flex items-center justify-center gap-2 py-3"
+                  className="m3-button-filled w-full mt-4"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
                 >
                   <ShieldCheck size={18} />
                   <span>{isHindi ? 'एडमिन पोर्टल अनलॉक करें' : 'Unlock Super Admin Portal'}</span>
                 </button>
               </form>
 
-              <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800 text-center">
+              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--md-outline-variant)' }}>
                 <button
                   type="button"
                   onClick={onBackToStore}
-                  className="text-xs text-slate-500 hover:text-blue-600 font-semibold"
+                  style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
                 >
-                  {isHindi ? '← वापस Billie बिलिंग स्टोर पर लौटें' : '← Return to Billie Billing App'}
+                  {isHindi ? '← वापस Billie स्टोर पर लौटें' : '← Return to Billie Billing App'}
                 </button>
               </div>
             </div>
@@ -398,7 +390,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
             {/* Top Stat Metrics Grid */}
             <div className="admin-metrics-row">
               <div className="admin-metric-card">
-                <div className="metric-icon-box bg-blue-100 dark:bg-blue-950/50 text-blue-600">
+                <div className="metric-icon-box users">
                   <Users size={22} />
                 </div>
                 <div className="metric-text-box">
@@ -408,48 +400,48 @@ export default function AdminDashboardPage({ onBackToStore }) {
               </div>
 
               <div className="admin-metric-card">
-                <div className="metric-icon-box bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600">
+                <div className="metric-icon-box active">
                   <CheckCircle size={22} />
                 </div>
                 <div className="metric-text-box">
                   <span className="metric-label">{isHindi ? 'सक्रिय प्लान' : 'Active'}</span>
-                  <span className="metric-number text-emerald-600">{activeSubsCount}</span>
+                  <span className="metric-number text-emerald">{activeSubsCount}</span>
                 </div>
               </div>
 
               <div className="admin-metric-card">
-                <div className="metric-icon-box bg-rose-100 dark:bg-rose-950/50 text-rose-600">
+                <div className="metric-icon-box expired">
                   <AlertTriangle size={22} />
                 </div>
                 <div className="metric-text-box">
                   <span className="metric-label">{isHindi ? 'समाप्त' : 'Expired'}</span>
-                  <span className="metric-number text-rose-600">{expiredSubsCount}</span>
+                  <span className="metric-number text-rose">{expiredSubsCount}</span>
                 </div>
               </div>
 
               <div className="admin-metric-card">
-                <div className="metric-icon-box bg-amber-100 dark:bg-amber-950/50 text-amber-600">
-                  <DollarSign size={22} />
+                <div className="metric-icon-box revenue">
+                  <TrendingUp size={22} />
                 </div>
                 <div className="metric-text-box">
                   <span className="metric-label">{isHindi ? 'कुल रेवेन्यू' : 'Gross Revenue'}</span>
-                  <span className="metric-number text-blue-600">
+                  <span className="metric-number text-blue">
                     {currency}{totalGrossRevenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Official Subscription Plans Banner */}
+            {/* Official Subscription Plans Banner (Material 3 Cards) */}
             <div className="admin-plans-horizontal-card">
               <div className="plans-horizontal-header">
-                <div className="flex items-center gap-2">
+                <div className="plans-header-left">
                   <CreditCard size={18} className="text-blue-500" />
-                  <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                  <h3 className="plans-title-text">
                     {isHindi ? 'आधिकारिक Billie सब्सक्रिप्शन पैकेज (18% GST सहित)' : 'Official Billie Subscription Packages (Inclusive of 18% GST)'}
                   </h3>
                 </div>
-                <span className="text-xs text-slate-400">
+                <span className="plans-subtitle-text">
                   {isHindi ? 'हर नए यूजर को इन दोनों में से एक प्लान असाइन किया जाता है' : 'Assign either plan to newly provisioned users'}
                 </span>
               </div>
@@ -457,35 +449,35 @@ export default function AdminDashboardPage({ onBackToStore }) {
               <div className="plans-horizontal-grid">
                 <div className="plan-detail-card">
                   <div className="plan-header-row">
-                    <span className="plan-title font-extrabold text-sm text-slate-800 dark:text-slate-100">
-                      Monthly Pro Plan
-                    </span>
-                    <span className="plan-duration-badge">30 Days Validity</span>
+                    <span className="plan-title">Monthly Pro Plan</span>
+                    <span className="plan-duration-badge">30 {isHindi ? 'दिन वैधता' : 'Days'}</span>
                   </div>
-                  <div className="plan-pricing-line mt-1">
-                    <span className="text-2xl font-black text-slate-900 dark:text-slate-50">{currency}999</span>
-                    <span className="text-xs text-slate-500 font-semibold"> + 18% GST ({currency}179.82)</span>
+                  <div className="plan-pricing-line">
+                    <span className="plan-main-price">{currency}999</span>
+                    <span className="plan-gst-text"> + 18% GST ({currency}179.82)</span>
                   </div>
-                  <div className="plan-total-highlight text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">
-                    = {currency}1,178.82 Total Billed / Month
+                  <div className="plan-total-highlight">
+                    = {currency}1,178.82 {isHindi ? 'कुल देय / माह' : 'Total Billed / Month'}
                   </div>
                 </div>
 
                 <div className="plan-detail-card featured-saver">
                   <div className="plan-header-row">
-                    <span className="plan-title font-extrabold text-sm text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                      <Sparkles size={15} />
-                      6-Months Super Saver
+                    <span className="plan-title flex-title">
+                      <Sparkles size={14} />
+                      <span>6-Months Super Saver</span>
                     </span>
-                    <span className="plan-duration-badge saver">180 Days Validity</span>
+                    <div className="badges-group">
+                      <span className="save-pill">{isHindi ? 'बचत' : 'Save'} {currency}1,074</span>
+                      <span className="plan-duration-badge saver">180 {isHindi ? 'दिन वैधता' : 'Days'}</span>
+                    </div>
                   </div>
-                  <div className="plan-pricing-line mt-1">
-                    <span className="text-2xl font-black text-blue-600">{currency}4,999</span>
-                    <span className="text-xs text-slate-500 font-semibold"> + 18% GST ({currency}899.82)</span>
+                  <div className="plan-pricing-line">
+                    <span className="plan-main-price text-blue">{currency}4,999</span>
+                    <span className="plan-gst-text"> + 18% GST ({currency}899.82)</span>
                   </div>
-                  <div className="plan-total-highlight text-xs font-bold text-blue-800 dark:text-blue-200 mt-1">
-                    = {currency}5,898.82 Total Billed / 6 Months
-                    <span className="save-pill ml-2">{isHindi ? 'बचत' : 'Save'} {currency}1,074</span>
+                  <div className="plan-total-highlight text-blue">
+                    = {currency}5,898.82 {isHindi ? 'कुल देय / 6 माह' : 'Total Billed / 6 Months'}
                   </div>
                 </div>
               </div>
@@ -496,27 +488,25 @@ export default function AdminDashboardPage({ onBackToStore }) {
               {/* Section Header & Search / Add Action Bar */}
               <div className="user-list-header-bar">
                 <div className="user-list-heading-group">
-                  <div className="flex items-center gap-2.5">
-                    <div className="user-icon-badge">
-                      <Users size={22} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <h2 className="user-list-title">
-                        {isHindi ? 'यूजर अकाउंट्स एवं सब्सक्रिप्शन लिस्ट' : 'User Accounts & Subscription Registry'}
-                      </h2>
-                      <p className="user-list-subtitle">
-                        {isHindi
-                          ? `कुल ${users.length} यूजर्स पंजीकृत हैं। यहाँ से क्रेडेंशियल्स देखें/कॉपी करें और प्लान मैनेज करें।`
-                          : `Manage all ${users.length} registered users. View/copy credentials and renew subscriptions.`}
-                      </p>
-                    </div>
+                  <div className="user-icon-badge">
+                    <Users size={22} />
+                  </div>
+                  <div>
+                    <h2 className="user-list-title">
+                      {isHindi ? 'यूजर अकाउंट्स एवं सब्सक्रिप्शन लिस्ट' : 'User Accounts & Subscription Registry'}
+                    </h2>
+                    <p className="user-list-subtitle">
+                      {isHindi
+                        ? `कुल ${users.length} यूजर्स पंजीकृत हैं। यहाँ से क्रेडेंशियल्स देखें/कॉपी करें और प्लान मैनेज करें।`
+                        : `Manage all ${users.length} registered users. View/copy credentials and renew subscriptions.`}
+                    </p>
                   </div>
                 </div>
 
                 {/* Filter and Add Controls Toolbar */}
                 <div className="user-list-actions-bar">
                   <div className="user-search-input-box">
-                    <Search size={16} className="text-slate-400 flex-shrink-0" />
+                    <Search size={16} className="search-icon" />
                     <input
                       type="text"
                       placeholder={isHindi ? 'नाम, ईमेल, दुकान या फोन से खोजें...' : 'Search by name, email, store or phone...'}
@@ -528,14 +518,14 @@ export default function AdminDashboardPage({ onBackToStore }) {
                       <button
                         type="button"
                         onClick={() => setSearchQuery('')}
-                        className="text-slate-400 hover:text-slate-600"
+                        className="search-clear-btn"
                       >
-                        <X size={15} />
+                        <X size={14} />
                       </button>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="admin-filters-row">
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
@@ -558,11 +548,11 @@ export default function AdminDashboardPage({ onBackToStore }) {
                     </select>
 
                     {/* View Switcher (Cards vs Table on wide screens) */}
-                    <div className="hidden md:flex items-center p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="admin-view-toggle">
                       <button
                         type="button"
                         onClick={() => setViewMode('cards')}
-                        className={`p-1.5 rounded-md transition-all ${viewMode === 'cards' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-400'}`}
+                        className={`view-toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
                         title="Card View"
                       >
                         <LayoutGrid size={15} />
@@ -570,7 +560,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                       <button
                         type="button"
                         onClick={() => setViewMode('table')}
-                        className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-400'}`}
+                        className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
                         title="Table View"
                       >
                         <TableIcon size={15} />
@@ -593,16 +583,16 @@ export default function AdminDashboardPage({ onBackToStore }) {
               {isAddFormOpen && (
                 <form onSubmit={handleCreateUser} className="admin-add-user-full-card animate-slide-up">
                   <div className="form-card-header">
-                    <div className="flex items-center gap-2">
+                    <div className="form-card-title-group">
                       <Sparkles size={18} className="text-amber-500" />
-                      <h4 className="font-bold text-base text-slate-900 dark:text-slate-100">
+                      <h4 className="form-card-title">
                         {isHindi ? 'नया यूजर पंजीकृत करें और आईडी/पासवर्ड बनाएं' : 'Create New User & Provision Credentials'}
                       </h4>
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsAddFormOpen(false)}
-                      className="text-slate-400 hover:text-slate-600"
+                      className="dialog-close-btn"
                     >
                       <X size={18} />
                     </button>
@@ -675,12 +665,12 @@ export default function AdminDashboardPage({ onBackToStore }) {
                     </div>
 
                     <div className="form-group">
-                      <div className="flex items-center justify-between">
+                      <div className="form-label-row">
                         <label className="form-label">{isHindi ? 'लॉगिन पासवर्ड *' : 'Login Password *'}</label>
                         <button
                           type="button"
                           onClick={generateRandomPassword}
-                          className="text-xs text-blue-600 hover:underline font-bold"
+                          className="text-action-link"
                         >
                           {isHindi ? '🎲 ऑटो-जनरेट' : 'Auto-Generate'}
                         </button>
@@ -726,17 +716,18 @@ export default function AdminDashboardPage({ onBackToStore }) {
                     />
                   </div>
 
-                  <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <div className="form-actions-footer">
                     <button
                       type="button"
                       onClick={() => setIsAddFormOpen(false)}
-                      className="m3-button-tonal text-xs py-2 px-4"
+                      className="m3-button-tonal"
                     >
                       {isHindi ? 'रद्द करें' : 'Cancel'}
                     </button>
                     <button
                       type="submit"
-                      className="m3-button-filled text-xs py-2 px-5 flex items-center gap-1.5"
+                      className="m3-button-filled"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <CheckCircle size={16} />
                       <span>{isHindi ? 'यूजर बनाएं और एक्टिवेट करें' : 'Create User & Activate Plan'}</span>
@@ -747,12 +738,12 @@ export default function AdminDashboardPage({ onBackToStore }) {
 
               {/* EMPTY STATE */}
               {filteredUsers.length === 0 ? (
-                <div className="text-center py-16 text-slate-500">
-                  <Users size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-3" />
-                  <h4 className="text-base font-bold text-slate-700 dark:text-slate-300">
+                <div className="admin-empty-state">
+                  <Users size={48} className="empty-icon" />
+                  <h4 className="empty-title">
                     {isHindi ? 'कोई यूजर नहीं मिला' : 'No matching users found'}
                   </h4>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="empty-desc">
                     {isHindi
                       ? 'नया यूजर जोड़ने के लिए ऊपर दिए गए "नया यूजर जोड़ें" बटन का उपयोग करें।'
                       : 'Click "Add New User" above to create an account.'}
@@ -760,9 +751,9 @@ export default function AdminDashboardPage({ onBackToStore }) {
                 </div>
               ) : (
                 <>
-                  {/* VIEW A: MATERIAL 3 CARDS VIEW (DEFAULT ON MOBILE & TABLET, NO HORIZONTAL OVERFLOW!) */}
-                  {(viewMode === 'cards' || window.innerWidth < 900) && (
-                    <div className="m3-admin-user-cards-grid mt-4">
+                  {/* VIEW A: MATERIAL 3 USER CARDS (100% RESPONSIVE ON ALL MOBILES & TABLETS) */}
+                  {viewMode === 'cards' && (
+                    <div className="m3-admin-user-cards-grid">
                       {filteredUsers.map((u) => {
                         const isVisible = visiblePasswords[u.id];
                         const isExpired =
@@ -779,31 +770,29 @@ export default function AdminDashboardPage({ onBackToStore }) {
                             className={`m3-admin-user-card ${isExpired ? 'expired-border' : isSuspended ? 'suspended-border' : 'active-border'}`}
                           >
                             {/* Card Header: Avatar, Name, Firm, Role & Status Badge */}
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-center gap-3 min-w-0">
+                            <div className="card-top-row">
+                              <div className="user-profile-summary">
                                 <div className="admin-user-avatar-m3">
                                   <span>{u.name ? u.name.charAt(0).toUpperCase() : 'U'}</span>
                                 </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100 truncate">
-                                      {u.name}
-                                    </h4>
+                                <div className="user-names-box">
+                                  <div className="name-badge-row">
+                                    <h4 className="user-title-name">{u.name}</h4>
                                     {u.role === 'admin' ? (
                                       <span className="admin-pill-tag">Admin</span>
                                     ) : (
                                       <span className="user-pill-tag">User</span>
                                     )}
                                   </div>
-                                  <p className="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1 mt-0.5 truncate">
-                                    <Building size={12} className="text-amber-500 flex-shrink-0" />
+                                  <p className="store-name-text">
+                                    <Building size={12} className="text-amber-500" />
                                     <span>{u.businessName || 'Business Owner'}</span>
                                   </p>
                                 </div>
                               </div>
 
                               {/* Status Badge */}
-                              <div className="flex-shrink-0">
+                              <div className="status-badge-wrap">
                                 {isSuspended ? (
                                   <span className="m3-badge-status-admin suspended">
                                     <span className="status-dot amber" />
@@ -824,7 +813,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                             </div>
 
                             {/* Contact & Registration Strip */}
-                            <div className="m3-user-contact-strip mt-2.5">
+                            <div className="m3-user-contact-strip">
                               {u.phone && (
                                 <a href={`tel:${u.phone}`} className="contact-item">
                                   <Phone size={12} className="text-blue-500" />
@@ -833,20 +822,20 @@ export default function AdminDashboardPage({ onBackToStore }) {
                               )}
                               <span className="contact-item">
                                 <Mail size={12} className="text-slate-400" />
-                                <span className="truncate">{u.email}</span>
+                                <span className="truncate-text">{u.email}</span>
                               </span>
                               {u.address && (
-                                <span className="contact-item text-slate-500 truncate" title={u.address}>
-                                  <Store size={12} className="text-indigo-400 flex-shrink-0" />
-                                  <span className="truncate">{u.address}</span>
+                                <span className="contact-item store-address" title={u.address}>
+                                  <Store size={12} className="text-indigo-400" />
+                                  <span className="truncate-text">{u.address}</span>
                                 </span>
                               )}
                             </div>
 
-                            {/* Login Credentials Box (Outlined Material Container) */}
-                            <div className="m3-credentials-box-modern mt-3">
-                              <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-slate-200/60 dark:border-slate-800">
-                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                            {/* Login Credentials Box (Material Outlined Container) */}
+                            <div className="m3-credentials-box-modern">
+                              <div className="creds-box-header">
+                                <span className="creds-title">
                                   <Key size={12} className="text-amber-500" />
                                   {isHindi ? 'लॉगिन क्रेडेंशियल्स' : 'Login Credentials'}
                                 </span>
@@ -859,7 +848,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                   {copiedId === u.id ? (
                                     <>
                                       <Check size={12} className="text-emerald-500" />
-                                      <span className="text-emerald-600 font-bold">{isHindi ? 'कॉपी हो गया!' : 'Copied!'}</span>
+                                      <span className="text-emerald-600">{isHindi ? 'कॉपी हो गया!' : 'Copied!'}</span>
                                     </>
                                   ) : (
                                     <>
@@ -870,23 +859,21 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                 </button>
                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-                                  <span className="text-slate-400 font-medium">ID:</span>
-                                  <code className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate ml-2">
-                                    {u.email}
-                                  </code>
+                              <div className="creds-grid">
+                                <div className="cred-tile">
+                                  <span className="cred-lbl">ID:</span>
+                                  <code className="cred-val font-mono">{u.email}</code>
                                 </div>
-                                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-                                  <span className="text-slate-400 font-medium">PASS:</span>
-                                  <div className="flex items-center gap-2">
-                                    <code className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                <div className="cred-tile">
+                                  <span className="cred-lbl">PASS:</span>
+                                  <div className="cred-pass-group">
+                                    <code className="cred-val font-mono font-bold">
                                       {isVisible ? u.password : '••••••••'}
                                     </code>
                                     <button
                                       type="button"
                                       onClick={() => togglePassVisibility(u.id)}
-                                      className="text-slate-400 hover:text-blue-500"
+                                      className="eye-icon-btn"
                                       title={isVisible ? 'Hide Password' : 'Show Password'}
                                     >
                                       {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -897,25 +884,25 @@ export default function AdminDashboardPage({ onBackToStore }) {
                             </div>
 
                             {/* Subscription Plan & Validity Details */}
-                            <div className="m3-subscription-box-modern mt-3">
-                              <div className="flex items-center justify-between flex-wrap gap-2">
-                                <div className="flex items-center gap-2">
+                            <div className="m3-subscription-box-modern">
+                              <div className="sub-box-content">
+                                <div className="sub-plan-info">
                                   <span className={`m3-plan-chip ${u.subscription?.planId === 'six_months' ? 'six-months' : 'monthly'}`}>
                                     {u.subscription?.planId === 'six_months' ? '⭐ 6-Months Saver' : 'Monthly Pro'}
                                   </span>
-                                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                                    {currency}{u.subscription?.basePrice || (u.subscription?.planId === 'six_months' ? 4999 : 999)}
-                                    <span className="text-[10px] text-slate-400 font-normal"> + 18% GST</span>
+                                  <span className="sub-pricing-text">
+                                    ₹{u.subscription?.basePrice || (u.subscription?.planId === 'six_months' ? 4999 : 999)}
+                                    <span className="sub-gst-note"> + 18% GST</span>
                                   </span>
                                 </div>
 
-                                <div className="text-right">
-                                  <span className={`text-xs font-bold ${diffDays <= 5 ? (diffDays <= 0 ? 'text-rose-600' : 'text-amber-600') : 'text-emerald-600'}`}>
+                                <div className="sub-validity-info">
+                                  <span className={`days-countdown-pill ${diffDays <= 5 ? (diffDays <= 0 ? 'expired' : 'soon') : 'valid'}`}>
                                     {diffDays > 0
                                       ? `⏱️ ${diffDays} ${isHindi ? 'दिन बाकी' : 'days left'}`
                                       : `⚠️ ${Math.abs(diffDays)} ${isHindi ? 'दिन पहले समाप्त' : 'days expired'}`}
                                   </span>
-                                  <span className="text-[10px] text-slate-400 block">
+                                  <span className="expiry-date-text">
                                     {isHindi ? 'वैधता:' : 'Expires:'} {expiryDate.toLocaleDateString()}
                                   </span>
                                 </div>
@@ -923,9 +910,8 @@ export default function AdminDashboardPage({ onBackToStore }) {
                             </div>
 
                             {/* Action Buttons Row */}
-                            <div className="m3-card-footer-action-row mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex-wrap">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {/* Renew 1 Month */}
+                            <div className="m3-card-footer-action-row">
+                              <div className="actions-left-group">
                                 <button
                                   type="button"
                                   onClick={() => renewSubscription(u.id, 'monthly')}
@@ -936,7 +922,6 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                   <span>+1 Mo</span>
                                 </button>
 
-                                {/* Renew 6 Months */}
                                 <button
                                   type="button"
                                   onClick={() => renewSubscription(u.id, 'six_months')}
@@ -947,7 +932,6 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                   <span>+6 Mo</span>
                                 </button>
 
-                                {/* Suspend / Activate */}
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -962,8 +946,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                 </button>
                               </div>
 
-                              <div className="flex items-center gap-2">
-                                {/* Edit User & Subscription */}
+                              <div className="actions-right-group">
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditUser(u)}
@@ -974,7 +957,6 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                   <span>{isHindi ? 'एडिट' : 'Edit'}</span>
                                 </button>
 
-                                {/* Delete User */}
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -998,9 +980,9 @@ export default function AdminDashboardPage({ onBackToStore }) {
                     </div>
                   )}
 
-                  {/* VIEW B: WIDE TABLE VIEW (AVAILABLE ON LARGE SCREENS WHEN VIEW MODE IS TABLE) */}
+                  {/* VIEW B: WIDE TABLE VIEW (AVAILABLE ON LARGE SCREENS) */}
                   {viewMode === 'table' && (
-                    <div className="large-table-container mt-4 hidden md:block">
+                    <div className="large-table-container">
                       <table className="spacious-admin-table">
                         <thead>
                           <tr>
@@ -1031,7 +1013,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                       <span>{u.name ? u.name.charAt(0).toUpperCase() : 'U'}</span>
                                     </div>
                                     <div className="user-text-details">
-                                      <div className="flex items-center gap-1.5">
+                                      <div className="name-badge-row">
                                         <span className="user-primary-name">{u.name}</span>
                                         {u.role === 'admin' ? (
                                           <span className="admin-pill-tag">Admin</span>
@@ -1039,14 +1021,14 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                           <span className="user-pill-tag">User</span>
                                         )}
                                       </div>
-                                      <span className="user-firm-name flex items-center gap-1">
+                                      <span className="user-firm-name">
                                         <Building size={13} className="text-slate-400" />
-                                        {u.businessName || 'Business Owner'}
+                                        <span>{u.businessName || 'Business Owner'}</span>
                                       </span>
                                       {u.phone && (
-                                        <span className="user-phone-tag flex items-center gap-1">
+                                        <span className="user-phone-tag">
                                           <Phone size={12} className="text-slate-400" />
-                                          {u.phone}
+                                          <span>{u.phone}</span>
                                         </span>
                                       )}
                                     </div>
@@ -1059,7 +1041,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                       <span className="cred-tag-id">ID</span>
                                       <code className="cred-code">{u.email}</code>
                                     </div>
-                                    <div className="cred-line mt-1.5">
+                                    <div className="cred-line mt-1">
                                       <span className="cred-tag-pass">PASS</span>
                                       <code className="cred-code font-bold">
                                         {isVisible ? u.password : '••••••••'}
@@ -1093,13 +1075,13 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                     <span className={`plan-pill-large ${u.subscription?.planId === 'six_months' ? 'six-months' : 'monthly'}`}>
                                       {u.subscription?.planId === 'six_months' ? '6-Months Saver' : 'Monthly Pro'}
                                     </span>
-                                    <div className="sub-pricing-line mt-1.5">
+                                    <div className="sub-pricing-line">
                                       <span className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
                                         {currency}{u.subscription?.basePrice || (u.subscription?.planId === 'six_months' ? 4999 : 999)}
                                       </span>
-                                      <span className="text-[11px] text-slate-400 font-normal"> + 18% GST</span>
+                                      <span className="sub-gst-note"> + 18% GST</span>
                                     </div>
-                                    <span className="text-[11px] text-slate-400">
+                                    <span className="sub-total-paid-note">
                                       Total: {currency}{u.subscription?.totalPaid ? Number(u.subscription?.totalPaid).toFixed(0) : '—'}
                                     </span>
                                   </div>
@@ -1138,7 +1120,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                                 </td>
 
                                 <td className="text-right">
-                                  <div className="actions-cluster-spacious justify-end">
+                                  <div className="actions-cluster-spacious">
                                     <button
                                       type="button"
                                       onClick={() => renewSubscription(u.id, 'monthly')}
@@ -1219,7 +1201,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                 >
                   {/* Dialog Header */}
                   <div className="m3-dialog-header-enhanced">
-                    <div className="flex items-center gap-3">
+                    <div className="m3-dialog-header-left">
                       <div className="m3-dialog-icon-pill blue">
                         <Edit3 size={20} className="text-white" />
                       </div>
@@ -1250,7 +1232,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                         {isHindi ? '1. व्यक्तिगत व दुकान विवरण' : '1. Store & Personal Info'}
                       </span>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+                      <div className="form-grid-2 mt-2">
                         <div className="m3-form-field-group">
                           <label className="m3-field-label">{isHindi ? 'यूजर का नाम *' : 'Full Name *'}</label>
                           <input
@@ -1303,7 +1285,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                         {isHindi ? '2. लॉगिन क्रेडेंशियल्स' : '2. Login Credentials'}
                       </span>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+                      <div className="form-grid-2 mt-2">
                         <div className="m3-form-field-group">
                           <label className="m3-field-label">{isHindi ? 'लॉगिन आईडी (Email) *' : 'Login ID (Email) *'}</label>
                           <input
@@ -1316,28 +1298,28 @@ export default function AdminDashboardPage({ onBackToStore }) {
                         </div>
 
                         <div className="m3-form-field-group">
-                          <div className="flex items-center justify-between">
+                          <div className="form-label-row">
                             <label className="m3-field-label">{isHindi ? 'लॉगिन पासवर्ड *' : 'Login Password *'}</label>
                             <button
                               type="button"
                               onClick={generateRandomPasswordForEdit}
-                              className="text-xs text-blue-600 hover:underline font-bold"
+                              className="text-action-link"
                             >
                               {isHindi ? '🎲 ऑटो-जनरेट' : 'Auto-Generate'}
                             </button>
                           </div>
-                          <div className="relative">
+                          <div className="relative-input-wrap">
                             <input
                               type={editShowPass ? 'text' : 'password'}
                               required
                               value={editingUser.password}
                               onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
-                              className="m3-enhanced-input text-field-only font-mono pr-10"
+                              className="m3-enhanced-input text-field-only font-mono pr-pass"
                             />
                             <button
                               type="button"
                               onClick={() => setEditShowPass(!editShowPass)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                              className="input-eye-btn"
                             >
                               {editShowPass ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
@@ -1350,10 +1332,10 @@ export default function AdminDashboardPage({ onBackToStore }) {
                     <div className="m3-form-card-section">
                       <span className="m3-section-title">
                         <CreditCard size={14} className="text-emerald-500" />
-                        {isHindi ? '3. सब्सक्रिप्शन व वैधता नियंत्रण (Subscription Control)' : '3. Subscription & Validity Control'}
+                        {isHindi ? '3. सब्सक्रिप्शन व वैधता नियंत्रण' : '3. Subscription & Validity Control'}
                       </span>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2">
+                      <div className="form-grid-3 mt-2">
                         <div className="m3-form-field-group">
                           <label className="m3-field-label">{isHindi ? 'सब्सक्रिप्शन प्लान' : 'Assigned Plan'}</label>
                           <select
@@ -1396,7 +1378,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                         </div>
 
                         <div className="m3-form-field-group">
-                          <label className="m3-field-label">{isHindi ? 'एक्सपायरी डेट (Validity)' : 'Expiry Date'}</label>
+                          <label className="m3-field-label">{isHindi ? 'एक्सपायरी डेट' : 'Expiry Date'}</label>
                           <input
                             type="date"
                             required
