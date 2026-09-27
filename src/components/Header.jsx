@@ -1,8 +1,8 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, User, Sparkles, ShieldCheck, BarChart3 } from 'lucide-react';
+import { Settings, User, Sparkles, ShieldCheck, BarChart3, Users } from 'lucide-react';
 
-export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onOpenReporting }) {
+export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onOpenReporting, onOpenCustomers }) {
   const { user, settings, setIsVoiceSessionActive } = useApp();
   const isHindi = settings.language === 'hi';
 
@@ -24,6 +24,21 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
       </div>
 
       <div className="header-right">
+        {/* Customers Tab Button */}
+        {onOpenCustomers && (
+          <button
+            type="button"
+            onClick={() => {
+              if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
+              onOpenCustomers();
+            }}
+            className="header-report-btn customers-btn m3-ripple"
+            title={isHindi ? 'ग्राहक डायरेक्टरी व बिल इतिहास' : 'Customers Directory & Invoices'}
+          >
+            <Users size={16} className="text-blue-600 dark:text-blue-400" />
+            <span className="header-btn-text">{isHindi ? 'ग्राहक' : 'Customers'}</span>
+          </button>
+        )}
         {/* Reporting Button */}
         {onOpenReporting && (
           <button

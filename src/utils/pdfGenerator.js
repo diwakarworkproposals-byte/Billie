@@ -76,31 +76,50 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
   doc.text(invoice.dueDate || 'Upon Receipt', 196, startY + 20, { align: 'right' });
 
   // 3. Bill To Box
+  const hasExtraDetails = invoice.customerCompany || invoice.customerGst || invoice.customerAddress;
+  const billToHeight = hasExtraDetails ? 32 : 24;
   const billToY = Math.max(currentY + 6, startY + 28);
   doc.setFillColor(...lightBg);
-  doc.roundedRect(14, billToY, 182, 24, 3, 3, 'F');
+  doc.roundedRect(14, billToY, 182, billToHeight, 3, 3, 'F');
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, billToY, 182, 24, 3, 3, 'S');
+  doc.roundedRect(14, billToY, 182, billToHeight, 3, 3, 'S');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...primaryColor);
-  doc.text('BILLED TO:', 20, billToY + 7);
+  doc.text('BILLED TO:', 20, billToY + 6);
 
   doc.setFontSize(12);
   doc.setTextColor(...darkTextColor);
-  doc.text(invoice.customerName || 'Valued Customer', 20, billToY + 14);
+  let nameText = invoice.customerName || 'Valued Customer';
+  if (invoice.customerCompany && invoice.customerName !== invoice.customerCompany) {
+    nameText += ` (${invoice.customerCompany})`;
+  }
+  doc.text(nameText, 20, billToY + 12.5);
 
-  if (invoice.customerEmail || invoice.customerPhone) {
-    doc.setFontSize(9);
+  let custLineY = billToY + 18;
+  const metaParts = [];
+  if (invoice.customerPhone) metaParts.push(`Phone: ${invoice.customerPhone}`);
+  if (invoice.customerGst) metaParts.push(`GSTIN: ${invoice.customerGst}`);
+  if (invoice.customerEmail) metaParts.push(invoice.customerEmail);
+
+  if (metaParts.length > 0) {
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mutedTextColor);
-    const custContact = [invoice.customerEmail, invoice.customerPhone].filter(Boolean).join(' | ');
-    doc.text(custContact, 20, billToY + 20);
+    doc.text(metaParts.join('  |  '), 20, custLineY);
+    custLineY += 5;
+  }
+
+  if (invoice.customerAddress) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...mutedTextColor);
+    doc.text(`Address: ${invoice.customerAddress}`, 20, custLineY);
   }
 
   // 4. Items Table
-  const tableStartY = billToY + 32;
+  const tableStartY = billToY + billToHeight + 6;
   const items = invoice.items && invoice.items.length > 0 
     ? invoice.items 
     : [{

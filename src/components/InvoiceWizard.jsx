@@ -12,7 +12,12 @@ import {
   PlusCircle,
   Package,
   ShieldCheck,
-  BarChart3
+  BarChart3,
+  Users,
+  UserPlus,
+  Phone,
+  Building,
+  CheckCircle2
 } from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
 import StockReportCard from './StockReportCard';
@@ -40,7 +45,10 @@ import { speakText } from '../utils/speechRecognition';
 const STEPS = {
   IDLE: 'IDLE',
   // Billing Flow
+  SELECT_CUSTOMER_TYPE: 'SELECT_CUSTOMER_TYPE',
+  PICK_EXISTING_CUSTOMER: 'PICK_EXISTING_CUSTOMER',
   ASK_CUSTOMER: 'ASK_CUSTOMER',
+  ASK_CUSTOMER_PHONE_GST: 'ASK_CUSTOMER_PHONE_GST',
   ASK_PRODUCT: 'ASK_PRODUCT',
   ASK_QUANTITY: 'ASK_QUANTITY',
   ASK_PRICE: 'ASK_PRICE',
@@ -62,12 +70,15 @@ export default function InvoiceWizard({
   onResetExternalQuery,
   onOpenInventory,
   onOpenAdmin,
-  onOpenReporting
+  onOpenReporting,
+  onOpenCustomers,
+  activeCustomerForBill
 }) {
   const {
     user,
     settings,
     inventory,
+    customers = [],
     addInvoice,
     getNextInvoiceNumber,
     setLanguage,
@@ -91,6 +102,21 @@ export default function InvoiceWizard({
 
   // Invoice drafting state
   const [draftCustomer, setDraftCustomer] = useState('');
+  const [draftCustomerDetails, setDraftCustomerDetails] = useState({
+    name: '',
+    companyName: '',
+    phone: '',
+    gstNumber: '',
+    address: ''
+  });
+  const draftCustomerDetailsRef = useRef({
+    name: '',
+    companyName: '',
+    phone: '',
+    gstNumber: '',
+    address: ''
+  });
+
   const [draftItems, setDraftItems] = useState([]);
   const [currentItem, setCurrentItem] = useState({
     name: '',
@@ -135,14 +161,51 @@ export default function InvoiceWizard({
     if (onResetExternalQuery) onResetExternalQuery();
   }, [externalQuery]);
 
+  // Handle incoming selected customer from Customers Directory
+  useEffect(() => {
+    if (!activeCustomerForBill) return;
+    const cust = activeCustomerForBill;
+    draftCustomerDetailsRef.current = {
+      name: cust.name,
+      companyName: cust.companyName || '',
+      phone: cust.phone || '',
+      gstNumber: cust.gstNumber || '',
+      address: cust.address || ''
+    };
+    setDraftCustomerDetails(draftCustomerDetailsRef.current);
+    setDraftCustomer(cust.name);
+    setDraftItems([]);
+    setCurrentItem({ name: '', quantity: 1, price: 0 });
+    setFinalInvoice(null);
+    setActiveStockReport(null);
+    setActiveReporting(null);
+    setStep(STEPS.ASK_PRODUCT);
+    setIsVoiceSessionActive(true);
+    const p = PROMPTS[lang] || PROMPTS.hi;
+    const reply =
+      lang === 'hi'
+        ? `बढ़िया, ${cust.name} के लिए बिल बनाते हैं! ${p.ask_product}`
+        : `Great, billing for ${cust.name}! ${p.ask_product}`;
+    replyBillie(reply, lang);
+  }, [activeCustomerForBill]);
+
   // Update prompt hint based on current step and active language
   useEffect(() => {
     const p = PROMPTS[lang] || PROMPTS.hi;
     let hint = p.hints.idle;
 
     switch (step) {
+      case STEPS.SELECT_CUSTOMER_TYPE:
+        hint = p.hints.customer_type;
+        break;
+      case STEPS.PICK_EXISTING_CUSTOMER:
+        hint = p.hints.existing_customer;
+        break;
       case STEPS.ASK_CUSTOMER:
         hint = p.hints.customer;
+        break;
+      case STEPS.ASK_CUSTOMER_PHONE_GST:
+        hint = p.hints.customer_phone_gst;
         break;
       case STEPS.ASK_PRODUCT:
         hint = p.hints.product;
@@ -211,10 +274,20 @@ export default function InvoiceWizard({
     const invoiceNum = getNextInvoiceNumber();
     const currency = settings.currency || '₹';
 
+    const custName = customerName || draftCustomerDetailsRef.current.name || (chosenLang === 'hi' ? 'सम्मानित ग्राहक' : 'Valued Customer');
+    const custCompany = draftCustomerDetailsRef.current.companyName || '';
+    const custPhone = draftCustomerDetailsRef.current.phone || '';
+    const custGst = draftCustomerDetailsRef.current.gstNumber || '';
+    const custAddress = draftCustomerDetailsRef.current.address || '';
+
     const completeInvoice = {
       id: `inv_${Date.now()}`,
       invoiceNumber: invoiceNum,
-      customerName: customerName || (chosenLang === 'hi' ? 'सम्मानित ग्राहक' : 'Valued Customer'),
+      customerName: custName,
+      customerCompany: custCompany,
+      customerPhone: custPhone,
+      customerGst: custGst,
+      customerAddress: custAddress,
       date: new Date().toLocaleDateString(),
       dueDate: chosenLang === 'hi' ? 'तुरंत देय (Due on Receipt)' : 'Due on Receipt',
       product: itemsList.length > 0 ? itemsList.map((i) => i.name).join(', ') : 'Standard Service',
@@ -401,6 +474,33 @@ export default function InvoiceWizard({
     // -------------------------------------------------------------
     const oneShot = parseOneShotInvoice(trimmed);
     if (oneShot.hasFullDetails) {
+      if (oneShot.customerName) {
+        const matched = customers.find(
+          (c) =>
+            c.name.toLowerCase() === oneShot.customerName.toLowerCase() ||
+            (c.companyName && c.companyName.toLowerCase() === oneShot.customerName.toLowerCase())
+        );
+        if (matched) {
+          draftCustomerDetailsRef.current = {
+            name: matched.name,
+            companyName: matched.companyName || '',
+            phone: matched.phone || '',
+            gstNumber: matched.gstNumber || '',
+            address: matched.address || ''
+          };
+          setDraftCustomerDetails(draftCustomerDetailsRef.current);
+        } else {
+          draftCustomerDetailsRef.current = {
+            name: oneShot.customerName,
+            companyName: '',
+            phone: '',
+            gstNumber: '',
+            address: ''
+          };
+          setDraftCustomerDetails(draftCustomerDetailsRef.current);
+        }
+      }
+
       finalizeInvoice(
         oneShot.customerName,
         [
@@ -425,6 +525,20 @@ export default function InvoiceWizard({
     if (step === STEPS.IDLE || step === STEPS.COMPLETED || isInvoiceIntent(trimmed)) {
       if (isInvoiceIntent(trimmed)) {
         setDraftCustomer(oneShot.customerName || '');
+        setDraftCustomerDetails({
+          name: oneShot.customerName || '',
+          companyName: '',
+          phone: '',
+          gstNumber: '',
+          address: ''
+        });
+        draftCustomerDetailsRef.current = {
+          name: oneShot.customerName || '',
+          companyName: '',
+          phone: '',
+          gstNumber: '',
+          address: ''
+        };
         setDraftItems([]);
         setCurrentItem({ name: '', quantity: 1, price: 0 });
         setFinalInvoice(null);
@@ -432,6 +546,21 @@ export default function InvoiceWizard({
         setIsVoiceSessionActive(true);
 
         if (oneShot.customerName) {
+          const matched = customers.find(
+            (c) =>
+              c.name.toLowerCase() === oneShot.customerName.toLowerCase() ||
+              (c.companyName && c.companyName.toLowerCase() === oneShot.customerName.toLowerCase())
+          );
+          if (matched) {
+            draftCustomerDetailsRef.current = {
+              name: matched.name,
+              companyName: matched.companyName || '',
+              phone: matched.phone || '',
+              gstNumber: matched.gstNumber || '',
+              address: matched.address || ''
+            };
+            setDraftCustomerDetails(draftCustomerDetailsRef.current);
+          }
           setStep(STEPS.ASK_PRODUCT);
           const reply =
             activeLang === 'hi'
@@ -439,8 +568,9 @@ export default function InvoiceWizard({
               : `Got it, invoicing for ${oneShot.customerName}! ${p.ask_product}`;
           replyBillie(reply, activeLang);
         } else {
-          setStep(STEPS.ASK_CUSTOMER);
-          replyBillie(p.ask_customer, activeLang);
+          // Present 2 choices: New Customer or Existing Customer
+          setStep(STEPS.SELECT_CUSTOMER_TYPE);
+          replyBillie(p.ask_customer_type, activeLang);
         }
         return;
       }
@@ -451,18 +581,165 @@ export default function InvoiceWizard({
     // -------------------------------------------------------------
     switch (step) {
       // ----------------- BILLING STEPS -----------------
+      case STEPS.SELECT_CUSTOMER_TYPE: {
+        const norm = trimmed.toLowerCase();
+        if (
+          norm.includes('purana') ||
+          norm.includes('existing') ||
+          norm.includes('old') ||
+          norm.includes('maujuda') ||
+          norm.includes('पुराना') ||
+          norm.includes('मौजूदा')
+        ) {
+          setStep(STEPS.PICK_EXISTING_CUSTOMER);
+          replyBillie(p.ask_existing_customer, activeLang);
+        } else if (norm.includes('naya') || norm.includes('new') || norm.includes('नया')) {
+          setStep(STEPS.ASK_CUSTOMER);
+          replyBillie(p.ask_customer, activeLang);
+        } else {
+          // Check if user directly said an existing customer name or phone
+          const cleanNum = trimmed.replace(/\D/g, '');
+          const matched = customers.find((c) => {
+            if (cleanNum && cleanNum.length >= 6 && c.phone && c.phone.replace(/\D/g, '').includes(cleanNum)) {
+              return true;
+            }
+            return (
+              c.name.toLowerCase() === trimmed.toLowerCase() ||
+              (c.companyName && c.companyName.toLowerCase() === trimmed.toLowerCase())
+            );
+          });
+
+          if (matched) {
+            setDraftCustomer(matched.name);
+            draftCustomerDetailsRef.current = {
+              name: matched.name,
+              companyName: matched.companyName || '',
+              phone: matched.phone || '',
+              gstNumber: matched.gstNumber || '',
+              address: matched.address || ''
+            };
+            setDraftCustomerDetails(draftCustomerDetailsRef.current);
+            setStep(STEPS.ASK_PRODUCT);
+            replyBillie(
+              activeLang === 'hi'
+                ? `✓ ग्राहक "${matched.name}" की डिटेल्स लोड हो गई हैं! ${p.ask_product}`
+                : `✓ Customer "${matched.name}" details loaded! ${p.ask_product}`,
+              activeLang
+            );
+          } else {
+            // Treat as new customer name
+            const cleanedCustomer = trimmed
+              .replace(/^(customer\s*name\s*is|customer\s*is|naam\s*hai|for|kiske\s*liye)\s+/i, '')
+              .trim();
+            setDraftCustomer(cleanedCustomer);
+            draftCustomerDetailsRef.current = {
+              name: cleanedCustomer,
+              companyName: '',
+              phone: '',
+              gstNumber: '',
+              address: ''
+            };
+            setDraftCustomerDetails(draftCustomerDetailsRef.current);
+            setStep(STEPS.ASK_CUSTOMER_PHONE_GST);
+            replyBillie(p.ask_customer_phone_gst, activeLang);
+          }
+        }
+        break;
+      }
+
+      case STEPS.PICK_EXISTING_CUSTOMER: {
+        const cleanNum = trimmed.replace(/\D/g, '');
+        const matched = customers.find((c) => {
+          if (cleanNum && cleanNum.length >= 6 && c.phone && c.phone.replace(/\D/g, '').includes(cleanNum)) {
+            return true;
+          }
+          return (
+            c.name.toLowerCase().includes(trimmed.toLowerCase()) ||
+            (c.companyName && c.companyName.toLowerCase().includes(trimmed.toLowerCase()))
+          );
+        });
+
+        if (matched) {
+          setDraftCustomer(matched.name);
+          draftCustomerDetailsRef.current = {
+            name: matched.name,
+            companyName: matched.companyName || '',
+            phone: matched.phone || '',
+            gstNumber: matched.gstNumber || '',
+            address: matched.address || ''
+          };
+          setDraftCustomerDetails(draftCustomerDetailsRef.current);
+          setStep(STEPS.ASK_PRODUCT);
+          replyBillie(
+            activeLang === 'hi'
+              ? `✓ ग्राहक "${matched.name}" की डिटेल्स लोड हो गई हैं! ${p.ask_product}`
+              : `✓ Customer "${matched.name}" details loaded! ${p.ask_product}`,
+            activeLang
+          );
+        } else {
+          replyBillie(
+            activeLang === 'hi'
+              ? `माफ़ कीजिये, "${trimmed}" नाम या नंबर का कोई पुराना ग्राहक नहीं मिला। कृपया नीचे दी गई सूची से ग्राहक चुनें या 'नया ग्राहक' बोलें:`
+              : `Sorry, no customer found matching "${trimmed}". Please select from the list below or say 'new customer':`,
+            activeLang
+          );
+        }
+        break;
+      }
+
       case STEPS.ASK_CUSTOMER: {
         const cleanedCustomer = trimmed
           .replace(/^(customer\s*name\s*is|customer\s*is|naam\s*hai|for|kiske\s*liye)\s+/i, '')
           .trim();
         setDraftCustomer(cleanedCustomer);
-        setStep(STEPS.ASK_PRODUCT);
+        draftCustomerDetailsRef.current = {
+          name: cleanedCustomer,
+          companyName: '',
+          phone: '',
+          gstNumber: '',
+          address: ''
+        };
+        setDraftCustomerDetails(draftCustomerDetailsRef.current);
+        setStep(STEPS.ASK_CUSTOMER_PHONE_GST);
+        replyBillie(p.ask_customer_phone_gst, activeLang);
+        break;
+      }
 
-        const reply =
-          activeLang === 'hi'
-            ? `बढ़िया, ${cleanedCustomer} के लिए बिल बनाते हैं! ${p.ask_product}`
-            : `Great, billing ${cleanedCustomer}! ${p.ask_product}`;
-        replyBillie(reply, activeLang);
+      case STEPS.ASK_CUSTOMER_PHONE_GST: {
+        const norm = trimmed.toLowerCase();
+        if (
+          ['skip', 'chhod do', 'chhodo', 'nahi', 'no', 'aage', 'next', 'aage badho', 'skip karo', 'na', 'kuch nahi'].includes(norm)
+        ) {
+          setStep(STEPS.ASK_PRODUCT);
+          replyBillie(
+            activeLang === 'hi'
+              ? `ठीक है! ${p.ask_product}`
+              : `Got it! ${p.ask_product}`,
+            activeLang
+          );
+        } else {
+          const phoneMatch = trimmed.match(/(?:\+91|0)?[6-9]\d{9}/);
+          if (phoneMatch) {
+            draftCustomerDetailsRef.current.phone = phoneMatch[0];
+          }
+          const gstMatch = trimmed.match(/\b\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b/i);
+          if (gstMatch) {
+            draftCustomerDetailsRef.current.gstNumber = gstMatch[0].toUpperCase();
+          } else if (!phoneMatch && trimmed.length >= 8 && /\d/.test(trimmed)) {
+            const digits = trimmed.replace(/\D/g, '');
+            if (digits.length >= 8) {
+              draftCustomerDetailsRef.current.phone = digits;
+            }
+          }
+          setDraftCustomerDetails({ ...draftCustomerDetailsRef.current });
+          setStep(STEPS.ASK_PRODUCT);
+          replyBillie(
+            activeLang === 'hi'
+              ? `✓ ग्राहक विवरण नोट हो गया! ${p.ask_product}`
+              : `✓ Customer details recorded! ${p.ask_product}`,
+            activeLang
+          );
+        }
         break;
       }
 
@@ -699,6 +976,20 @@ export default function InvoiceWizard({
     setStep(STEPS.IDLE);
     setFinalInvoice(null);
     setDraftCustomer('');
+    setDraftCustomerDetails({
+      name: '',
+      companyName: '',
+      phone: '',
+      gstNumber: '',
+      address: ''
+    });
+    draftCustomerDetailsRef.current = {
+      name: '',
+      companyName: '',
+      phone: '',
+      gstNumber: '',
+      address: ''
+    };
     setDraftItems([]);
     currentItemRef.current = { name: '', quantity: 1, price: 0 };
     setCurrentItem({ name: '', quantity: 1, price: 0 });
@@ -804,6 +1095,17 @@ export default function InvoiceWizard({
               <span>📊 {lang === 'hi' ? 'रिपोर्टिंग (बिक्री व खरीद)' : 'Reporting & Accounts'}</span>
             </button>
 
+            {onOpenCustomers && (
+              <button
+                type="button"
+                onClick={onOpenCustomers}
+                className="suggestion-chip m3-ripple"
+              >
+                <Users size={14} className="text-blue-500" />
+                <span>👥 {lang === 'hi' ? 'ग्राहक सूची' : 'Customers'}</span>
+              </button>
+            )}
+
             {onOpenAdmin && (
               <button
                 type="button"
@@ -854,6 +1156,199 @@ export default function InvoiceWizard({
           );
         })}
 
+        {/* INTERACTIVE CONTROLS 1: NEW VS EXISTING CUSTOMER CHOICE */}
+        {step === STEPS.SELECT_CUSTOMER_TYPE && (
+          <div className="m3-customer-choice-container animate-slide-up">
+            <button
+              type="button"
+              onClick={() => {
+                setStep(STEPS.ASK_CUSTOMER);
+                const p = PROMPTS[lang] || PROMPTS.hi;
+                replyBillie(p.ask_customer, lang);
+              }}
+              className="m3-cust-choice-card new-cust m3-ripple"
+            >
+              <div className="choice-icon-wrap emerald">
+                <UserPlus size={22} />
+              </div>
+              <div className="choice-text-wrap">
+                <span className="choice-title">
+                  {lang === 'hi' ? '1. नया ग्राहक (New Customer)' : '1. New Customer'}
+                </span>
+                <span className="choice-desc">
+                  {lang === 'hi' ? 'नया नाम, मोबाइल व GST विवरण दर्ज करें' : 'Enter new customer / company details'}
+                </span>
+              </div>
+              <ArrowRight size={18} className="choice-arrow" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep(STEPS.PICK_EXISTING_CUSTOMER);
+                const p = PROMPTS[lang] || PROMPTS.hi;
+                replyBillie(p.ask_existing_customer, lang);
+              }}
+              className="m3-cust-choice-card existing-cust m3-ripple"
+            >
+              <div className="choice-icon-wrap blue">
+                <Users size={22} />
+              </div>
+              <div className="choice-text-wrap">
+                <span className="choice-title">
+                  {lang === 'hi' ? '2. पुराना ग्राहक (Existing Customer)' : '2. Existing Customer'}
+                  <span className="choice-count-badge">{customers.length}</span>
+                </span>
+                <span className="choice-desc">
+                  {lang === 'hi' ? 'डायरेक्टरी से ग्राहक चुनें या सर्च करें' : 'Pick existing customer from directory'}
+                </span>
+              </div>
+              <ArrowRight size={18} className="choice-arrow" />
+            </button>
+          </div>
+        )}
+
+        {/* INTERACTIVE CONTROLS 2: PICK EXISTING CUSTOMER */}
+        {step === STEPS.PICK_EXISTING_CUSTOMER && (
+          <div className="m3-existing-customer-picker animate-slide-up">
+            <div className="flex items-center justify-between mb-2">
+              <span className="picker-header-title">
+                <Users size={15} className="text-blue-500" />
+                <span>{lang === 'hi' ? 'मौजूदा ग्राहक चुनें (Tap to Select):' : 'Select Existing Customer:'}</span>
+              </span>
+              <span className="text-[11px] text-slate-400">
+                {customers.length} {lang === 'hi' ? 'ग्राहक उपलब्ध' : 'available'}
+              </span>
+            </div>
+
+            <div className="existing-chips-scroll custom-scrollbar">
+              {customers.map((cust) => (
+                <button
+                  key={cust.id}
+                  type="button"
+                  onClick={() => {
+                    setDraftCustomer(cust.name);
+                    draftCustomerDetailsRef.current = {
+                      name: cust.name,
+                      companyName: cust.companyName || '',
+                      phone: cust.phone || '',
+                      gstNumber: cust.gstNumber || '',
+                      address: cust.address || ''
+                    };
+                    setDraftCustomerDetails(draftCustomerDetailsRef.current);
+                    setStep(STEPS.ASK_PRODUCT);
+                    const p = PROMPTS[lang] || PROMPTS.hi;
+                    replyBillie(
+                      lang === 'hi'
+                        ? `✓ ग्राहक "${cust.name}" की डिटेल्स लोड हो गई हैं! ${p.ask_product}`
+                        : `✓ Customer "${cust.name}" loaded! ${p.ask_product}`,
+                      lang
+                    );
+                  }}
+                  className="m3-existing-cust-chip m3-ripple"
+                >
+                  <div className="chip-avatar">
+                    {(cust.name || 'C').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="chip-info">
+                    <span className="chip-name">{cust.name}</span>
+                    {cust.companyName && <span className="chip-company">({cust.companyName})</span>}
+                    {cust.phone && <span className="chip-phone">📞 {cust.phone}</span>}
+                    {cust.gstNumber && <span className="chip-gst">GST: {cust.gstNumber}</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep(STEPS.ASK_CUSTOMER);
+                const p = PROMPTS[lang] || PROMPTS.hi;
+                replyBillie(p.ask_customer, lang);
+              }}
+              className="picker-switch-new-btn mt-2"
+            >
+              {lang === 'hi' ? '+ नया ग्राहक बनाना है?' : '+ Create New Customer Instead'}
+            </button>
+          </div>
+        )}
+
+        {/* INTERACTIVE CONTROLS 3: OPTIONAL PHONE & GST FORM */}
+        {step === STEPS.ASK_CUSTOMER_PHONE_GST && (
+          <div className="m3-phone-gst-optional-box animate-slide-up">
+            <div className="box-header">
+              <span className="box-title">
+                📱 {lang === 'hi' ? 'मोबाइल नंबर व GST नंबर (वैकल्पिक)' : 'Mobile & GST Number (Optional)'}
+              </span>
+              <span className="optional-tag">{lang === 'hi' ? 'अनिवार्य नहीं है (Optional)' : 'Optional'}</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <div>
+                <label className="m3-mini-label">{lang === 'hi' ? 'मोबाइल नंबर' : 'Phone / Mobile'}</label>
+                <input
+                  type="tel"
+                  placeholder="+91 98XXX XXXXX"
+                  value={draftCustomerDetails.phone}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    draftCustomerDetailsRef.current.phone = val;
+                    setDraftCustomerDetails((prev) => ({ ...prev, phone: val }));
+                  }}
+                  className="m3-enhanced-input text-field-only compact"
+                />
+              </div>
+              <div>
+                <label className="m3-mini-label">{lang === 'hi' ? 'GSTIN नंबर' : 'GST Number'}</label>
+                <input
+                  type="text"
+                  maxLength={15}
+                  placeholder="07AAAAA0000A1Z5"
+                  value={draftCustomerDetails.gstNumber}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    draftCustomerDetailsRef.current.gstNumber = val;
+                    setDraftCustomerDetails((prev) => ({ ...prev, gstNumber: val }));
+                  }}
+                  className="m3-enhanced-input text-field-only compact uppercase font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(STEPS.ASK_PRODUCT);
+                  const p = PROMPTS[lang] || PROMPTS.hi;
+                  replyBillie(p.ask_product, lang);
+                }}
+                className="m3-skip-btn"
+              >
+                {lang === 'hi' ? 'छोड़ें (Skip)' : 'Skip'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(STEPS.ASK_PRODUCT);
+                  const p = PROMPTS[lang] || PROMPTS.hi;
+                  replyBillie(
+                    lang === 'hi'
+                      ? `✓ ग्राहक विवरण नोट हो गया! ${p.ask_product}`
+                      : `✓ Customer details recorded! ${p.ask_product}`,
+                    lang
+                  );
+                }}
+                className="m3-continue-btn"
+              >
+                <span>{lang === 'hi' ? 'आगे बढ़ें (Continue)' : 'Continue'}</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Live Drafting Progress Card during active invoice creation */}
         {step !== STEPS.IDLE &&
           step !== STEPS.COMPLETED &&
@@ -891,9 +1386,17 @@ export default function InvoiceWizard({
                   <span className="label">
                     {lang === 'hi' ? 'ग्राहक (Customer):' : 'Customer:'}
                   </span>
-                  <span className="val font-semibold">
-                    {draftCustomer || (lang === 'hi' ? 'नाम पूछ रहे हैं...' : 'Waiting...')}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="val font-semibold">
+                      {draftCustomer || (lang === 'hi' ? 'नाम पूछ रहे हैं...' : 'Waiting...')}
+                    </span>
+                    {(draftCustomerDetails.phone || draftCustomerDetails.gstNumber) && (
+                      <span className="text-[11px] text-slate-500 mt-0.5">
+                        {draftCustomerDetails.phone && `📞 ${draftCustomerDetails.phone} `}
+                        {draftCustomerDetails.gstNumber && `🏢 GST: ${draftCustomerDetails.gstNumber}`}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {draftItems.length > 0 && (

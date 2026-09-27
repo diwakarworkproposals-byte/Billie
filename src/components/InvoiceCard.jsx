@@ -55,6 +55,28 @@ export default function InvoiceCard({
         <div className="meta-col">
           <span className="meta-label">{isHindi ? 'ग्राहक (Billed To)' : 'Billed To'}</span>
           <h3 className="customer-display-name">{invoice.customerName || (isHindi ? 'सम्मानित ग्राहक' : 'Valued Customer')}</h3>
+          {invoice.customerCompany && (
+            <span className="meta-company font-semibold text-slate-700 dark:text-slate-300 block text-xs mt-0.5">
+              🏢 {invoice.customerCompany}
+            </span>
+          )}
+          <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
+            {invoice.customerPhone && (
+              <span className="font-medium text-slate-700 dark:text-slate-300">
+                📞 {invoice.customerPhone}
+              </span>
+            )}
+            {invoice.customerGst && (
+              <span className="m3-badge-gst font-mono font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded text-[11px] border border-blue-200 dark:border-blue-800">
+                GSTIN: {invoice.customerGst}
+              </span>
+            )}
+          </div>
+          {invoice.customerAddress && (
+            <span className="meta-sub block text-[11px] text-slate-400 mt-0.5">
+              📍 {invoice.customerAddress}
+            </span>
+          )}
           {invoice.customerEmail && <span className="meta-sub">{invoice.customerEmail}</span>}
         </div>
         <div className="meta-col text-right">

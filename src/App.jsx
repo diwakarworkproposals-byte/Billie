@@ -8,6 +8,7 @@ import SettingsModal from './components/SettingsModal';
 import InventoryModal from './components/InventoryModal';
 import ReportingSection from './components/ReportingSection';
 import AdminDashboardPage from './components/AdminDashboardPage';
+import CustomersModal from './components/CustomersModal';
 import { AlertTriangle } from 'lucide-react';
 
 function BillieApp() {
@@ -22,6 +23,8 @@ function BillieApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isReportingOpen, setIsReportingOpen] = useState(false);
+  const [isCustomersOpen, setIsCustomersOpen] = useState(false);
+  const [activeCustomerForBill, setActiveCustomerForBill] = useState(null);
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [promptHint, setPromptHint] = useState('');
 
@@ -75,6 +78,10 @@ function BillieApp() {
           if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
           setIsReportingOpen(true);
         }}
+        onOpenCustomers={() => {
+          if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
+          setIsCustomersOpen(true);
+        }}
       />
 
       {/* Subscription Expired Alert Banner */}
@@ -110,6 +117,11 @@ function BillieApp() {
             if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
             setIsReportingOpen(true);
           }}
+          onOpenCustomers={() => {
+            if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
+            setIsCustomersOpen(true);
+          }}
+          activeCustomerForBill={activeCustomerForBill}
         />
       </main>
 
@@ -134,6 +146,16 @@ function BillieApp() {
       <InventoryModal
         isOpen={isInventoryOpen}
         onClose={() => setIsInventoryOpen(false)}
+      />
+
+      {/* Customers Directory & Invoices Modal */}
+      <CustomersModal
+        isOpen={isCustomersOpen}
+        onClose={() => setIsCustomersOpen(false)}
+        onSelectCustomerForBill={(cust) => {
+          setActiveCustomerForBill(cust);
+          setIsCustomersOpen(false);
+        }}
       />
 
       {/* Reporting & Accounting Modal Dialog */}

@@ -388,7 +388,10 @@ export function parseStockUpdateCommand(text = '', inventory = []) {
 export const PROMPTS = {
   hi: {
     welcome: "नमस्ते! मैं Billie हूँ, आपका वॉइस और टेक्स्ट असिस्टेंट। बिल बनाने के लिए 'bill banao' बोलें, या स्टॉक देखने/जोड़ने के लिए 'stock check karo' या 'stock add karo' बोलें।",
-    ask_customer: "Customer ka naam batao (kiske naam pe bill banana hai)?",
+    ask_customer_type: "नया ग्राहक है या पुराना ग्राहक? (नीचे विकल्प चुनें या 'नया' / 'पुराना' बोलें)",
+    ask_existing_customer: "मौजूदा ग्राहक का नाम या मोबाइल नंबर बताएं या नीचे सूची से चुनें:",
+    ask_customer_phone_gst: "क्या आप ग्राहक का मोबाइल नंबर या GST नंबर जोड़ना चाहते हैं? (यह वैकल्पिक है, आप 'Skip' भी कर सकते हैं)",
+    ask_customer: "Customer ka naam ya company ka naam batao?",
     ask_product: "Kya product hai?",
     ask_quantity: (product) => `"${product}" kitna piece ya quantity chahiye? (jaise 1, 2, 3, 4, 5...)`,
     ask_price: (product) => `"${product}" ka per piece price / keemat kitni hai?`,
@@ -413,6 +416,9 @@ export const PROMPTS = {
 
     hints: {
       idle: "Bolein: 'bill banao', 'stock check karo', ya 'stock add karo'...",
+      customer_type: "'नया ग्राहक' या 'पुराना ग्राहक' चुनें...",
+      existing_customer: "पुराने ग्राहक का नाम या मोबाइल नंबर बताएं...",
+      customer_phone_gst: "मोबाइल नंबर या GST नंबर डालें या 'Skip' दबाएं...",
       customer: "Customer ka naam bataiye (jaise 'Ramesh Kumar')...",
       product: "Product ka naam bataiye (jaise 'Shirt' ya 'Laptop')...",
       quantity: "Quantity / piece bataiye (jaise 3, 4, 5, 'teen', 'char')...",
@@ -427,7 +433,10 @@ export const PROMPTS = {
   },
   en: {
     welcome: "Hello! I'm Billie, your voice & text assistant. Say 'generate invoice' to bill, or 'check stock' / 'add stock' to manage inventory.",
-    ask_customer: "Who is the customer? (Please state or type customer name)",
+    ask_customer_type: "Is this a New Customer or Existing Customer? (Choose below or say 'new' / 'existing')",
+    ask_existing_customer: "Please state existing customer name, phone number or choose from below:",
+    ask_customer_phone_gst: "Would you like to add Mobile Number or GST Number? (Optional, you can click or say 'Skip')",
+    ask_customer: "What is the Customer or Company Name?",
     ask_product: "What product or service is this for?",
     ask_quantity: (product) => `How many units or pieces of "${product}"? (e.g. 1, 2, 5)`,
     ask_price: (product) => `What is the price per unit for "${product}"?`,
@@ -452,7 +461,10 @@ export const PROMPTS = {
 
     hints: {
       idle: "Ask Billie: 'generate invoice', 'check stock', or 'add stock'...",
-      customer: "Say or type Customer Name (e.g. 'Acme Corp')...",
+      customer_type: "Choose 'New Customer' or 'Existing Customer'...",
+      existing_customer: "Say or type existing customer name or phone...",
+      customer_phone_gst: "Enter Phone or GSTIN, or say 'Skip' to continue...",
+      customer: "Say or type Customer or Company Name (e.g. 'Acme Corp')...",
       product: "Say or type Product name (e.g. 'Website Design')...",
       quantity: "Say or type Quantity (e.g. '2' or '5')...",
       price: "Say or type Unit Price (e.g. '500')...",

@@ -351,6 +351,39 @@ const DEFAULT_INVOICES = [
   }
 ];
 
+const DEFAULT_CUSTOMERS = [
+  {
+    id: 'cust_1',
+    name: 'Amit Sharma',
+    companyName: 'Sharma Garments',
+    phone: '+91 98101 23456',
+    email: 'amit.sharma@gmail.com',
+    gstNumber: '07AAACS1429B1Z2',
+    address: 'Sector 14, Gurugram, Haryana',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'cust_2',
+    name: 'Neha Verma',
+    companyName: '',
+    phone: '+91 98991 99887',
+    email: 'neha.v@yahoo.com',
+    gstNumber: '',
+    address: 'Lajpat Nagar, New Delhi',
+    createdAt: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: 'cust_3',
+    name: 'Rajesh Enterprises',
+    companyName: 'Rajesh Enterprises Pvt Ltd',
+    phone: '+91 98711 22334',
+    email: 'rajesh@enterprise.in',
+    gstNumber: '07AAAAA0000A1Z5',
+    address: 'Chandni Chowk, Delhi - 110006',
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
+  }
+];
+
 export function AppProvider({ children }) {
   // 1. Registered Users Database (Managed by Admin)
   const [users, setUsers] = useState(() => {
@@ -402,7 +435,7 @@ export function AppProvider({ children }) {
     }
   });
 
-  // 5. Inventory Products State
+  // 6. Inventory Products State
   const [inventory, setInventory] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_inventory');
@@ -412,7 +445,17 @@ export function AppProvider({ children }) {
     }
   });
 
-  // 6. PWA Installation & Session state
+  // 7. Customers Database State
+  const [customers, setCustomers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('billie_customers');
+      return saved ? JSON.parse(saved) : DEFAULT_CUSTOMERS;
+    } catch {
+      return DEFAULT_CUSTOMERS;
+    }
+  });
+
+  // 8. PWA Installation & Session state
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -444,6 +487,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('billie_purchases', JSON.stringify(purchases));
   }, [purchases]);
+
+  useEffect(() => {
+    localStorage.setItem('billie_customers', JSON.stringify(customers));
+  }, [customers]);
 
   // Network online/offline listeners
   useEffect(() => {
@@ -747,10 +794,102 @@ export function AppProvider({ children }) {
     updateSettings({ language: lang });
   };
 
+  // Customer Management actions
+  const addOrUpdateCustomer = (custData) => {
+    if (!custData || (!custData.name && !custData.companyName && !custData.phone)) {
+      return null;
+    }
+
+    const cleanName = (custData.name || custData.companyName || 'Valued Customer').trim();
+    const cleanCompany = (custData.companyName || '').trim();
+    const cleanPhone = (custData.phone || '').trim();
+    const cleanEmail = (custData.email || '').trim();
+    const cleanGst = (custData.gstNumber || '').trim().toUpperCase();
+    const cleanAddress = (custData.address || '').trim();
+
+    let resultCustomer = null;
+
+    setCustomers((prev) => {
+      // Find if customer already exists by ID, by exact phone (if provided), or by case-insensitive name
+      const idx = prev.findIndex((c) => {
+        if (custData.id && c.id === custData.id) return true;
+        if (cleanPhone && c.phone && c.phone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, '')) return true;
+        return c.name.toLowerCase() === cleanName.toLowerCase();
+      });
+
+      if (idx >= 0) {
+        const existing = prev[idx];
+        const updated = {
+          ...existing,
+          name: cleanName || existing.name,
+          companyName: cleanCompany || existing.companyName,
+          phone: cleanPhone || existing.phone,
+          email: cleanEmail || existing.email,
+          gstNumber: cleanGst || existing.gstNumber,
+          address: cleanAddress || existing.address,
+          updatedAt: new Date().toISOString()
+        };
+        resultCustomer = updated;
+        const copy = [...prev];
+        copy[idx] = updated;
+        return copy;
+      } else {
+        const newCust = {
+          id: custData.id || `cust_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: cleanName,
+          companyName: cleanCompany,
+          phone: cleanPhone,
+          email: cleanEmail,
+          gstNumber: cleanGst,
+          address: cleanAddress,
+          createdAt: new Date().toISOString()
+        };
+        resultCustomer = newCust;
+        return [newCust, ...prev];
+      }
+    });
+
+    return resultCustomer;
+  };
+
+  const updateCustomer = (id, fields) => {
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...fields, updatedAt: new Date().toISOString() } : c))
+    );
+  };
+
+  const deleteCustomer = (id) => {
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
+  };
+
   const addInvoice = (invoice) => {
     setInvoices((prev) => [invoice, ...prev]);
     if (invoice.items && invoice.items.length > 0) {
       reduceStockForInvoice(invoice.items);
+    }
+
+    // Automatically add or update customer in directory
+    if (invoice.customerName && invoice.customerName.trim()) {
+      const normName = invoice.customerName.trim().toLowerCase();
+      const isGeneric = [
+        'cash customer',
+        'कैश ग्राहक',
+        'valued customer',
+        'सम्मानित ग्राहक',
+        'walk-in',
+        'walk in'
+      ].includes(normName);
+
+      if (!isGeneric || invoice.customerPhone || invoice.customerGst || invoice.customerCompany) {
+        addOrUpdateCustomer({
+          name: invoice.customerName.trim(),
+          companyName: invoice.customerCompany || '',
+          phone: invoice.customerPhone || '',
+          email: invoice.customerEmail || '',
+          gstNumber: invoice.customerGst || '',
+          address: invoice.customerAddress || ''
+        });
+      }
     }
   };
 
@@ -956,6 +1095,10 @@ export function AppProvider({ children }) {
         invoices,
         inventory,
         purchases,
+        customers,
+        addOrUpdateCustomer,
+        updateCustomer,
+        deleteCustomer,
         isInstallable,
         isInstalled,
         isOffline,
