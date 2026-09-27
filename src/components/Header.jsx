@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Settings, User, Sparkles, ShieldCheck, BarChart3 } from 'lucide-react';
 
 export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onOpenReporting }) {
-  const { user, settings } = useApp();
+  const { user, settings, setIsVoiceSessionActive } = useApp();
   const isHindi = settings.language === 'hi';
 
   return (
@@ -28,7 +28,10 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
         {onOpenReporting && (
           <button
             type="button"
-            onClick={onOpenReporting}
+            onClick={() => {
+              if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
+              onOpenReporting();
+            }}
             className="header-report-btn m3-ripple"
             title={isHindi ? 'बिजनेस रिपोर्टिंग: बिक्री, मुनाफ़ा व खरीद खाता' : 'Reports: Sales, Profit & Purchases'}
           >

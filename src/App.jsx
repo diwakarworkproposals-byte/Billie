@@ -11,7 +11,7 @@ import AdminDashboardPage from './components/AdminDashboardPage';
 import { AlertTriangle } from 'lucide-react';
 
 function BillieApp() {
-  const { user, settings } = useApp();
+  const { user, settings, setIsVoiceSessionActive } = useApp();
   const [currentView, setCurrentView] = useState(() => {
     return window.location.hash === '#/admin' || window.location.hash === '#admin'
       ? 'admin'
@@ -71,7 +71,10 @@ function BillieApp() {
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAdmin={openAdminPage}
-        onOpenReporting={() => setIsReportingOpen(true)}
+        onOpenReporting={() => {
+          if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
+          setIsReportingOpen(true);
+        }}
       />
 
       {/* Subscription Expired Alert Banner */}
@@ -103,7 +106,10 @@ function BillieApp() {
           onResetExternalQuery={() => setSubmittedQuery('')}
           onOpenInventory={() => setIsInventoryOpen(true)}
           onOpenAdmin={openAdminPage}
-          onOpenReporting={() => setIsReportingOpen(true)}
+          onOpenReporting={() => {
+            if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
+            setIsReportingOpen(true);
+          }}
         />
       </main>
 
@@ -119,7 +125,10 @@ function BillieApp() {
         onClose={() => setIsProfileOpen(false)}
         onOpenInventory={() => setIsInventoryOpen(true)}
         onOpenAdmin={openAdminPage}
-        onOpenReporting={() => setIsReportingOpen(true)}
+        onOpenReporting={() => {
+          if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
+          setIsReportingOpen(true);
+        }}
       />
 
       <InventoryModal

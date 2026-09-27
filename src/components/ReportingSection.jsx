@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { generateInvoicePDF } from '../utils/pdfGenerator';
 import {
   TrendingUp,
   CreditCard,
@@ -21,7 +22,9 @@ import {
   Layers,
   Sparkles,
   User,
-  Building
+  Building,
+  FileText,
+  Download
 } from 'lucide-react';
 
 export default function ReportingSection({
@@ -30,6 +33,7 @@ export default function ReportingSection({
   isStandalone = false
 }) {
   const {
+    user,
     invoices,
     inventory,
     purchases,
@@ -390,23 +394,6 @@ export default function ReportingSection({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* REQUIREMENT: Clean Dropdown for Sales vs Purchase */}
-          <div className="m3-dropdown-pill-wrap">
-            <select
-              value={reportMode}
-              onChange={(e) => setReportMode(e.target.value)}
-              className="m3-report-select-element"
-            >
-              <option value="sales">
-                {isHindi ? '📈 बिक्री रिपोर्ट (Sales)' : '📈 Sales Report'}
-              </option>
-              <option value="purchase">
-                {isHindi ? '📦 खरीद रिपोर्ट (Purchase)' : '📦 Purchase Report'}
-              </option>
-            </select>
-            <ChevronDown size={14} className="m3-dropdown-arrow" />
-          </div>
-
           {onClose && (
             <button
               type="button"
@@ -545,33 +532,92 @@ export default function ReportingSection({
                 </p>
               </div>
             ) : (
-              <div className="m3-mobile-cards-stack">
+              <div className="m3-sales-cards-container">
                 {filteredSalesInvoices.map((inv) => (
-                  <div key={inv.id} className="m3-invoice-row-card">
+                  <div key={inv.id} className="m3-sales-card">
+                    {/* Top Row: Customer Name, Phone, Invoice No & Payment Badge */}
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
+                      <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
+                          <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
                             {inv.customerName || (isHindi ? 'कैश ग्राहक' : 'Cash Customer')}
-                          </span>
-                          <span className="m3-mini-pill-inv">{inv.invoiceNumber}</span>
+                          </h4>
+                          <span className="m3-badge-inv-num">{inv.invoiceNumber}</span>
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                          {inv.items?.map((it) => `${it.name} (${it.quantity})`).join(', ') || inv.product}
-                        </p>
-                        <span className="text-[11px] text-slate-400 mt-1 block">
-                          📅 {inv.date}
-                        </span>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
+                          {inv.customerPhone && (
+                            <span className="flex items-center gap-1 font-medium">
+                              <Phone size={11} className="text-blue-500" />
+                              {inv.customerPhone}
+                            </span>
+                          )}
+                          <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                            <Calendar size={11} />
+                            {inv.date} {inv.time ? `• ${inv.time}` : ''}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="text-right flex flex-col items-end flex-shrink-0">
-                        <span className="font-extrabold text-base text-slate-900 dark:text-slate-100">
-                          {currency}{Number(inv.total).toLocaleString()}
-                        </span>
-                        <span className="m3-profit-badge mt-1">
-                          +{currency}{Number(inv.netProfit).toFixed(0)} {isHindi ? 'लाभ' : 'profit'}
+                      {/* Payment Mode / Status Badge */}
+                      <div>
+                        <span className="m3-badge-status paid">
+                          {inv.paymentMethod?.toLowerCase() === 'upi'
+                            ? '⚡ UPI'
+                            : inv.paymentMethod?.toLowerCase() === 'card'
+                            ? '💳 Card'
+                            : '💵 ' + (isHindi ? 'नकद (Cash)' : 'Cash')}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Middle: Items Purchased Strip */}
+                    <div className="m3-purchased-items-strip mt-2">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        🛍️ {inv.items && inv.items.length > 0
+                          ? inv.items.map((it) => `${it.name} (${it.quantity} pcs @ ${currency}${it.price})`).join(', ')
+                          : (inv.product || 'Items')}
+                      </span>
+                    </div>
+
+                    {/* Financial Amount Grid: Items Count, Net Profit, Total Bill */}
+                    <div className="m3-ledger-amount-grid mt-2.5">
+                      <div className="ledger-amt-col">
+                        <span className="label">{isHindi ? 'कुल आइटम' : 'Items Qty'}</span>
+                        <span className="val font-semibold">
+                          {inv.items?.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0) || 1} pcs
+                        </span>
+                      </div>
+                      <div className="ledger-amt-col">
+                        <span className="label">{isHindi ? 'शुद्ध मुनाफ़ा' : 'Net Profit'}</span>
+                        <span className="val font-bold text-emerald-600 dark:text-emerald-400">
+                          +{currency}{Number(inv.netProfit || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="ledger-amt-col balance" style={{ background: '#eff6ff', borderColor: '#dbeafe' }}>
+                        <span className="label text-blue-700 dark:text-blue-300 font-bold">{isHindi ? 'कुल बिल' : 'Total Bill'}</span>
+                        <span className="val font-black text-blue-700 dark:text-blue-300">
+                          {currency}{Number(inv.total).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Row: Tax Invoice Generated & PDF View/Download Button */}
+                    <div className="m3-card-footer-action-row mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                      <div className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                        <Receipt size={13} className="text-indigo-500" />
+                        <span>{isHindi ? 'पक्का बिल जनरेटेड' : 'Tax Invoice'}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => generateInvoicePDF(inv, user, settings)}
+                        className="m3-view-pdf-btn m3-ripple"
+                        title={isHindi ? 'इस बिल का PDF देखें व डाउनलोड करें' : 'View & Download Invoice PDF'}
+                      >
+                        <FileText size={13} />
+                        <span>{isHindi ? 'बिल PDF देखें' : 'View PDF'}</span>
+                        <Download size={12} className="opacity-70" />
+                      </button>
                     </div>
                   </div>
                 ))}

@@ -367,13 +367,13 @@ export default function InvoiceWizard({
       const replyText =
         activeLang === 'hi'
           ? (mode === 'purchase'
-              ? 'यहाँ आपकी सप्लायर खरीददारी व अकाउंटिंग (Purchase Ledger) की रिपोर्ट है। आप ऊपर ड्रॉपडाउन से Sales Report भी चुन सकते हैं।'
-              : 'यहाँ आपकी दैनिक बिक्री व मुनाफ़ा (Sales & Profit) की रिपोर्ट है। आप ऊपर ड्रॉपडाउन से Purchase Report भी चुन सकते हैं।')
+              ? 'यहाँ आपकी सप्लायर खरीददारी व अकाउंटिंग (Purchase Ledger) की रिपोर्ट है। आप ऊपर दिए गए बटनों से आसानी से Sales और Purchase स्विच कर सकते हैं।'
+              : 'यहाँ आपकी दैनिक बिक्री व मुनाफ़ा (Sales & Profit) की रिपोर्ट है। आप ऊपर दिए गए बटनों से आसानी से Sales और Purchase स्विच कर सकते हैं।')
           : (mode === 'purchase'
-              ? 'Here is your Supplier Purchase & Accounting Ledger report. You can switch between Sales and Purchase from the dropdown.'
-              : 'Here is your Daily Sales & Net Profit report. You can switch between Sales and Purchase from the dropdown.');
+              ? 'Here is your Supplier Purchase & Accounting Ledger report. You can switch between Sales and Purchase using the tabs above.'
+              : 'Here is your Daily Sales & Net Profit report. You can switch between Sales and Purchase using the tabs above.');
 
-      setIsVoiceSessionActive(true);
+      setIsVoiceSessionActive(false);
       replyBillie(replyText, activeLang);
       return;
     }
@@ -771,7 +771,7 @@ export default function InvoiceWizard({
             <button
               type="button"
               onClick={() => {
-                setIsVoiceSessionActive(true);
+                setIsVoiceSessionActive(false);
                 handleUserMessage('sales report');
               }}
               className="suggestion-chip active-report-chip m3-ripple"
