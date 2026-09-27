@@ -207,6 +207,33 @@ export function isCheckStockIntent(text = '') {
   return [...hindiCheckStock, ...englishCheckStock].some((t) => norm.includes(t));
 }
 
+// Reporting & Accounting Intent Detection (Sales vs Purchase)
+export function isReportingIntent(text = '') {
+  const norm = text.toLowerCase().trim();
+  const reportTriggers = [
+    'report', 'reporting', 'reports', 'sales report', 'purchase report',
+    'sale report', 'bikri report', 'kharid report', 'khareed report', 'hisaab', 'hisab', 'accounting',
+    'profit', 'munafa', 'daily sales', 'check sales', 'sales check karo',
+    'report dikhao', 'report check karo', 'purchase check karo', 'supplier hisab',
+    'payment pending', 'due payment', 'due date', 'kab payment due', 'kiski payment',
+    'दैनिक बिक्री', 'बिक्री रिपोर्ट', 'खरीद रिपोर्ट', 'मुनाफा', 'हिसाब', 'अकाउंटिंग', 'रिपोर्ट'
+  ];
+  return reportTriggers.some((t) => norm.includes(t));
+}
+
+export function detectReportType(text = '') {
+  const norm = text.toLowerCase().trim();
+  const purchaseKeywords = [
+    'purchase', 'kharid', 'khareed', 'supplier', 'vendor', 'pending payment',
+    'due payment', 'kab payment', 'kis se kitna', 'acccunting', 'accounting',
+    'खरीद', 'खरीददारी', 'सप्लायर', 'वेंडर', 'बकाया'
+  ];
+  if (purchaseKeywords.some((k) => norm.includes(k))) {
+    return 'purchase';
+  }
+  return 'sales';
+}
+
 // Extract product from "Shirt ka stock dikhao" or "check stock of Jeans"
 export function extractProductFromStockQuery(text = '') {
   const str = text.trim();

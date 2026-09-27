@@ -21,10 +21,11 @@ import {
   AlertTriangle,
   CreditCard,
   Calendar,
-  Check
+  Check,
+  BarChart3
 } from 'lucide-react';
 
-export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenAdmin }) {
+export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenAdmin, onOpenReporting }) {
   const {
     user,
     authenticate,
@@ -413,6 +414,36 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                   >
                     <Package size={15} />
                     <span>{isHindi ? 'इन्वेंटरी' : 'Inventory'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Reporting & Supplier Accounting Card */}
+              <div className="profile-inventory-card mt-3">
+                <div className="profile-inventory-header">
+                  <div className="profile-inventory-icon-box bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600">
+                    <BarChart3 size={22} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="profile-inventory-title">
+                      {isHindi ? '📊 बिजनेस रिपोर्टिंग व अकाउंटिंग' : '📊 Business Reports & Accounting'}
+                    </h4>
+                    <p className="profile-inventory-desc">
+                      {isHindi
+                        ? 'दैनिक बिक्री, शुद्ध मुनाफ़ा (Profit) व सप्लायर ड्यू डेट चेक करें'
+                        : 'Track daily sales, net profit and supplier payment dues'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      if (onOpenReporting) onOpenReporting();
+                    }}
+                    className="m3-button-tonal text-xs py-2 px-3.5 flex items-center gap-1.5"
+                  >
+                    <BarChart3 size={15} />
+                    <span>{isHindi ? 'रिपोर्ट्स' : 'Reports'}</span>
                   </button>
                 </div>
               </div>

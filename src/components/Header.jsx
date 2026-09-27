@@ -1,8 +1,8 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, User, Wifi, WifiOff, Sparkles, CheckCircle2, Languages, ShieldCheck } from 'lucide-react';
+import { Settings, User, Wifi, WifiOff, Sparkles, CheckCircle2, Languages, ShieldCheck, BarChart3 } from 'lucide-react';
 
-export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin }) {
+export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onOpenReporting }) {
   const { user, isOffline, isInstalled, settings, setLanguage } = useApp();
   const isHindi = settings.language === 'hi';
 
@@ -43,6 +43,19 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin }) {
       </div>
 
       <div className="header-right">
+        {/* Reporting Button */}
+        {onOpenReporting && (
+          <button
+            type="button"
+            onClick={onOpenReporting}
+            className="header-report-btn m3-ripple"
+            title={isHindi ? 'बिजनेस रिपोर्टिंग: बिक्री, मुनाफ़ा व खरीद खाता' : 'Reports: Sales, Profit & Purchases'}
+          >
+            <BarChart3 size={16} className="text-indigo-600 dark:text-indigo-400" />
+            <span>{isHindi ? 'रिपोर्ट्स' : 'Reports'}</span>
+          </button>
+        )}
+
         {/* Admin Portal Button */}
         <button
           type="button"

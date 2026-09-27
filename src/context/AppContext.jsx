@@ -165,6 +165,192 @@ const DEFAULT_INVENTORY = [
   }
 ];
 
+export const DEFAULT_PURCHASES = [
+  {
+    id: 'pur_101',
+    purchaseNumber: 'PUR-2026-001',
+    supplierName: 'Vardhman Textiles Ltd.',
+    supplierContact: '+91 98220 11223',
+    supplierAddress: 'Ludhiana, Punjab',
+    date: new Date(Date.now() - 86400000 * 7).toISOString().split('T')[0],
+    dueDate: new Date(Date.now() + 86400000 * 8).toISOString().split('T')[0],
+    product: 'Cotton T-Shirt Fabric & Blanks',
+    items: [
+      { name: 'T-Shirt', quantity: 60, unitCost: 320, totalCost: 19200 }
+    ],
+    totalAmount: 19200,
+    paidAmount: 12000,
+    pendingAmount: 7200,
+    paymentStatus: 'partial', // 'paid' | 'partial' | 'unpaid'
+    paymentHistory: [
+      { id: 'pay_1', amount: 12000, date: new Date(Date.now() - 86400000 * 7).toISOString().split('T')[0], method: 'NEFT Transfer', notes: 'Initial advance 60%' }
+    ],
+    notes: 'Advance ₹12,000 paid. Balance ₹7,200 due in 8 days.'
+  },
+  {
+    id: 'pur_102',
+    purchaseNumber: 'PUR-2026-002',
+    supplierName: 'Surat Silk & Denim Mills',
+    supplierContact: '+91 98450 67890',
+    supplierAddress: 'Ring Road, Surat, Gujarat',
+    date: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0],
+    dueDate: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0],
+    product: 'Denim Jeans Fabric Rolls',
+    items: [
+      { name: 'Jeans', quantity: 35, unitCost: 850, totalCost: 29750 }
+    ],
+    totalAmount: 29750,
+    paidAmount: 29750,
+    pendingAmount: 0,
+    paymentStatus: 'paid',
+    paymentHistory: [
+      { id: 'pay_2', amount: 29750, date: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0], method: 'Bank Transfer (IMPS)', notes: 'Full settlement on delivery' }
+    ],
+    notes: 'Full payment cleared upon delivery.'
+  },
+  {
+    id: 'pur_103',
+    purchaseNumber: 'PUR-2026-003',
+    supplierName: 'Apex Leather & Accessories',
+    supplierContact: '+91 97112 34567',
+    supplierAddress: 'Dharavi, Mumbai',
+    date: new Date(Date.now() - 86400000 * 12).toISOString().split('T')[0],
+    dueDate: new Date(Date.now() - 86400000 * 1).toISOString().split('T')[0], // Overdue by 1 day
+    product: 'Genuine Leather Belts',
+    items: [
+      { name: 'Leather Belt', quantity: 25, unitCost: 220, totalCost: 5500 }
+    ],
+    totalAmount: 5500,
+    paidAmount: 2000,
+    pendingAmount: 3500,
+    paymentStatus: 'partial',
+    paymentHistory: [
+      { id: 'pay_3', amount: 2000, date: new Date(Date.now() - 86400000 * 12).toISOString().split('T')[0], method: 'Cash', notes: 'Booking deposit' }
+    ],
+    notes: 'Urgent: Payment due date passed! Balance ₹3,500 pending.'
+  },
+  {
+    id: 'pur_104',
+    purchaseNumber: 'PUR-2026-004',
+    supplierName: 'Raymond Shirting & Suiting Co.',
+    supplierContact: '+91 99100 88776',
+    supplierAddress: 'Bhiwandi, Maharashtra',
+    date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+    dueDate: new Date(Date.now() + 86400000 * 18).toISOString().split('T')[0],
+    product: 'Formal Shirts Fabric Lots',
+    items: [
+      { name: 'Formal Shirt', quantity: 20, unitCost: 600, totalCost: 12000 }
+    ],
+    totalAmount: 12000,
+    paidAmount: 0,
+    pendingAmount: 12000,
+    paymentStatus: 'unpaid',
+    paymentHistory: [],
+    notes: 'Net 20 days credit terms. Full payment of ₹12,000 pending.'
+  }
+];
+
+const DEFAULT_INVOICES = [
+  {
+    id: 'inv_demo_today',
+    invoiceNumber: 'INV-2026-003',
+    customerName: 'Amit Sharma',
+    customerEmail: 'amit.sharma@gmail.com',
+    customerPhone: '+91 98101 23456',
+    date: new Date().toLocaleDateString(),
+    rawDate: new Date().toISOString().split('T')[0],
+    product: 'T-Shirt, Leather Belt',
+    quantity: 3,
+    price: 1450,
+    discount: 0,
+    discountType: 'flat',
+    subtotal: 1450,
+    totalDiscount: 0,
+    taxRate: 0,
+    taxAmount: 0,
+    total: 1450,
+    currency: '₹',
+    items: [
+      {
+        name: 'T-Shirt',
+        quantity: 2,
+        price: 500,
+        subtotal: 1000,
+        lineDiscount: 0,
+        lineTotal: 1000
+      },
+      {
+        name: 'Leather Belt',
+        quantity: 1,
+        price: 450,
+        subtotal: 450,
+        lineDiscount: 0,
+        lineTotal: 450
+      }
+    ]
+  },
+  {
+    id: 'inv_demo_yesterday',
+    invoiceNumber: 'INV-2026-002',
+    customerName: 'Neha Verma',
+    customerEmail: 'neha.v@yahoo.com',
+    customerPhone: '+91 98991 99887',
+    date: new Date(Date.now() - 86400000).toLocaleDateString(),
+    rawDate: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+    product: 'Jeans',
+    quantity: 2,
+    price: 1200,
+    discount: 100,
+    discountType: 'flat',
+    subtotal: 2400,
+    totalDiscount: 100,
+    taxRate: 5,
+    taxAmount: 115,
+    total: 2415,
+    currency: '₹',
+    items: [
+      {
+        name: 'Jeans',
+        quantity: 2,
+        price: 1200,
+        subtotal: 2400,
+        lineDiscount: 100,
+        lineTotal: 2300
+      }
+    ]
+  },
+  {
+    id: 'inv_demo_1',
+    invoiceNumber: 'INV-2026-001',
+    customerName: 'Rajesh Enterprises',
+    customerEmail: 'rajesh@enterprise.in',
+    customerPhone: '+91 98711 22334',
+    date: new Date(Date.now() - 86400000 * 3).toLocaleDateString(),
+    rawDate: new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0],
+    product: 'Formal Shirt',
+    quantity: 3,
+    price: 900,
+    discount: 100,
+    discountType: 'flat',
+    subtotal: 2700,
+    totalDiscount: 100,
+    taxRate: 5,
+    taxAmount: 130,
+    total: 2730,
+    currency: '₹',
+    items: [
+      {
+        name: 'Formal Shirt',
+        quantity: 3,
+        price: 900,
+        subtotal: 2700,
+        lineDiscount: 100,
+        lineTotal: 2600
+      }
+    ]
+  }
+];
+
 export function AppProvider({ children }) {
   // 1. Registered Users Database (Managed by Admin)
   const [users, setUsers] = useState(() => {
@@ -200,41 +386,19 @@ export function AppProvider({ children }) {
   const [invoices, setInvoices] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_invoices');
-      return saved ? JSON.parse(saved) : [
-        {
-          id: 'inv_demo_1',
-          invoiceNumber: 'INV-2026-001',
-          customerName: 'Rajesh Enterprises',
-          customerEmail: 'rajesh@enterprise.in',
-          date: new Date(Date.now() - 86400000 * 2).toLocaleDateString(),
-          dueDate: 'Net 15 Days',
-          product: 'PWA Web Design & Development',
-          quantity: 1,
-          price: 1250,
-          discount: 50,
-          discountType: 'flat',
-          subtotal: 1250,
-          totalDiscount: 50,
-          taxRate: 5,
-          taxAmount: 60,
-          total: 1260,
-          currency: '₹',
-          items: [
-            {
-              name: 'PWA Web Design & Development',
-              quantity: 1,
-              price: 1250,
-              discount: 50,
-              discountType: 'flat',
-              subtotal: 1250,
-              lineDiscount: 50,
-              lineTotal: 1200
-            }
-          ]
-        }
-      ];
+      return saved ? JSON.parse(saved) : DEFAULT_INVOICES;
     } catch {
-      return [];
+      return DEFAULT_INVOICES;
+    }
+  });
+
+  // 5. Purchases & Accounting Ledger State
+  const [purchases, setPurchases] = useState(() => {
+    try {
+      const saved = localStorage.getItem('billie_purchases');
+      return saved ? JSON.parse(saved) : DEFAULT_PURCHASES;
+    } catch {
+      return DEFAULT_PURCHASES;
     }
   });
 
@@ -276,6 +440,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('billie_inventory', JSON.stringify(inventory));
   }, [inventory]);
+
+  useEffect(() => {
+    localStorage.setItem('billie_purchases', JSON.stringify(purchases));
+  }, [purchases]);
 
   // Network online/offline listeners
   useEffect(() => {
@@ -670,6 +838,115 @@ export function AppProvider({ children }) {
     });
   };
 
+  // -------------------------------------------------------------
+  // PURCHASE & SUPPLIER ACCOUNTING ACTIONS
+  // -------------------------------------------------------------
+  const addPurchase = (purchaseData) => {
+    const total = Math.max(0, Number(purchaseData.totalAmount) || 0);
+    const paid = Math.max(0, Math.min(total, Number(purchaseData.paidAmount) || 0));
+    const pending = Math.max(0, total - paid);
+    const status = paid >= total && total > 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
+
+    const count = purchases.length + 1;
+    const newPurchase = {
+      id: `pur_${Date.now()}`,
+      purchaseNumber: purchaseData.purchaseNumber || `PUR-2026-${String(count).padStart(3, '0')}`,
+      supplierName: (purchaseData.supplierName || '').trim() || 'General Supplier',
+      supplierContact: (purchaseData.supplierContact || '').trim(),
+      supplierAddress: (purchaseData.supplierAddress || '').trim(),
+      date: purchaseData.date || new Date().toISOString().split('T')[0],
+      dueDate: purchaseData.dueDate || new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0],
+      product: purchaseData.product || (purchaseData.items?.[0]?.name) || 'Supplies',
+      items: purchaseData.items || [
+        {
+          name: purchaseData.product || 'Supplies',
+          quantity: Number(purchaseData.quantity) || 1,
+          unitCost: Number(purchaseData.unitCost) || total,
+          totalCost: total
+        }
+      ],
+      totalAmount: total,
+      paidAmount: paid,
+      pendingAmount: pending,
+      paymentStatus: status,
+      paymentHistory: paid > 0 ? [
+        {
+          id: `pay_${Date.now()}`,
+          amount: paid,
+          date: purchaseData.date || new Date().toISOString().split('T')[0],
+          method: purchaseData.paymentMethod || 'Initial Payment',
+          notes: 'Paid upon bill entry'
+        }
+      ] : [],
+      notes: purchaseData.notes || ''
+    };
+
+    setPurchases((prev) => [newPurchase, ...prev]);
+
+    // If restock requested, update inventory
+    if (purchaseData.addToStock && purchaseData.items) {
+      purchaseData.items.forEach((item) => {
+        if (item.name) {
+          addOrUpdateStock(item.name, item.quantity || 1, 0, item.unitCost || 0);
+        }
+      });
+    }
+
+    return newPurchase;
+  };
+
+  const recordPurchasePayment = (purchaseId, amountPaid, paymentMethod = 'UPI / Cash', notes = '') => {
+    const payAmount = Math.max(0, Number(amountPaid) || 0);
+    if (payAmount <= 0) return false;
+
+    setPurchases((prev) =>
+      prev.map((pur) => {
+        if (pur.id === purchaseId) {
+          const newPaid = pur.paidAmount + payAmount;
+          const newPending = Math.max(0, pur.totalAmount - newPaid);
+          const newStatus = newPaid >= pur.totalAmount ? 'paid' : 'partial';
+
+          const newHistoryItem = {
+            id: `pay_${Date.now()}`,
+            amount: payAmount,
+            date: new Date().toISOString().split('T')[0],
+            method: paymentMethod,
+            notes: notes || `Recorded payment of ₹${payAmount}`
+          };
+
+          return {
+            ...pur,
+            paidAmount: newPaid,
+            pendingAmount: newPending,
+            paymentStatus: newStatus,
+            paymentHistory: [newHistoryItem, ...(pur.paymentHistory || [])],
+            notes: notes ? `${pur.notes ? pur.notes + ' | ' : ''}${notes}` : pur.notes
+          };
+        }
+        return pur;
+      })
+    );
+    return true;
+  };
+
+  const deletePurchase = (purchaseId) => {
+    setPurchases((prev) => prev.filter((p) => p.id !== purchaseId));
+  };
+
+  const updatePurchase = (purchaseId, updatedFields) => {
+    setPurchases((prev) =>
+      prev.map((pur) => {
+        if (pur.id === purchaseId) {
+          const merged = { ...pur, ...updatedFields };
+          merged.pendingAmount = Math.max(0, merged.totalAmount - merged.paidAmount);
+          merged.paymentStatus = merged.paidAmount >= merged.totalAmount ? 'paid' : merged.paidAmount > 0 ? 'partial' : 'unpaid';
+          return merged;
+        }
+        return pur;
+      })
+    );
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -678,6 +955,7 @@ export function AppProvider({ children }) {
         settings,
         invoices,
         inventory,
+        purchases,
         isInstallable,
         isInstalled,
         isOffline,
@@ -700,7 +978,11 @@ export function AppProvider({ children }) {
         addOrUpdateStock,
         updateProduct,
         deleteProduct,
-        reduceStockForInvoice
+        reduceStockForInvoice,
+        addPurchase,
+        recordPurchasePayment,
+        deletePurchase,
+        updatePurchase
       }}
     >
       {children}

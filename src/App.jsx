@@ -1,41 +1,77 @@
-import React, { useState } from 'react';
-import { AppProvider } from './context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { AppProvider, useApp } from './context/AppContext';
 import Header from './components/Header';
 import BottomSearchBar from './components/BottomSearchBar';
 import InvoiceWizard from './components/InvoiceWizard';
 import ProfileModal from './components/ProfileModal';
 import SettingsModal from './components/SettingsModal';
 import InventoryModal from './components/InventoryModal';
-import AdminDashboardModal from './components/AdminDashboardModal';
-import { useApp } from './context/AppContext';
-import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import ReportingSection from './components/ReportingSection';
+import AdminDashboardPage from './components/AdminDashboardPage';
+import { AlertTriangle } from 'lucide-react';
 
 function BillieApp() {
   const { user, settings } = useApp();
+  const [currentView, setCurrentView] = useState(() => {
+    return window.location.hash === '#/admin' || window.location.hash === '#admin'
+      ? 'admin'
+      : 'app';
+  });
+
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isReportingOpen, setIsReportingOpen] = useState(false);
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [promptHint, setPromptHint] = useState('');
 
   const isHindi = settings.language === 'hi';
-  const isSubExpired = user.isLoggedIn && user.role !== 'admin' && (
-    user.subscription?.status === 'expired' ||
-    (user.subscription?.expiryDate && new Date(user.subscription.expiryDate) < new Date())
-  );
+  const isSubExpired =
+    user.isLoggedIn &&
+    user.role !== 'admin' &&
+    (user.subscription?.status === 'expired' ||
+      (user.subscription?.expiryDate && new Date(user.subscription.expiryDate) < new Date()));
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#/admin' || window.location.hash === '#admin') {
+        setCurrentView('admin');
+      } else {
+        setCurrentView('app');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const openAdminPage = () => {
+    window.location.hash = '#/admin';
+    setCurrentView('admin');
+  };
+
+  const backToStore = () => {
+    window.location.hash = '#/';
+    setCurrentView('app');
+  };
 
   const handleQuerySubmit = (query) => {
     setSubmittedQuery(query);
   };
 
+  // FULL PAGE VIEW 1: SUPER ADMIN DASHBOARD PAGE
+  if (currentView === 'admin') {
+    return <AdminDashboardPage onBackToStore={backToStore} />;
+  }
+
+  // FULL PAGE VIEW 2: BILLIE BILLING STORE APP
   return (
     <div className="billie-app-viewport">
       {/* Top Header */}
       <Header
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={openAdminPage}
+        onOpenReporting={() => setIsReportingOpen(true)}
       />
 
       {/* Subscription Expired Alert Banner */}
@@ -51,7 +87,7 @@ function BillieApp() {
           </div>
           <button
             type="button"
-            onClick={() => setIsAdminOpen(true)}
+            onClick={openAdminPage}
             className="sub-renew-strip-btn"
           >
             {isHindi ? 'एडमिन पोर्टल' : 'Admin Portal'}
@@ -66,7 +102,8 @@ function BillieApp() {
           onPromptHintChange={setPromptHint}
           onResetExternalQuery={() => setSubmittedQuery('')}
           onOpenInventory={() => setIsInventoryOpen(true)}
-          onOpenAdmin={() => setIsAdminOpen(true)}
+          onOpenAdmin={openAdminPage}
+          onOpenReporting={() => setIsReportingOpen(true)}
         />
       </main>
 
@@ -81,7 +118,8 @@ function BillieApp() {
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
         onOpenInventory={() => setIsInventoryOpen(true)}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={openAdminPage}
+        onOpenReporting={() => setIsReportingOpen(true)}
       />
 
       <InventoryModal
@@ -89,10 +127,26 @@ function BillieApp() {
         onClose={() => setIsInventoryOpen(false)}
       />
 
-      <AdminDashboardModal
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-      />
+      {/* Reporting & Accounting Modal Dialog */}
+      {isReportingOpen && (
+        <div
+          className="modal-backdrop animate-fade-in"
+          onClick={() => setIsReportingOpen(false)}
+        >
+          <div
+            className="reporting-dialog-viewport animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <ReportingSection
+              initialMode="sales"
+              onClose={() => setIsReportingOpen(false)}
+              isStandalone={false}
+            />
+          </div>
+        </div>
+      )}
 
       <SettingsModal
         isOpen={isSettingsOpen}

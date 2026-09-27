@@ -11,15 +11,19 @@ import {
   CornerDownLeft,
   PlusCircle,
   Package,
-  ShieldCheck
+  ShieldCheck,
+  BarChart3
 } from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
 import StockReportCard from './StockReportCard';
+import ReportingSection from './ReportingSection';
 import { useApp } from '../context/AppContext';
 import {
   isInvoiceIntent,
   isAddStockIntent,
   isCheckStockIntent,
+  isReportingIntent,
+  detectReportType,
   extractProductFromStockQuery,
   detectLanguage,
   isAffirmative,
@@ -55,7 +59,8 @@ export default function InvoiceWizard({
   onPromptHintChange,
   onResetExternalQuery,
   onOpenInventory,
-  onOpenAdmin
+  onOpenAdmin,
+  onOpenReporting
 }) {
   const {
     user,
@@ -103,6 +108,9 @@ export default function InvoiceWizard({
   // Home page active stock report card
   const [activeStockReport, setActiveStockReport] = useState(null);
 
+  // Home page active reporting & accounting section
+  const [activeReporting, setActiveReporting] = useState(null); // { mode: 'sales' | 'purchase' }
+
   const messagesEndRef = useRef(null);
 
   // Sync lang with settings
@@ -115,7 +123,7 @@ export default function InvoiceWizard({
   // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, step, finalInvoice, activeStockReport]);
+  }, [messages, step, finalInvoice, activeStockReport, activeReporting]);
 
   // Handle incoming query from the bottom search bar (text or voice)
   useEffect(() => {
@@ -325,10 +333,36 @@ export default function InvoiceWizard({
     }
 
     // -------------------------------------------------------------
+    // FLOW: "report", "sales report", "purchase report", "accounting"
+    // -------------------------------------------------------------
+    if (isReportingIntent(trimmed) && (step === STEPS.IDLE || step === STEPS.COMPLETED)) {
+      const mode = detectReportType(trimmed); // 'sales' or 'purchase'
+      setActiveReporting({ mode });
+      setActiveStockReport(null);
+      setFinalInvoice(null);
+      setStep(STEPS.IDLE);
+
+      const replyText =
+        activeLang === 'hi'
+          ? (mode === 'purchase'
+              ? 'यहाँ आपकी सप्लायर खरीददारी व अकाउंटिंग (Purchase Ledger) की रिपोर्ट है। आप ऊपर ड्रॉपडाउन से Sales Report भी चुन सकते हैं।'
+              : 'यहाँ आपकी दैनिक बिक्री व मुनाफ़ा (Sales & Profit) की रिपोर्ट है। आप ऊपर ड्रॉपडाउन से Purchase Report भी चुन सकते हैं।')
+          : (mode === 'purchase'
+              ? 'Here is your Supplier Purchase & Accounting Ledger report. You can switch between Sales and Purchase from the dropdown.'
+              : 'Here is your Daily Sales & Net Profit report. You can switch between Sales and Purchase from the dropdown.');
+
+      replyBillie(replyText, activeLang, () => {
+        setIsVoiceSessionActive(false);
+      });
+      return;
+    }
+
+    // -------------------------------------------------------------
     // FLOW 1: "stock add karo" or "add stock" -> Conversational Add
     // -------------------------------------------------------------
     if (isAddStockIntent(trimmed) && step === STEPS.IDLE) {
       setFinalInvoice(null);
+      setActiveReporting(null);
       draftStockRef.current = { name: '', quantity: 1, price: 0 };
       setDraftStockItem({ name: '', quantity: 1, price: 0 });
       setStep(STEPS.STOCK_ASK_PRODUCT);
@@ -694,6 +728,19 @@ export default function InvoiceWizard({
               </button>
             )}
 
+            <button
+              type="button"
+              onClick={() => {
+                setActiveReporting({ mode: 'sales' });
+                setActiveStockReport(null);
+                setFinalInvoice(null);
+              }}
+              className="suggestion-chip active-report-chip m3-ripple"
+            >
+              <BarChart3 size={14} className="text-indigo-500" />
+              <span>📊 {lang === 'hi' ? 'रिपोर्टिंग (बिक्री व खरीद)' : 'Reporting & Accounts'}</span>
+            </button>
+
             {onOpenAdmin && (
               <button
                 type="button"
@@ -879,6 +926,16 @@ export default function InvoiceWizard({
               filteredProduct={activeStockReport.filteredProduct}
               onClose={() => setActiveStockReport(null)}
               onAddStockClick={() => handleUserMessage('stock add karo')}
+            />
+          </div>
+        )}
+
+        {/* Live Reporting & Accounting Section on Home Screen */}
+        {activeReporting && (
+          <div className="my-3">
+            <ReportingSection
+              initialMode={activeReporting.mode || 'sales'}
+              onClose={() => setActiveReporting(null)}
             />
           </div>
         )}
