@@ -1,31 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import {
-  BarChart3,
   TrendingUp,
-  DollarSign,
-  Calendar,
   CreditCard,
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Filter,
   Search,
   Plus,
   ChevronDown,
-  Package,
-  User,
+  ShoppingBag,
   Phone,
   ArrowUpRight,
-  ArrowDownRight,
-  Sparkles,
   X,
-  FileText,
   Check,
   Receipt,
-  ShoppingBag,
-  RefreshCw,
-  Trash2
+  Trash2,
+  Calendar,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 
 export default function ReportingSection({
@@ -46,11 +39,11 @@ export default function ReportingSection({
   const isHindi = settings.language === 'hi';
   const currency = settings.currency || '₹';
 
-  // Active Report View Mode: 'sales' (बिक्री रिपोर्ट) or 'purchase' (खरीददारी व अकाउंटिंग)
+  // Active Report View Mode: 'sales' (बिक्री रिपोर्ट) or 'purchase' (खरीददारी व सप्लायर खाता)
   const [reportMode, setReportMode] = useState(initialMode);
 
-  // Time filter for Sales: 'today' | 'week' | 'month' | 'all'
-  const [salesTimeFilter, setSalesTimeFilter] = useState('all');
+  // Time filter for Sales: 'today' (Daily) | 'week' (Weekly) | 'month' (Monthly) | 'all' (All Time)
+  const [salesTimeFilter, setSalesTimeFilter] = useState('today');
 
   // Purchase filters
   const [purchaseStatusFilter, setPurchaseStatusFilter] = useState('all'); // 'all' | 'pending' | 'due' | 'paid'
@@ -138,7 +131,7 @@ export default function ReportingSection({
   // Today's Date String in YYYY-MM-DD
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Filtered Invoices according to selected time range
+  // Filtered Invoices according to selected time range (Daily, Weekly, Monthly, All)
   const filteredSalesInvoices = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -174,67 +167,16 @@ export default function ReportingSection({
     });
 
     const invoiceCount = filteredSalesInvoices.length;
-    const avgOrderValue = invoiceCount > 0 ? totalRevenue / invoiceCount : 0;
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-    // Today's specific metrics
-    const todayInvoices = processedInvoices.filter((inv) => {
-      const invDay = inv.parsedDate.toISOString().split('T')[0];
-      return invDay === todayStr;
-    });
-    const todayRevenue = todayInvoices.reduce((acc, curr) => acc + (curr.total || 0), 0);
-    const todayProfit = todayInvoices.reduce((acc, curr) => acc + (curr.netProfit || 0), 0);
 
     return {
       totalRevenue,
       totalCost,
       totalProfit,
       profitMargin,
-      invoiceCount,
-      avgOrderValue,
-      todayRevenue,
-      todayProfit,
-      todayInvoicesCount: todayInvoices.length
+      invoiceCount
     };
-  }, [filteredSalesInvoices, processedInvoices, todayStr]);
-
-  // Product-wise Performance Breakdown
-  const productPerformance = useMemo(() => {
-    const breakdown = {};
-
-    filteredSalesInvoices.forEach((inv) => {
-      if (inv.items && Array.isArray(inv.items)) {
-        inv.items.forEach((it) => {
-          const name = it.name || 'Miscellaneous';
-          const normName = name.toLowerCase().trim();
-          const qty = Number(it.quantity) || 1;
-          const rev = Number(it.lineTotal) || (qty * (Number(it.price) || 0));
-          const unitCost = productCostMap[normName] || ((Number(it.price) || 0) * 0.65);
-          const cost = qty * unitCost;
-          const profit = Math.max(0, rev - cost);
-
-          if (!breakdown[normName]) {
-            breakdown[normName] = {
-              displayName: name,
-              totalQuantity: 0,
-              totalRevenue: 0,
-              totalCost: 0,
-              totalProfit: 0,
-              avgPrice: Number(it.price) || 0,
-              unitCost
-            };
-          }
-
-          breakdown[normName].totalQuantity += qty;
-          breakdown[normName].totalRevenue += rev;
-          breakdown[normName].totalCost += cost;
-          breakdown[normName].totalProfit += profit;
-        });
-      }
-    });
-
-    return Object.values(breakdown).sort((a, b) => b.totalRevenue - a.totalRevenue);
-  }, [filteredSalesInvoices, productCostMap]);
+  }, [filteredSalesInvoices]);
 
   // -------------------------------------------------------------
   // 2. PURCHASE ACCOUNTING CALCULATIONS
@@ -274,7 +216,6 @@ export default function ReportingSection({
     let totalPaid = 0;
     let totalPending = 0;
     let overdueCount = 0;
-    let overdueAmount = 0;
     let pendingCount = 0;
 
     processedPurchases.forEach((p) => {
@@ -283,10 +224,7 @@ export default function ReportingSection({
       totalPending += Number(p.pendingAmount) || 0;
       if (p.pendingAmount > 0) {
         pendingCount += 1;
-        if (p.isOverdue) {
-          overdueCount += 1;
-          overdueAmount += p.pendingAmount;
-        }
+        if (p.isOverdue) overdueCount += 1;
       }
     });
 
@@ -295,7 +233,6 @@ export default function ReportingSection({
       totalPaid,
       totalPending,
       overdueCount,
-      overdueAmount,
       pendingCount
     };
   }, [processedPurchases]);
@@ -339,7 +276,7 @@ export default function ReportingSection({
 
     const amount = Number(payAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert(isHindi ? 'कृपया वैध भुगतान राशि दर्ज करें!' : 'Please enter a valid payment amount!');
+      alert(isHindi ? 'कृपया सही राशि दर्ज करें!' : 'Please enter a valid amount!');
       return;
     }
 
@@ -353,13 +290,13 @@ export default function ReportingSection({
     if (success) {
       setPaymentSuccessMsg(
         isHindi
-          ? `सफलतापूर्वक ${currency}${amount.toLocaleString()} का भुगतान दर्ज कर लिया गया!`
-          : `Payment of ${currency}${amount.toLocaleString()} recorded successfully!`
+          ? `✓ ${currency}${amount.toLocaleString()} का भुगतान दर्ज हो गया!`
+          : `✓ Payment of ${currency}${amount.toLocaleString()} recorded!`
       );
       setTimeout(() => {
         setActivePaymentPurchase(null);
         setPaymentSuccessMsg('');
-      }, 1200);
+      }, 1000);
     }
   };
 
@@ -384,7 +321,7 @@ export default function ReportingSection({
     const qty = Math.max(1, Number(newQuantity) || 1);
     const unitCost = Math.max(0, Number(newUnitCost) || 0);
     if (unitCost <= 0) {
-      setAddBillError(isHindi ? 'कृपया खरीद मूल्य (Cost Price) दर्ज करें!' : 'Please enter unit cost price!');
+      setAddBillError(isHindi ? 'कृपया खरीद लागत (Cost Price) दर्ज करें!' : 'Please enter unit cost price!');
       return;
     }
 
@@ -414,8 +351,8 @@ export default function ReportingSection({
 
     setAddBillSuccess(
       isHindi
-        ? `खरीद बिल सफलतापूर्वक दर्ज हो गया! (कुल: ${currency}${total.toLocaleString()})`
-        : `Purchase bill recorded! (Total: ${currency}${total.toLocaleString()})`
+        ? `✓ बिल जुड़ गया! कुल: ${currency}${total.toLocaleString()}`
+        : `✓ Bill added! Total: ${currency}${total.toLocaleString()}`
     );
 
     setTimeout(() => {
@@ -428,59 +365,50 @@ export default function ReportingSection({
       setNewUnitCost('');
       setNewPaidNow('0');
       setNewNotes('');
-    }, 1200);
+    }, 1000);
   };
 
   return (
-    <div className={`reporting-card-container animate-fade-in ${isStandalone ? 'standalone-viewport' : ''}`}>
-      {/* Top Header with Prominent Dropdown Switcher */}
-      <div className="reporting-top-header">
-        <div className="reporting-title-area">
-          <div className="reporting-icon-badge">
-            <BarChart3 size={22} className="text-white" />
+    <div className={`m3-report-card-container animate-fade-in ${isStandalone ? 'standalone-viewport' : ''}`}>
+      {/* 1. M3 HEADER WITH CLEAN DROPDOWN SELECTOR */}
+      <div className="m3-report-top-bar">
+        <div className="flex items-center gap-2.5">
+          <div className="m3-report-icon-box">
+            {reportMode === 'sales' ? <TrendingUp size={20} /> : <ShoppingBag size={20} />}
           </div>
           <div>
-            <h3 className="reporting-main-title">
-              {isHindi ? '📊 बिजनेस रिपोर्टिंग व अकाउंटिंग' : '📊 Business Reports & Accounting'}
+            <h3 className="m3-report-heading">
+              {isHindi ? 'हिसाब-किताब व रिपोर्ट' : 'Business Reports'}
             </h3>
-            <p className="reporting-subtitle">
-              {isHindi
-                ? 'दैनिक बिक्री, मुनाफ़ा (Profit) और सप्लायर खरीददारी का संपूर्ण हिसाब-किताब'
-                : 'Track daily sales, net profit, supplier purchases and pending dues'}
+            <p className="m3-report-subheading">
+              {isHindi ? 'बिक्री, मुनाफ़ा व सप्लायर उधारी' : 'Sales, Profit & Supplier Dues'}
             </p>
           </div>
         </div>
 
-        <div className="reporting-controls-row">
-          {/* REQUIREMENT: Dropdown Selector for Sales Report vs Purchase Report */}
-          <div className="report-dropdown-wrapper">
-            <label htmlFor="report-mode-select" className="report-dropdown-label">
-              {isHindi ? 'रिपोर्ट का प्रकार चुनें:' : 'Select Report:'}
-            </label>
-            <div className="custom-select-container">
-              <select
-                id="report-mode-select"
-                value={reportMode}
-                onChange={(e) => setReportMode(e.target.value)}
-                className="report-mode-select-input"
-              >
-                <option value="sales">
-                  📈 {isHindi ? 'बिक्री व मुनाफ़ा रिपोर्ट (Sales & Profit)' : 'Sales & Profit Report'}
-                </option>
-                <option value="purchase">
-                  📦 {isHindi ? 'खरीददारी व अकाउंटिंग रिपोर्ट (Purchase & Accounting)' : 'Purchase & Accounting Report'}
-                </option>
-              </select>
-              <ChevronDown size={16} className="select-chevron-icon" />
-            </div>
+        <div className="flex items-center gap-2">
+          {/* REQUIREMENT: Clean Dropdown for Sales vs Purchase */}
+          <div className="m3-dropdown-pill-wrap">
+            <select
+              value={reportMode}
+              onChange={(e) => setReportMode(e.target.value)}
+              className="m3-report-select-element"
+            >
+              <option value="sales">
+                {isHindi ? '📈 बिक्री रिपोर्ट (Sales)' : '📈 Sales Report'}
+              </option>
+              <option value="purchase">
+                {isHindi ? '📦 खरीद रिपोर्ट (Purchase)' : '📦 Purchase Report'}
+              </option>
+            </select>
+            <ChevronDown size={14} className="m3-dropdown-arrow" />
           </div>
 
-          {/* Close button if provided */}
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="report-close-btn m3-ripple"
+              className="m3-circle-close-btn"
               title={isHindi ? 'बंद करें' : 'Close'}
             >
               <X size={18} />
@@ -489,586 +417,392 @@ export default function ReportingSection({
         </div>
       </div>
 
-      {/* Visual Tab Quick Switchers */}
-      <div className="report-mode-tabs-bar">
+      {/* 2. M3 SEGMENTED VIEW SWITCHER (Big Tap Targets for Phone) */}
+      <div className="m3-segmented-control-row">
         <button
           type="button"
           onClick={() => setReportMode('sales')}
-          className={`report-tab-btn ${reportMode === 'sales' ? 'active-sales' : ''}`}
+          className={`m3-segment-btn ${reportMode === 'sales' ? 'active-sales' : ''}`}
         >
-          <TrendingUp size={16} />
-          <span>{isHindi ? 'बिक्री व मुनाफ़ा (Sales & Profit)' : 'Sales & Profit Report'}</span>
-          <span className="tab-count-badge">{invoices.length}</span>
+          <TrendingUp size={15} />
+          <span>{isHindi ? 'बिक्री व मुनाफ़ा (Sales)' : 'Sales & Profit'}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setReportMode('purchase')}
-          className={`report-tab-btn ${reportMode === 'purchase' ? 'active-purchase' : ''}`}
+          className={`m3-segment-btn ${reportMode === 'purchase' ? 'active-purchase' : ''}`}
         >
-          <ShoppingBag size={16} />
-          <span>{isHindi ? 'खरीददारी व अकाउंटिंग (Purchase & Accounting)' : 'Purchase & Accounting'}</span>
+          <ShoppingBag size={15} />
+          <span>{isHindi ? 'सप्लायर खाता (Purchase)' : 'Supplier Ledger'}</span>
           {purchaseKPIs.pendingCount > 0 && (
-            <span className="tab-warning-badge">{purchaseKPIs.pendingCount} Due</span>
+            <span className="m3-alert-badge">{purchaseKPIs.pendingCount}</span>
           )}
         </button>
       </div>
 
       {/* ========================================================= */}
-      {/* SECTION 1: SALES & PROFIT REPORT (दैनिक बिक्री व लाभ)     */}
+      {/* VIEW 1: SALES REPORT (DAILY / WEEKLY / MONTHLY)           */}
       {/* ========================================================= */}
       {reportMode === 'sales' && (
-        <div className="sales-report-view animate-fade-in">
-          {/* Daily Sales Spotlight Banner */}
-          <div className="daily-sales-spotlight-card">
-            <div className="spotlight-left">
-              <span className="spotlight-tag">
-                <Sparkles size={14} />
-                <span>{isHindi ? 'दैनिक बिक्री (Today\'s Sales)' : 'Today\'s Performance'}</span>
+        <div className="m3-sales-section-body animate-fade-in">
+          {/* Time Filter Chips: Daily, Weekly, Monthly, All */}
+          <div className="m3-filter-chips-scroll custom-scrollbar">
+            <button
+              type="button"
+              onClick={() => setSalesTimeFilter('today')}
+              className={`m3-chip ${salesTimeFilter === 'today' ? 'active' : ''}`}
+            >
+              <Sparkles size={13} />
+              <span>{isHindi ? 'आज (Daily)' : 'Today (Daily)'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSalesTimeFilter('week')}
+              className={`m3-chip ${salesTimeFilter === 'week' ? 'active' : ''}`}
+            >
+              <Calendar size={13} />
+              <span>{isHindi ? 'इस सप्ताह (Weekly)' : 'This Week'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSalesTimeFilter('month')}
+              className={`m3-chip ${salesTimeFilter === 'month' ? 'active' : ''}`}
+            >
+              <Calendar size={13} />
+              <span>{isHindi ? 'इस महीने (Monthly)' : 'This Month'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSalesTimeFilter('all')}
+              className={`m3-chip ${salesTimeFilter === 'all' ? 'active' : ''}`}
+            >
+              <Layers size={13} />
+              <span>{isHindi ? 'कुल (All Time)' : 'All Time'}</span>
+            </button>
+          </div>
+
+          {/* Simple, High-Visibility M3 KPI Cards (100% Mobile Responsive) */}
+          <div className="m3-mobile-kpi-container">
+            {/* Total Sales Card */}
+            <div className="m3-kpi-card-simple sales">
+              <span className="m3-kpi-tag">
+                {salesTimeFilter === 'today'
+                  ? (isHindi ? 'आज की कुल बिक्री (Daily Sales)' : "Today's Total Sales")
+                  : salesTimeFilter === 'week'
+                  ? (isHindi ? 'इस सप्ताह की बिक्री (Weekly)' : "This Week's Sales")
+                  : salesTimeFilter === 'month'
+                  ? (isHindi ? 'इस महीने की बिक्री (Monthly)' : "This Month's Sales")
+                  : (isHindi ? 'कुल बिक्री (All Sales)' : 'Total Sales')}
               </span>
-              <div className="spotlight-metric-row">
-                <span className="spotlight-amount">
-                  {currency}{salesKPIs.todayRevenue.toLocaleString()}
-                </span>
-                <span className="spotlight-invoices">
-                  {salesKPIs.todayInvoicesCount} {isHindi ? 'बिल कटे' : 'invoices'}
-                </span>
-              </div>
-            </div>
-
-            <div className="spotlight-right">
-              <div className="spotlight-profit-box">
-                <span className="spotlight-profit-label">
-                  {isHindi ? 'आज का शुद्ध मुनाफ़ा (Net Profit):' : 'Today\'s Net Profit:'}
-                </span>
-                <span className="spotlight-profit-val text-emerald-600 dark:text-emerald-400">
-                  +{currency}{salesKPIs.todayProfit.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Time Filter Tabs */}
-          <div className="sales-filter-bar">
-            <span className="filter-label">
-              <Filter size={14} />
-              <span>{isHindi ? 'अवधि:' : 'Period:'}</span>
-            </span>
-            <div className="filter-pills-row">
-              <button
-                type="button"
-                onClick={() => setSalesTimeFilter('today')}
-                className={`sales-filter-pill ${salesTimeFilter === 'today' ? 'active' : ''}`}
-              >
-                {isHindi ? 'आज (Today)' : 'Today'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSalesTimeFilter('week')}
-                className={`sales-filter-pill ${salesTimeFilter === 'week' ? 'active' : ''}`}
-              >
-                {isHindi ? 'इस सप्ताह (7 Days)' : 'This Week'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSalesTimeFilter('month')}
-                className={`sales-filter-pill ${salesTimeFilter === 'month' ? 'active' : ''}`}
-              >
-                {isHindi ? 'इस महीने (30 Days)' : 'This Month'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSalesTimeFilter('all')}
-                className={`sales-filter-pill ${salesTimeFilter === 'all' ? 'active' : ''}`}
-              >
-                {isHindi ? 'कुल (All Time)' : 'All Time'}
-              </button>
-            </div>
-          </div>
-
-          {/* Sales KPIs Grid */}
-          <div className="sales-kpi-grid">
-            <div className="kpi-metric-card revenue">
-              <div className="kpi-header">
-                <span className="kpi-title">{isHindi ? 'कुल बिक्री (Sales Revenue)' : 'Total Revenue'}</span>
-                <div className="kpi-icon-wrap bg-blue-100 dark:bg-blue-900/40 text-blue-600">
-                  <TrendingUp size={18} />
-                </div>
-              </div>
-              <div className="kpi-value text-blue-700 dark:text-blue-300">
+              <div className="m3-kpi-big-number text-blue-600 dark:text-blue-400">
                 {currency}{salesKPIs.totalRevenue.toLocaleString()}
               </div>
-              <div className="kpi-footer">
-                <span>{salesKPIs.invoiceCount} {isHindi ? 'इनवॉइस जनरेट हुए' : 'invoices generated'}</span>
-              </div>
+              <span className="m3-kpi-subtext">
+                {salesKPIs.invoiceCount} {isHindi ? 'बिल कटे हैं' : 'bills created'}
+              </span>
             </div>
 
-            <div className="kpi-metric-card profit">
-              <div className="kpi-header">
-                <span className="kpi-title">{isHindi ? 'कुल मुनाफ़ा (Net Profit)' : 'Net Profit'}</span>
-                <div className="kpi-icon-wrap bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600">
-                  <DollarSign size={18} />
-                </div>
-              </div>
-              <div className="kpi-value text-emerald-700 dark:text-emerald-300">
+            {/* Total Profit Card */}
+            <div className="m3-kpi-card-simple profit">
+              <span className="m3-kpi-tag">
+                {salesTimeFilter === 'today'
+                  ? (isHindi ? 'आज का शुद्ध मुनाफ़ा (Daily Profit)' : "Today's Net Profit")
+                  : (isHindi ? 'शुद्ध मुनाफ़ा (Net Profit)' : 'Net Profit Earned')}
+              </span>
+              <div className="m3-kpi-big-number text-emerald-600 dark:text-emerald-400">
                 +{currency}{salesKPIs.totalProfit.toLocaleString()}
               </div>
-              <div className="kpi-footer text-emerald-600 font-semibold">
-                <ArrowUpRight size={14} />
-                <span>{salesKPIs.profitMargin.toFixed(1)}% {isHindi ? 'ग्रॉस मार्जिन' : 'gross margin'}</span>
-              </div>
-            </div>
-
-            <div className="kpi-metric-card cost">
-              <div className="kpi-header">
-                <span className="kpi-title">{isHindi ? 'सामान की लागत (COGS Cost)' : 'Cost of Goods'}</span>
-                <div className="kpi-icon-wrap bg-slate-100 dark:bg-slate-800 text-slate-600">
-                  <Package size={18} />
-                </div>
-              </div>
-              <div className="kpi-value text-slate-700 dark:text-slate-300">
-                {currency}{salesKPIs.totalCost.toLocaleString()}
-              </div>
-              <div className="kpi-footer text-slate-500">
-                <span>{isHindi ? 'खरीद व स्टॉक लागत' : 'Inventory purchase cost'}</span>
-              </div>
-            </div>
-
-            <div className="kpi-metric-card aov">
-              <div className="kpi-header">
-                <span className="kpi-title">{isHindi ? 'औसत बिल साइज़ (Avg Bill)' : 'Avg Order Value'}</span>
-                <div className="kpi-icon-wrap bg-purple-100 dark:bg-purple-900/40 text-purple-600">
-                  <Receipt size={18} />
-                </div>
-              </div>
-              <div className="kpi-value text-purple-700 dark:text-purple-300">
-                {currency}{salesKPIs.avgOrderValue.toFixed(0)}
-              </div>
-              <div className="kpi-footer text-slate-500">
-                <span>{isHindi ? 'प्रति ग्राहक बिक्री' : 'Per transaction'}</span>
-              </div>
+              <span className="m3-kpi-subtext text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
+                <ArrowUpRight size={13} />
+                <span>{salesKPIs.profitMargin.toFixed(1)}% {isHindi ? 'मुनाफ़ा मार्जिन' : 'profit margin'}</span>
+              </span>
             </div>
           </div>
 
-          {/* Product-wise Sales & Profit Contribution */}
-          <div className="report-content-panel mt-6">
-            <div className="panel-header-row">
-              <h4 className="panel-title">
-                {isHindi ? '📦 प्रोडक्ट वार बिक्री व मुनाफ़ा (Product Profitability)' : 'Product Sales & Margin'}
+          {/* Mobile-First Invoice List (Cards, NOT a breaking table!) */}
+          <div className="m3-list-section mt-4">
+            <div className="flex items-center justify-between mb-2.5 px-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {isHindi ? 'कटे हुए बिलों का ब्यौरा' : 'Bills Generated'} ({filteredSalesInvoices.length})
               </h4>
-              <span className="panel-tag">
-                {productPerformance.length} {isHindi ? 'प्रोडक्ट्स बिके' : 'products sold'}
+              <span className="text-[11px] text-slate-400">
+                {salesTimeFilter === 'today' ? (isHindi ? 'आज के बिल' : 'Today') : ''}
               </span>
             </div>
 
-            <div className="table-responsive-wrapper">
-              <table className="reporting-data-table">
-                <thead>
-                  <tr>
-                    <th>{isHindi ? 'प्रोडक्ट का नाम' : 'Product'}</th>
-                    <th className="text-center">{isHindi ? 'बिक्री मात्रा' : 'Qty Sold'}</th>
-                    <th className="text-right">{isHindi ? 'औसत बिक्री मूल्य' : 'Avg Sell Price'}</th>
-                    <th className="text-right">{isHindi ? 'खरीद लागत' : 'Cost Price'}</th>
-                    <th className="text-right">{isHindi ? 'कुल बिक्री' : 'Revenue'}</th>
-                    <th className="text-right">{isHindi ? 'शुद्ध मुनाफ़ा' : 'Profit'}</th>
-                    <th className="text-right">{isHindi ? 'मार्जिन' : 'Margin %'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productPerformance.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="text-center py-6 text-slate-400">
-                        {isHindi ? 'इस अवधि में कोई बिक्री रिकॉर्ड नहीं है।' : 'No sales recorded for this period.'}
-                      </td>
-                    </tr>
-                  ) : (
-                    productPerformance.map((p, idx) => {
-                      const margin = p.totalRevenue > 0 ? (p.totalProfit / p.totalRevenue) * 100 : 0;
-                      return (
-                        <tr key={idx}>
-                          <td className="font-semibold text-slate-900 dark:text-slate-100">
-                            {p.displayName}
-                          </td>
-                          <td className="text-center font-bold">
-                            <span className="qty-sold-badge">{p.totalQuantity} pcs</span>
-                          </td>
-                          <td className="text-right">{currency}{p.avgPrice.toFixed(0)}</td>
-                          <td className="text-right text-slate-500">{currency}{p.unitCost.toFixed(0)}</td>
-                          <td className="text-right font-bold text-slate-800 dark:text-slate-200">
-                            {currency}{p.totalRevenue.toLocaleString()}
-                          </td>
-                          <td className="text-right font-extrabold text-emerald-600 dark:text-emerald-400">
-                            +{currency}{p.totalProfit.toLocaleString()}
-                          </td>
-                          <td className="text-right">
-                            <span className="profit-margin-pill">
-                              {margin.toFixed(1)}%
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+            {filteredSalesInvoices.length === 0 ? (
+              <div className="m3-empty-state-box">
+                <Receipt size={32} className="text-slate-300 mx-auto mb-2" />
+                <p className="text-xs text-slate-500">
+                  {isHindi ? 'इस अवधि में कोई बिल नहीं कटा है।' : 'No bills found for this period.'}
+                </p>
+              </div>
+            ) : (
+              <div className="m3-mobile-cards-stack">
+                {filteredSalesInvoices.map((inv) => (
+                  <div key={inv.id} className="m3-invoice-row-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
+                            {inv.customerName || (isHindi ? 'कैश ग्राहक' : 'Cash Customer')}
+                          </span>
+                          <span className="m3-mini-pill-inv">{inv.invoiceNumber}</span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                          {inv.items?.map((it) => `${it.name} (${it.quantity})`).join(', ') || inv.product}
+                        </p>
+                        <span className="text-[11px] text-slate-400 mt-1 block">
+                          📅 {inv.date}
+                        </span>
+                      </div>
 
-          {/* Invoices List Breakdown */}
-          <div className="report-content-panel mt-6">
-            <div className="panel-header-row">
-              <h4 className="panel-title">
-                {isHindi ? '🧾 हाल ही में कटे बिल (Invoice Ledger)' : 'Recent Invoices'}
-              </h4>
-              <span className="panel-tag">
-                {filteredSalesInvoices.length} {isHindi ? 'बिल' : 'records'}
-              </span>
-            </div>
-
-            <div className="table-responsive-wrapper">
-              <table className="reporting-data-table">
-                <thead>
-                  <tr>
-                    <th>{isHindi ? 'इनवॉइस #' : 'Invoice #'}</th>
-                    <th>{isHindi ? 'तारीख' : 'Date'}</th>
-                    <th>{isHindi ? 'ग्राहक का नाम' : 'Customer'}</th>
-                    <th>{isHindi ? 'आइटम्स' : 'Items'}</th>
-                    <th className="text-right">{isHindi ? 'कुल बिल राशि' : 'Amount'}</th>
-                    <th className="text-right">{isHindi ? 'मुनाफ़ा' : 'Profit'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSalesInvoices.map((inv) => (
-                    <tr key={inv.id}>
-                      <td className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
-                        {inv.invoiceNumber}
-                      </td>
-                      <td className="text-xs text-slate-500">{inv.date}</td>
-                      <td className="font-semibold text-slate-900 dark:text-slate-100">
-                        {inv.customerName || (isHindi ? 'कैश ग्राहक' : 'Walk-in Customer')}
-                      </td>
-                      <td className="text-xs text-slate-600 dark:text-slate-400 max-w-xs truncate">
-                        {inv.items?.map((it) => `${it.name} (${it.quantity})`).join(', ') || inv.product}
-                      </td>
-                      <td className="text-right font-bold text-slate-900 dark:text-slate-100">
-                        {currency}{Number(inv.total).toLocaleString()}
-                      </td>
-                      <td className="text-right font-bold text-emerald-600 dark:text-emerald-400">
-                        +{currency}{Number(inv.netProfit).toFixed(0)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      <div className="text-right flex flex-col items-end flex-shrink-0">
+                        <span className="font-extrabold text-base text-slate-900 dark:text-slate-100">
+                          {currency}{Number(inv.total).toLocaleString()}
+                        </span>
+                        <span className="m3-profit-badge mt-1">
+                          +{currency}{Number(inv.netProfit).toFixed(0)} {isHindi ? 'लाभ' : 'profit'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* SECTION 2: PURCHASE REPORT & ACCOUNTING (खरीददारी व खाता) */}
+      {/* VIEW 2: PURCHASE REPORT / SUPPLIER ACCOUNTING LEDGER      */}
       {/* ========================================================= */}
       {reportMode === 'purchase' && (
-        <div className="purchase-report-view animate-fade-in">
-          {/* Purchase Accounting KPIs */}
-          <div className="sales-kpi-grid">
-            <div className="kpi-metric-card revenue">
-              <div className="kpi-header">
-                <span className="kpi-title">{isHindi ? 'कुल खरीददारी (Total Purchases)' : 'Total Purchases'}</span>
-                <div className="kpi-icon-wrap bg-blue-100 dark:bg-blue-900/40 text-blue-600">
-                  <ShoppingBag size={18} />
-                </div>
-              </div>
-              <div className="kpi-value text-blue-700 dark:text-blue-300">
+        <div className="m3-purchase-section-body animate-fade-in">
+          {/* Summary KPI Cards (100% Mobile Responsive) */}
+          <div className="m3-purchase-summary-row">
+            <div className="m3-p-kpi-box">
+              <span className="p-kpi-label">{isHindi ? 'कुल खरीद (Purchase)' : 'Total Purchases'}</span>
+              <span className="p-kpi-val text-blue-700 dark:text-blue-300">
                 {currency}{purchaseKPIs.totalPurchased.toLocaleString()}
-              </div>
-              <div className="kpi-footer">
-                <span>{purchases.length} {isHindi ? 'खरीद बिल दर्ज' : 'purchase bills'}</span>
-              </div>
+              </span>
             </div>
 
-            <div className="kpi-metric-card profit">
-              <div className="kpi-header">
-                <span className="kpi-title">{isHindi ? 'चुकाई गई रकम (Amount Paid)' : 'Total Paid'}</span>
-                <div className="kpi-icon-wrap bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600">
-                  <CheckCircle2 size={18} />
-                </div>
-              </div>
-              <div className="kpi-value text-emerald-700 dark:text-emerald-300">
+            <div className="m3-p-kpi-box">
+              <span className="p-kpi-label">{isHindi ? 'चुकाया (Paid)' : 'Total Paid'}</span>
+              <span className="p-kpi-val text-emerald-600 dark:text-emerald-400">
                 {currency}{purchaseKPIs.totalPaid.toLocaleString()}
-              </div>
-              <div className="kpi-footer text-emerald-600 font-semibold">
-                <span>
-                  {purchaseKPIs.totalPurchased > 0
-                    ? `${((purchaseKPIs.totalPaid / purchaseKPIs.totalPurchased) * 100).toFixed(0)}% `
-                    : '100% '}
-                  {isHindi ? 'भुगतान चुकता' : 'settled'}
-                </span>
-              </div>
+              </span>
             </div>
 
-            <div className="kpi-metric-card cost">
-              <div className="kpi-header">
-                <span className="kpi-title">{isHindi ? 'बकाया पेमेंट (Pending Balance)' : 'Total Balance Due'}</span>
-                <div className="kpi-icon-wrap bg-amber-100 dark:bg-amber-900/40 text-amber-600">
-                  <CreditCard size={18} />
-                </div>
-              </div>
-              <div className="kpi-value text-amber-600 dark:text-amber-400">
+            <div className="m3-p-kpi-box highlighted">
+              <span className="p-kpi-label">{isHindi ? 'बकाया बाकी (Balance Due)' : 'Balance Due'}</span>
+              <span className="p-kpi-val text-amber-600 dark:text-amber-400">
                 {currency}{purchaseKPIs.totalPending.toLocaleString()}
-              </div>
-              <div className="kpi-footer text-amber-700 dark:text-amber-300 font-semibold">
-                <span>{purchaseKPIs.pendingCount} {isHindi ? 'बिलों का भुगतान बाकी' : 'pending bills'}</span>
-              </div>
-            </div>
-
-            <div className="kpi-metric-card aov">
-              <div className="kpi-header">
-                <span className="kpi-title">{isHindi ? 'अतिदेय राशि (Overdue Amount)' : 'Overdue Balance'}</span>
-                <div className="kpi-icon-wrap bg-rose-100 dark:bg-rose-900/40 text-rose-600">
-                  <AlertTriangle size={18} />
-                </div>
-              </div>
-              <div className="kpi-value text-rose-600 dark:text-rose-400">
-                {currency}{purchaseKPIs.overdueAmount.toLocaleString()}
-              </div>
-              <div className="kpi-footer text-rose-600 font-semibold">
-                <span>{purchaseKPIs.overdueCount} {isHindi ? 'बिल्स की तारीख निकल गई!' : 'bills overdue!'}</span>
-              </div>
+              </span>
             </div>
           </div>
 
-          {/* Action Bar & Filter Strip */}
-          <div className="purchase-action-strip mt-6">
-            <div className="search-filter-left">
-              <div className="search-input-box">
-                <Search size={16} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder={isHindi ? 'सप्लायर या प्रोडक्ट खोजें...' : 'Search supplier or product...'}
-                  value={purchaseSearchQuery}
-                  onChange={(e) => setPurchaseSearchQuery(e.target.value)}
-                  className="search-field-input"
-                />
-              </div>
-
-              <div className="purchase-filter-tabs">
-                <button
-                  type="button"
-                  onClick={() => setPurchaseStatusFilter('all')}
-                  className={`p-filter-pill ${purchaseStatusFilter === 'all' ? 'active' : ''}`}
-                >
-                  {isHindi ? 'सभी (All)' : 'All'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPurchaseStatusFilter('pending')}
-                  className={`p-filter-pill ${purchaseStatusFilter === 'pending' ? 'active' : ''}`}
-                >
-                  {isHindi ? 'बकाया (Pending)' : 'Pending'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPurchaseStatusFilter('due')}
-                  className={`p-filter-pill ${purchaseStatusFilter === 'due' ? 'active' : ''}`}
-                >
-                  {isHindi ? 'ड्यू / अतिदेय (Due Soon)' : 'Due Soon'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPurchaseStatusFilter('paid')}
-                  className={`p-filter-pill ${purchaseStatusFilter === 'paid' ? 'active' : ''}`}
-                >
-                  {isHindi ? 'पूर्ण चुकता (Paid)' : 'Paid'}
-                </button>
-              </div>
+          {/* Search, Filter & Add Button Strip */}
+          <div className="m3-purchase-toolbar mt-3">
+            <div className="m3-search-bar-wrap">
+              <Search size={14} className="text-slate-400" />
+              <input
+                type="text"
+                placeholder={isHindi ? 'सप्लायर या सामान खोजें...' : 'Search supplier or item...'}
+                value={purchaseSearchQuery}
+                onChange={(e) => setPurchaseSearchQuery(e.target.value)}
+                className="m3-search-input-field"
+              />
             </div>
 
             <button
               type="button"
               onClick={() => setIsAddPurchaseOpen(true)}
-              className="add-purchase-btn m3-ripple"
+              className="m3-add-purchase-btn"
             >
-              <Plus size={16} />
-              <span>{isHindi ? '+ नया खरीद बिल जोड़ें' : '+ Add Purchase Bill'}</span>
+              <Plus size={15} />
+              <span>{isHindi ? 'नया बिल जोड़ें' : 'Add Bill'}</span>
             </button>
           </div>
 
-          {/* Purchase Accounting Ledger Table */}
-          <div className="report-content-panel mt-4">
-            <div className="panel-header-row">
-              <h4 className="panel-title">
-                {isHindi ? '📖 सप्लायर खरीददारी व भुगतान खाता (Supplier Ledger)' : 'Supplier Purchase Ledger'}
-              </h4>
-              <span className="panel-tag">
-                {filteredPurchases.length} {isHindi ? 'रिकॉर्ड्स' : 'records'}
-              </span>
-            </div>
+          {/* Quick Status Filter Tabs */}
+          <div className="m3-status-filter-pills-row mt-2.5">
+            <button
+              type="button"
+              onClick={() => setPurchaseStatusFilter('all')}
+              className={`m3-status-chip ${purchaseStatusFilter === 'all' ? 'active' : ''}`}
+            >
+              {isHindi ? 'सभी बिल (All)' : 'All'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPurchaseStatusFilter('pending')}
+              className={`m3-status-chip ${purchaseStatusFilter === 'pending' ? 'active' : ''}`}
+            >
+              {isHindi ? 'बकाया (Pending Due)' : 'Pending'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPurchaseStatusFilter('due')}
+              className={`m3-status-chip ${purchaseStatusFilter === 'due' ? 'active' : ''}`}
+            >
+              {isHindi ? 'तारीख आ गई (Due Soon)' : 'Due Soon'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPurchaseStatusFilter('paid')}
+              className={`m3-status-chip ${purchaseStatusFilter === 'paid' ? 'active' : ''}`}
+            >
+              {isHindi ? 'पूर्ण चुकता (Paid)' : 'Paid'}
+            </button>
+          </div>
 
-            <div className="table-responsive-wrapper">
-              <table className="reporting-data-table purchase-table">
-                <thead>
-                  <tr>
-                    <th>{isHindi ? 'सप्लायर (किससे खरीदा)' : 'Supplier / Vendor'}</th>
-                    <th>{isHindi ? 'खरीदा गया सामान व मात्रा' : 'Items & Quantity'}</th>
-                    <th className="text-right">{isHindi ? 'कुल बिल राशि' : 'Total Bill'}</th>
-                    <th className="text-right">{isHindi ? 'कितनी पेमेंट कर दी' : 'Paid Amount'}</th>
-                    <th className="text-right">{isHindi ? 'पेंडिंग पेमेंट (बाकी)' : 'Pending Balance'}</th>
-                    <th className="text-center">{isHindi ? 'कब पेमेंट ड्यू है' : 'Due Date'}</th>
-                    <th className="text-center">{isHindi ? 'स्टेटस' : 'Status'}</th>
-                    <th className="text-center">{isHindi ? 'एक्शन' : 'Action'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPurchases.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="text-center py-8 text-slate-400">
-                        {isHindi ? 'कोई खरीददारी रिकॉर्ड नहीं मिला।' : 'No purchase records found.'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredPurchases.map((pur) => {
-                      const isFullyPaid = pur.pendingAmount <= 0;
-                      return (
-                        <tr key={pur.id} className={pur.isOverdue ? 'overdue-row' : ''}>
-                          {/* 1. Supplier Name & Contact */}
-                          <td>
-                            <div className="supplier-cell-content">
-                              <span className="supplier-name-text">{pur.supplierName}</span>
-                              {pur.supplierContact && (
-                                <span className="supplier-phone-subtext">
-                                  <Phone size={11} className="inline mr-1" />
-                                  {pur.supplierContact}
-                                </span>
-                              )}
-                              <span className="supplier-bill-no">{pur.purchaseNumber} • {pur.date}</span>
-                            </div>
-                          </td>
+          {/* Mobile-First Supplier Ledger Cards (NO HORIZONTAL OVERFLOW!) */}
+          <div className="m3-supplier-cards-container mt-3.5">
+            {filteredPurchases.length === 0 ? (
+              <div className="m3-empty-state-box">
+                <ShoppingBag size={32} className="text-slate-300 mx-auto mb-2" />
+                <p className="text-xs text-slate-500">
+                  {isHindi ? 'कोई खरीद बिल नहीं मिला।' : 'No purchase records found.'}
+                </p>
+              </div>
+            ) : (
+              filteredPurchases.map((pur) => {
+                const isFullyPaid = pur.pendingAmount <= 0;
+                return (
+                  <div
+                    key={pur.id}
+                    className={`m3-supplier-card ${pur.isOverdue ? 'overdue' : isFullyPaid ? 'paid' : 'pending'}`}
+                  >
+                    {/* Top Row: Supplier Name, Phone & Status Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
+                          {pur.supplierName}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
+                          {pur.supplierContact && (
+                            <span className="flex items-center gap-1 font-medium">
+                              <Phone size={11} className="text-blue-500" />
+                              {pur.supplierContact}
+                            </span>
+                          )}
+                          <span className="font-mono text-[11px] text-slate-400">
+                            {pur.purchaseNumber}
+                          </span>
+                        </div>
+                      </div>
 
-                          {/* 2. Items & Quantity */}
-                          <td>
-                            <div className="purchase-items-cell">
-                              {pur.items && pur.items.length > 0 ? (
-                                pur.items.map((it, idx) => (
-                                  <div key={idx} className="purchased-item-chip">
-                                    <span className="item-name font-semibold">{it.name}</span>
-                                    <span className="item-qty">
-                                      {it.quantity} pcs @ {currency}{it.unitCost}
-                                    </span>
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                                  {pur.product}
-                                </span>
-                              )}
-                            </div>
-                          </td>
+                      {/* Status Badge */}
+                      <div>
+                        {isFullyPaid ? (
+                          <span className="m3-badge-status paid">
+                            {isHindi ? '✓ पूर्ण चुकता' : 'Paid'}
+                          </span>
+                        ) : pur.paidAmount > 0 ? (
+                          <span className="m3-badge-status partial">
+                            {isHindi ? 'आंशिक बकाया' : 'Partial'}
+                          </span>
+                        ) : (
+                          <span className="m3-badge-status unpaid">
+                            {isHindi ? 'पूरा बाकी' : 'Unpaid'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                          {/* 3. Total Bill Amount */}
-                          <td className="text-right font-bold text-slate-900 dark:text-slate-100">
-                            {currency}{Number(pur.totalAmount).toLocaleString()}
-                          </td>
+                    {/* Middle: Product & Quantity Purchased */}
+                    <div className="m3-purchased-items-strip mt-2">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        📦 {pur.items && pur.items.length > 0
+                          ? pur.items.map((it) => `${it.name} (${it.quantity} pcs @ ${currency}${it.unitCost})`).join(', ')
+                          : pur.product}
+                      </span>
+                    </div>
 
-                          {/* 4. Amount Paid */}
-                          <td className="text-right font-bold text-emerald-600 dark:text-emerald-400">
-                            {currency}{Number(pur.paidAmount).toLocaleString()}
-                          </td>
+                    {/* Financial Summary: Total, Paid, Pending */}
+                    <div className="m3-ledger-amount-grid mt-2.5">
+                      <div className="ledger-amt-col">
+                        <span className="label">{isHindi ? 'कुल बिल' : 'Total'}</span>
+                        <span className="val font-semibold">{currency}{Number(pur.totalAmount).toLocaleString()}</span>
+                      </div>
+                      <div className="ledger-amt-col">
+                        <span className="label">{isHindi ? 'दिया गया' : 'Paid'}</span>
+                        <span className="val font-semibold text-emerald-600">{currency}{Number(pur.paidAmount).toLocaleString()}</span>
+                      </div>
+                      <div className="ledger-amt-col balance">
+                        <span className="label">{isHindi ? 'बाकी (Pending)' : 'Balance Due'}</span>
+                        <span className="val font-bold text-amber-600">
+                          {pur.pendingAmount > 0 ? `${currency}${Number(pur.pendingAmount).toLocaleString()}` : `${currency}0`}
+                        </span>
+                      </div>
+                    </div>
 
-                          {/* 5. Pending Balance */}
-                          <td className="text-right">
-                            {pur.pendingAmount > 0 ? (
-                              <span className="pending-balance-badge">
-                                {currency}{Number(pur.pendingAmount).toLocaleString()}
-                              </span>
-                            ) : (
-                              <span className="paid-zero-badge">
-                                {currency}0
-                              </span>
-                            )}
-                          </td>
+                    {/* Bottom Row: Due Date Alert & Pay Action */}
+                    <div className="m3-card-footer-action-row mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                      <div className="due-date-info">
+                        {isFullyPaid ? (
+                          <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">
+                            <CheckCircle2 size={13} />
+                            <span>{isHindi ? 'भुगतान पूर्ण' : 'Fully Paid'}</span>
+                          </span>
+                        ) : pur.isOverdue ? (
+                          <span className="text-xs text-rose-600 font-bold flex items-center gap-1">
+                            <AlertTriangle size={13} />
+                            <span>
+                              {isHindi ? 'तारीख निकल गई!' : 'Overdue!'} ({pur.dueDate})
+                            </span>
+                          </span>
+                        ) : pur.daysRemaining === 0 ? (
+                          <span className="text-xs text-amber-600 font-bold flex items-center gap-1">
+                            <Clock size={13} />
+                            <span>{isHindi ? 'आज ही देना है!' : 'Due Today!'}</span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1">
+                            <Clock size={13} className="text-blue-500" />
+                            <span>
+                              {pur.daysRemaining} {isHindi ? 'दिन बाकी' : 'days left'} ({pur.dueDate})
+                            </span>
+                          </span>
+                        )}
+                      </div>
 
-                          {/* 6. Payment Due Date & Countdown */}
-                          <td className="text-center">
-                            {isFullyPaid ? (
-                              <span className="due-status-pill fully-paid">
-                                <Check size={12} />
-                                <span>{isHindi ? 'पूर्ण चुकता' : 'Paid in Full'}</span>
-                              </span>
-                            ) : pur.isOverdue ? (
-                              <span className="due-status-pill overdue" title={`Due: ${pur.dueDate}`}>
-                                <AlertTriangle size={12} />
-                                <span>
-                                  {isHindi ? 'तारीख निकल गई!' : 'Overdue!'} ({Math.abs(pur.daysRemaining)} {isHindi ? 'दिन' : 'd'})
-                                </span>
-                              </span>
-                            ) : pur.daysRemaining === 0 ? (
-                              <span className="due-status-pill due-today" title={`Due: ${pur.dueDate}`}>
-                                <Clock size={12} />
-                                <span>{isHindi ? 'आज ड्यू है!' : 'Due Today!'}</span>
-                              </span>
-                            ) : (
-                              <span className="due-status-pill upcoming" title={`Due: ${pur.dueDate}`}>
-                                <Clock size={12} />
-                                <span>
-                                  {pur.daysRemaining} {isHindi ? 'दिन बाकी' : 'days left'} ({pur.dueDate})
-                                </span>
-                              </span>
-                            )}
-                          </td>
+                      <div className="flex items-center gap-2">
+                        {!isFullyPaid && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPaymentModal(pur)}
+                            className="m3-pay-now-btn"
+                          >
+                            <CreditCard size={13} />
+                            <span>{isHindi ? 'पेमेंट करें' : 'Pay'}</span>
+                          </button>
+                        )}
 
-                          {/* 7. Status Badge */}
-                          <td className="text-center">
-                            {isFullyPaid ? (
-                              <span className="purchase-status-badge status-paid">
-                                {isHindi ? '🟢 पूर्ण चुकता' : '🟢 Paid'}
-                              </span>
-                            ) : pur.paidAmount > 0 ? (
-                              <span className="purchase-status-badge status-partial">
-                                {isHindi ? '🟡 आंशिक बकाया' : '🟡 Partial'}
-                              </span>
-                            ) : (
-                              <span className="purchase-status-badge status-unpaid">
-                                {isHindi ? '🔴 पूरी बाकी' : '🔴 Unpaid'}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* 8. Action Buttons */}
-                          <td className="text-center">
-                            <div className="purchase-row-actions">
-                              {!isFullyPaid && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenPaymentModal(pur)}
-                                  className="record-payment-btn m3-ripple"
-                                  title={isHindi ? 'भुगतान दर्ज करें' : 'Record Payment'}
-                                >
-                                  <CreditCard size={13} />
-                                  <span>{isHindi ? 'पेमेंट करें' : 'Pay'}</span>
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (confirm(isHindi ? 'क्या आप इस खरीद रिकॉर्ड को हटाना चाहते हैं?' : 'Delete this purchase record?')) {
-                                    deletePurchase(pur.id);
-                                  }
-                                }}
-                                className="delete-row-icon-btn m3-ripple"
-                                title={isHindi ? 'डिलीट करें' : 'Delete'}
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(isHindi ? 'क्या आप इस खरीद बिल को हटाना चाहते हैं?' : 'Delete this purchase record?')) {
+                              deletePurchase(pur.id);
+                            }
+                          }}
+                          className="m3-del-icon-btn"
+                          title="Delete"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
@@ -1079,83 +813,61 @@ export default function ReportingSection({
       {activePaymentPurchase && (
         <div className="modal-backdrop animate-fade-in" onClick={() => setActivePaymentPurchase(null)}>
           <div
-            className="m3-dialog-container payment-dialog animate-scale-up"
+            className="m3-mobile-dialog animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="dialog-header">
+            <div className="dialog-header-clean">
               <div className="flex items-center gap-2">
-                <CreditCard size={20} className="text-emerald-600" />
-                <h3 className="dialog-title">
-                  {isHindi ? 'सप्लायर को पेमेंट दर्ज करें' : 'Record Supplier Payment'}
+                <CreditCard size={18} className="text-emerald-600" />
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                  {isHindi ? 'सप्लायर भुगतान दर्ज करें' : 'Record Supplier Payment'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setActivePaymentPurchase(null)}
-                className="icon-button"
+                className="text-slate-400 hover:text-slate-600"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleConfirmPayment} className="p-4 space-y-4">
+            <form onSubmit={handleConfirmPayment} className="p-3.5 space-y-3">
               {paymentSuccessMsg && (
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 rounded-lg text-sm flex items-center gap-2">
-                  <CheckCircle2 size={16} />
+                <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-lg text-xs flex items-center gap-2">
+                  <CheckCircle2 size={15} />
                   <span>{paymentSuccessMsg}</span>
                 </div>
               )}
 
               {/* Bill Details Summary */}
-              <div className="supplier-bill-summary-box">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs text-slate-500 uppercase tracking-wider">
-                      {isHindi ? 'सप्लायर' : 'Supplier'}
-                    </span>
-                    <h4 className="font-bold text-base text-slate-900 dark:text-slate-100">
-                      {activePaymentPurchase.supplierName}
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      {activePaymentPurchase.product} • {activePaymentPurchase.purchaseNumber}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-slate-500 uppercase tracking-wider">
-                      {isHindi ? 'बकाया राशि' : 'Balance Due'}
-                    </span>
-                    <div className="text-lg font-extrabold text-amber-600">
-                      {currency}{Number(activePaymentPurchase.pendingAmount).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-xs">
-                  <div>
-                    <span className="text-slate-500">{isHindi ? 'कुल बिल:' : 'Total Bill:'}</span>{' '}
-                    <span className="font-semibold">{currency}{activePaymentPurchase.totalAmount}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{isHindi ? 'पहले से दिया:' : 'Already Paid:'}</span>{' '}
-                    <span className="font-semibold text-emerald-600">{currency}{activePaymentPurchase.paidAmount}</span>
-                  </div>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {activePaymentPurchase.supplierName}
+                  </span>
+                  <span className="font-bold text-amber-600">
+                    {isHindi ? 'बकाया:' : 'Due:'} {currency}{Number(activePaymentPurchase.pendingAmount).toLocaleString()}
+                  </span>
                 </div>
               </div>
 
               {/* Payment Amount Input */}
               <div className="form-group">
-                <div className="flex justify-between items-center">
-                  <label className="form-label">{isHindi ? 'भुगतान राशि (Amount to Pay)' : 'Payment Amount'}</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {isHindi ? 'भुगतान राशि (Amount)' : 'Payment Amount'}
+                  </label>
                   <button
                     type="button"
                     onClick={() => setPayAmount(String(activePaymentPurchase.pendingAmount))}
-                    className="text-xs font-bold text-blue-600 hover:underline"
+                    className="text-[11px] font-bold text-blue-600 hover:underline"
                   >
-                    {isHindi ? 'पूरा बकाया भरें' : 'Pay Full Balance'}
+                    {isHindi ? 'पूरा भरें' : 'Pay Full'}
                   </button>
                 </div>
-                <div className="input-with-icon">
-                  <span className="currency-prefix">{currency}</span>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 font-bold text-slate-400">{currency}</span>
                   <input
                     type="number"
                     required
@@ -1163,22 +875,28 @@ export default function ReportingSection({
                     max={activePaymentPurchase.pendingAmount}
                     value={payAmount}
                     onChange={(e) => setPayAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    className="m3-text-field"
+                    placeholder="0"
+                    className="w-full pl-7 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
               {/* Payment Mode Selector */}
               <div className="form-group">
-                <label className="form-label">{isHindi ? 'भुगतान का माध्यम (Payment Method)' : 'Payment Mode'}</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['UPI', 'Cash', 'NEFT / Bank', 'Cheque'].map((mode) => (
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 block">
+                  {isHindi ? 'माध्यम (Payment Mode)' : 'Payment Mode'}
+                </label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {['UPI', 'Cash', 'NEFT', 'Cheque'].map((mode) => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => setPayMethod(mode)}
-                      className={`payment-mode-btn ${payMethod === mode ? 'active' : ''}`}
+                      className={`py-1.5 text-xs font-bold rounded border text-center transition-all ${
+                        payMethod === mode
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      }`}
                     >
                       {mode}
                     </button>
@@ -1186,32 +904,34 @@ export default function ReportingSection({
                 </div>
               </div>
 
-              {/* Notes or Ref ID */}
+              {/* Notes */}
               <div className="form-group">
-                <label className="form-label">{isHindi ? 'रिफरेंस / नोट (वैकल्पिक)' : 'Notes / Reference (Optional)'}</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 block">
+                  {isHindi ? 'नोट्स / UTR नंबर (वैकल्पिक)' : 'Notes / Ref ID (Optional)'}
+                </label>
                 <input
                   type="text"
                   value={payNotes}
                   onChange={(e) => setPayNotes(e.target.value)}
-                  placeholder={isHindi ? 'जैसे: UTR नंबर, चेक नंबर या कैश रसीद' : 'e.g. UTR / Transaction ID'}
-                  className="m3-text-field"
+                  placeholder={isHindi ? 'जैसे: GPay से भुगतान' : 'e.g. Paid via GPay'}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div className="dialog-actions-row">
+              <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setActivePaymentPurchase(null)}
-                  className="m3-button-tonal"
+                  className="flex-1 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg"
                 >
                   {isHindi ? 'रद्द करें' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
-                  className="m3-button-filled bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="flex-1 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center justify-center gap-1.5"
                 >
-                  <Check size={16} />
-                  <span>{isHindi ? 'भुगतान कन्फर्म करें' : 'Confirm Payment'}</span>
+                  <Check size={14} />
+                  <span>{isHindi ? 'कन्फर्म करें' : 'Confirm'}</span>
                 </button>
               </div>
             </form>
@@ -1225,187 +945,179 @@ export default function ReportingSection({
       {isAddPurchaseOpen && (
         <div className="modal-backdrop animate-fade-in" onClick={() => setIsAddPurchaseOpen(false)}>
           <div
-            className="m3-dialog-container add-purchase-dialog animate-scale-up"
+            className="m3-mobile-dialog animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="dialog-header">
+            <div className="dialog-header-clean">
               <div className="flex items-center gap-2">
-                <ShoppingBag size={20} className="text-blue-600" />
-                <h3 className="dialog-title">
-                  {isHindi ? '📦 नया सप्लायर खरीद बिल जोड़ें' : 'Add New Purchase Bill'}
+                <ShoppingBag size={18} className="text-blue-600" />
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                  {isHindi ? 'नया सप्लायर खरीद बिल' : 'Add Purchase Bill'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAddPurchaseOpen(false)}
-                className="icon-button"
+                className="text-slate-400 hover:text-slate-600"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddPurchaseSubmit} className="p-4 space-y-3.5">
+            <form onSubmit={handleAddPurchaseSubmit} className="p-3.5 space-y-3">
               {addBillError && (
-                <div className="p-2.5 bg-rose-50 text-rose-800 rounded-lg text-xs flex items-center gap-2">
-                  <AlertTriangle size={15} />
+                <div className="p-2 bg-rose-50 text-rose-800 rounded text-xs flex items-center gap-1.5">
+                  <AlertTriangle size={14} />
                   <span>{addBillError}</span>
                 </div>
               )}
               {addBillSuccess && (
-                <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-lg text-xs flex items-center gap-2">
-                  <CheckCircle2 size={15} />
+                <div className="p-2 bg-emerald-50 text-emerald-800 rounded text-xs flex items-center gap-1.5">
+                  <CheckCircle2 size={14} />
                   <span>{addBillSuccess}</span>
                 </div>
               )}
 
-              {/* Row 1: Supplier Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="form-group">
-                  <label className="form-label">{isHindi ? 'सप्लायर / वेंडर का नाम *' : 'Supplier Name *'}</label>
+              {/* Supplier & Phone */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    {isHindi ? 'सप्लायर का नाम *' : 'Supplier Name *'}
+                  </label>
                   <input
                     type="text"
                     required
                     value={newSupplierName}
                     onChange={(e) => setNewSupplierName(e.target.value)}
-                    placeholder="e.g. Vardhman Textiles"
-                    className="m3-text-field"
+                    placeholder="e.g. Vardhman"
+                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{isHindi ? 'सप्लायर फोन नंबर' : 'Contact Phone'}</label>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    {isHindi ? 'फोन नंबर' : 'Phone'}
+                  </label>
                   <input
                     type="text"
                     value={newSupplierContact}
                     onChange={(e) => setNewSupplierContact(e.target.value)}
-                    placeholder="+91 98XXX XXXXX"
-                    className="m3-text-field"
+                    placeholder="+91 98XXX"
+                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
-              {/* Row 2: Product Name & Restock option */}
-              <div className="form-group">
-                <label className="form-label">{isHindi ? 'खरीदा गया प्रोडक्ट / माल *' : 'Product / Material *'}</label>
+              {/* Product */}
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  {isHindi ? 'सामान / प्रोडक्ट का नाम *' : 'Product / Material *'}
+                </label>
                 <input
                   type="text"
                   required
                   value={newProduct}
                   onChange={(e) => setNewProduct(e.target.value)}
-                  placeholder="e.g. T-Shirt Fabric, Formal Shirt"
-                  className="m3-text-field"
+                  placeholder="e.g. T-Shirt Fabric, Jeans"
+                  className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              {/* Row 3: Quantity & Unit Cost Price */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="form-group">
-                  <label className="form-label">{isHindi ? 'खरीद मात्रा (Quantity) *' : 'Quantity *'}</label>
+              {/* Quantity & Unit Cost */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    {isHindi ? 'मात्रा (Qty) *' : 'Quantity *'}
+                  </label>
                   <input
                     type="number"
                     required
                     min="1"
                     value={newQuantity}
                     onChange={(e) => setNewQuantity(e.target.value)}
-                    className="m3-text-field"
+                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                   />
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label">{isHindi ? 'प्रति पीस खरीद लागत (Unit Cost) *' : 'Unit Cost Price *'}</label>
-                  <div className="input-with-icon">
-                    <span className="currency-prefix">{currency}</span>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      value={newUnitCost}
-                      onChange={(e) => setNewUnitCost(e.target.value)}
-                      placeholder="e.g. 320"
-                      className="m3-text-field"
-                    />
-                  </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    {isHindi ? 'प्रति पीस लागत *' : 'Unit Cost *'}
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={newUnitCost}
+                    onChange={(e) => setNewUnitCost(e.target.value)}
+                    placeholder="320"
+                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  />
                 </div>
               </div>
 
-              {/* Calculated Total Bar */}
-              <div className="calculated-total-bar">
-                <span>{isHindi ? 'कुल खरीद बिल राशि (Total Bill):' : 'Total Purchase Bill:'}</span>
-                <span className="total-val">
+              {/* Total Calculation Strip */}
+              <div className="flex justify-between items-center p-2 bg-blue-50 dark:bg-blue-950/40 rounded text-xs text-blue-900 dark:text-blue-200 font-bold">
+                <span>{isHindi ? 'कुल खरीद बिल:' : 'Total Bill:'}</span>
+                <span className="text-sm">
                   {currency}{(Math.max(1, Number(newQuantity) || 1) * Math.max(0, Number(newUnitCost) || 0)).toLocaleString()}
                 </span>
               </div>
 
-              {/* Row 4: Paid Amount Now & Due Date */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="form-group">
-                  <label className="form-label">{isHindi ? 'अभी कितना भुगतान किया (Paid Now)' : 'Amount Paid Now'}</label>
-                  <div className="input-with-icon">
-                    <span className="currency-prefix">{currency}</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={newPaidNow}
-                      onChange={(e) => setNewPaidNow(e.target.value)}
-                      placeholder="0"
-                      className="m3-text-field"
-                    />
-                  </div>
+              {/* Paid Now & Due Date */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    {isHindi ? 'अभी कितना दिया' : 'Paid Now'}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newPaidNow}
+                    onChange={(e) => setNewPaidNow(e.target.value)}
+                    placeholder="0"
+                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  />
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label">{isHindi ? 'पेमेंट ड्यू डेट (कब चुकानी है) *' : 'Payment Due Date *'}</label>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    {isHindi ? 'पेमेंट ड्यू डेट *' : 'Due Date *'}
+                  </label>
                   <input
                     type="date"
                     required
                     value={newDueDate}
                     onChange={(e) => setNewDueDate(e.target.value)}
-                    className="m3-text-field"
+                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
 
-              {/* Auto Add to Inventory Checkbox */}
-              <div className="flex items-center gap-2 pt-1">
+              {/* Restock Checkbox */}
+              <div className="flex items-center gap-2 pt-0.5">
                 <input
                   type="checkbox"
-                  id="add-to-stock-cb"
+                  id="add-stock-cb"
                   checked={newAddToStock}
                   onChange={(e) => setNewAddToStock(e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                  className="rounded text-blue-600 h-3.5 w-3.5 cursor-pointer"
                 />
-                <label htmlFor="add-to-stock-cb" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                  {isHindi
-                    ? '📦 इन्वेंटरी स्टॉक में भी जोड़ें (साथ ही कॉस्ट प्राइस अपडेट करें)'
-                    : '📦 Also update product stock quantity and cost price in Inventory'}
+                <label htmlFor="add-stock-cb" className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                  {isHindi ? 'इन्वेंटरी स्टॉक में भी जोड़ें' : 'Also add to inventory stock'}
                 </label>
               </div>
 
-              {/* Notes */}
-              <div className="form-group">
-                <label className="form-label">{isHindi ? 'बिल नोट्स / क्रेडिट शर्तें' : 'Notes / Terms'}</label>
-                <input
-                  type="text"
-                  value={newNotes}
-                  onChange={(e) => setNewNotes(e.target.value)}
-                  placeholder={isHindi ? 'जैसे: 15 दिन की उधारी, डिलीवरी के बाद बकाया' : 'e.g. 15 days credit terms'}
-                  className="m3-text-field"
-                />
-              </div>
-
-              <div className="dialog-actions-row">
+              <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setIsAddPurchaseOpen(false)}
-                  className="m3-button-tonal"
+                  className="flex-1 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg"
                 >
                   {isHindi ? 'रद्द करें' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
-                  className="m3-button-filled"
+                  className="flex-1 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-1.5"
                 >
-                  <Plus size={16} />
-                  <span>{isHindi ? 'खरीद बिल सेव करें' : 'Save Purchase Bill'}</span>
+                  <Plus size={14} />
+                  <span>{isHindi ? 'बिल सेव करें' : 'Save Bill'}</span>
                 </button>
               </div>
             </form>

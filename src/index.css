@@ -3307,741 +3307,700 @@ input:checked + .slider:before {
 }
 
 /* ==========================================================================
-   REPORTING & ACCOUNTING SECTION STYLES (SALES & PURCHASE LEDGER)
+   REPORTING & ACCOUNTING SECTION STYLES (MATERIAL DESIGN 3 - MOBILE FIRST)
    ========================================================================== */
-.reporting-card-container {
+.m3-report-card-container {
   background: var(--md-surface, #ffffff);
   border: 1px solid var(--md-outline-variant, #e2e8f0);
-  border-radius: var(--radius-xl, 20px);
-  padding: 22px 24px;
+  border-radius: var(--radius-xl, 18px);
+  padding: 16px;
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   margin-bottom: 20px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-.reporting-card-container.standalone-viewport {
-  max-width: 1300px;
+@media (min-width: 640px) {
+  .m3-report-card-container {
+    padding: 22px 24px;
+  }
+}
+
+.m3-report-card-container.standalone-viewport {
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.reporting-dialog-viewport {
-  width: 95%;
-  max-width: 1250px;
-  max-height: 90vh;
-  overflow-y: auto;
-  background: var(--md-surface, #ffffff);
-  border-radius: var(--radius-xl, 20px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--md-outline-variant, #e2e8f0);
-}
-
-.reporting-top-header {
+/* 1. Header with Dropdown Selector */
+.m3-report-top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
-  padding-bottom: 18px;
+  gap: 12px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--md-outline-variant, #e2e8f0);
-  margin-bottom: 16px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.reporting-title-area {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.reporting-icon-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+.m3-report-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(79, 70, 229, 0.25);
+  flex-shrink: 0;
 }
 
-.reporting-main-title {
-  font-size: 1.25rem;
+.m3-report-heading {
+  font-size: 1.05rem;
   font-weight: 800;
-  color: var(--md-on-surface);
+  color: var(--md-on-surface, #0f172a);
   line-height: 1.2;
 }
 
-.reporting-subtitle {
-  font-size: 0.78rem;
-  color: var(--md-on-surface-variant);
-  margin-top: 3px;
+.m3-report-subheading {
+  font-size: 0.72rem;
+  color: var(--md-on-surface-variant, #64748b);
+  margin-top: 2px;
 }
 
-.reporting-controls-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-/* REQUIREMENT: Dropdown Selector for Sales Report vs Purchase Report */
-.report-dropdown-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.report-dropdown-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--md-on-surface-variant);
-}
-
-.custom-select-container {
+/* REQUIREMENT: Dropdown Selector for Sales vs Purchase Report */
+.m3-dropdown-pill-wrap {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
 
-.report-mode-select-input {
+.m3-report-select-element {
   appearance: none;
   -webkit-appearance: none;
-  padding: 9px 36px 9px 14px;
-  font-size: 0.88rem;
+  padding: 6px 30px 6px 12px;
+  font-size: 0.78rem;
   font-weight: 700;
-  border-radius: var(--radius-md, 10px);
-  border: 2px solid #6366F1;
+  border-radius: 9999px;
+  border: 1.5px solid #4f46e5;
   background-color: var(--md-surface, #ffffff);
-  color: var(--md-on-surface);
+  color: var(--md-on-surface, #0f172a);
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.12);
   transition: all 0.15s ease;
 }
 
-.report-mode-select-input:focus {
+.m3-report-select-element:focus {
   outline: none;
-  border-color: #4F46E5;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  border-color: #3730a3;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
 
-.select-chevron-icon {
+.m3-dropdown-arrow {
   position: absolute;
-  right: 12px;
+  right: 10px;
   pointer-events: none;
-  color: #6366F1;
+  color: #4f46e5;
 }
 
-.report-close-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--md-outline-variant);
-  background: var(--md-surface-container, #f1f5f9);
-  color: var(--md-on-surface-variant);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.report-close-btn:hover {
-  background-color: var(--md-error-container);
-  color: var(--md-on-error-container);
-}
-
-/* Tabs Bar */
-.report-mode-tabs-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  background-color: var(--md-surface-container, #f1f5f9);
-  padding: 4px;
-  border-radius: var(--radius-lg);
-  width: fit-content;
-}
-
-.report-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  border: none;
-  background: transparent;
-  color: var(--md-on-surface-variant);
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.report-tab-btn.active-sales {
-  background-color: #3B82F6;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-.report-tab-btn.active-purchase {
-  background-color: #059669;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
-}
-
-.tab-count-badge {
-  font-size: 0.7rem;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.tab-warning-badge {
-  font-size: 0.7rem;
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-  background: #FEE2E2;
-  color: #991B1B;
-  font-weight: 800;
-}
-
-/* Daily Sales Spotlight Banner */
-.daily-sales-spotlight-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding: 16px 20px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-  border: 1px solid #C7D2FE;
-  margin-bottom: 18px;
-}
-
-.spotlight-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.spotlight-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #4F46E5;
-}
-
-.spotlight-metric-row {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.spotlight-amount {
-  font-size: 1.6rem;
-  font-weight: 900;
-  color: #1E1B4B;
-}
-
-.spotlight-invoices {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #4338CA;
-}
-
-.spotlight-profit-box {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.spotlight-profit-label {
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--md-on-surface-variant);
-}
-
-.spotlight-profit-val {
-  font-size: 1.35rem;
-  font-weight: 900;
-}
-
-/* Sales Filter Bar */
-.sales-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.filter-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--md-on-surface-variant);
-}
-
-.filter-pills-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.sales-filter-pill {
-  padding: 5px 12px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--md-outline-variant);
-  background: var(--md-surface);
-  color: var(--md-on-surface-variant);
-  font-size: 0.74rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.sales-filter-pill.active {
-  background-color: #3B82F6;
-  color: #fff;
-  border-color: #3B82F6;
-}
-
-/* Sales KPIs Grid */
-.sales-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-@media (max-width: 900px) {
-  .sales-kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 550px) {
-  .sales-kpi-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.kpi-metric-card {
-  padding: 16px;
-  border-radius: var(--radius-lg);
-  background: var(--md-surface);
-  border: 1px solid var(--md-outline-variant);
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-}
-
-.kpi-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.kpi-title {
-  font-size: 0.74rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--md-on-surface-variant);
-}
-
-.kpi-icon-wrap {
+.m3-circle-close-btn {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  background: var(--md-surface-container, #f1f5f9);
+  color: var(--md-on-surface-variant, #64748b);
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.kpi-value {
-  font-size: 1.45rem;
-  font-weight: 900;
-  line-height: 1.2;
+.m3-circle-close-btn:hover {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
 }
 
-.kpi-footer {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  color: var(--md-on-surface-variant);
-  margin-top: 6px;
-}
-
-/* Report Content Panels & Tables */
-.report-content-panel {
-  background: var(--md-surface);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-}
-
-.panel-header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.panel-title {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--md-on-surface);
-}
-
-.panel-tag {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  background: var(--md-surface-container-high, #f1f5f9);
-  color: var(--md-on-surface-variant);
-}
-
-.reporting-data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.reporting-data-table th {
-  padding: 10px 14px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--md-on-surface-variant);
-  background-color: var(--md-surface-container, #f8fafc);
-  border-bottom: 1px solid var(--md-outline-variant);
-}
-
-.reporting-data-table td {
-  padding: 12px 14px;
-  font-size: 0.84rem;
-  border-bottom: 1px solid var(--md-outline-variant);
-  vertical-align: middle;
-}
-
-.qty-sold-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  background-color: #EFF6FF;
-  color: #1D4ED8;
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.profit-margin-pill {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  background-color: #D1FAE5;
-  color: #065F46;
-  font-size: 0.74rem;
-  font-weight: 800;
-}
-
-/* Purchase Action Strip */
-.purchase-action-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.search-filter-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  flex: 1;
-}
-
-.search-input-box {
-  position: relative;
-  min-width: 240px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--md-on-surface-variant);
-}
-
-.search-field-input {
-  width: 100%;
-  padding: 8px 12px 8px 34px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface);
-  font-size: 0.82rem;
-  color: var(--md-on-surface);
-}
-
-.purchase-filter-tabs {
+/* 2. Segmented Switcher (Sales vs Purchase) */
+.m3-segmented-control-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 4px;
+  background-color: var(--md-surface-container-high, #f1f5f9);
+  border-radius: 12px;
+  margin: 12px 0 16px 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.p-filter-pill {
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--md-outline-variant);
-  background: var(--md-surface);
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--md-on-surface-variant);
-  cursor: pointer;
-}
-
-.p-filter-pill.active {
-  background-color: #059669;
-  color: #fff;
-  border-color: #059669;
-}
-
-.add-purchase-btn {
+.m3-segment-btn {
+  flex: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  background-color: #059669;
-  color: #fff;
-  font-size: 0.82rem;
-  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 9px;
   border: none;
+  background: transparent;
+  color: var(--md-on-surface-variant, #64748b);
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+  transition: all 0.15s ease;
+  min-height: 38px;
+}
+
+.m3-segment-btn.active-sales {
+  background-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.m3-segment-btn.active-purchase {
+  background-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+}
+
+.m3-alert-badge {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 800;
+}
+
+/* 3. Filter Chips (Daily / Weekly / Monthly / All) */
+.m3-filter-chips-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.m3-filter-chips-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.m3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--md-outline-variant, #cbd5e1);
+  background: var(--md-surface, #ffffff);
+  color: var(--md-on-surface-variant, #64748b);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease;
 }
 
-.add-purchase-btn:hover {
-  background-color: #047857;
+.m3-chip.active {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
 }
 
-/* Purchase Table Specific Styles */
-.purchase-table {
-  min-width: 900px;
+/* 4. Simple Responsive KPI Cards (Total Sales & Net Profit) */
+.m3-mobile-kpi-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.supplier-cell-content {
+@media (max-width: 480px) {
+  .m3-mobile-kpi-container {
+    gap: 8px;
+  }
+}
+
+.m3-kpi-card-simple {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  background: var(--md-surface, #ffffff);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.m3-kpi-card-simple.sales {
+  background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #bfdbfe;
+}
+
+.m3-kpi-card-simple.profit {
+  background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #bbf7d0;
+}
+
+.m3-kpi-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--md-on-surface-variant, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.m3-kpi-big-number {
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 480px) {
+  .m3-kpi-big-number {
+    font-size: 1.55rem;
+  }
+}
+
+.m3-kpi-subtext {
+  font-size: 0.7rem;
+  color: var(--md-on-surface-variant, #64748b);
+}
+
+/* 5. Mobile Invoices List (Cards, No Overflowing Table!) */
+.m3-list-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.m3-empty-state-box {
+  text-align: center;
+  padding: 28px 16px;
+  background: var(--md-surface-container, #f8fafc);
+  border-radius: 12px;
+  border: 1px dashed var(--md-outline-variant, #e2e8f0);
+}
+
+.m3-mobile-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.m3-invoice-row-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--md-surface, #ffffff);
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.m3-mini-pill-inv {
+  font-family: monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.m3-profit-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #047857;
+  background: #d1fae5;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+/* 6. Purchase Summary Strip */
+.m3-purchase-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.m3-p-kpi-box {
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: var(--md-surface-container, #f8fafc);
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  text-align: center;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
-.supplier-name-text {
-  font-size: 0.92rem;
-  font-weight: 800;
-  color: var(--md-on-surface);
+.m3-p-kpi-box.highlighted {
+  background: #fef3c7;
+  border-color: #fde68a;
 }
 
-.supplier-phone-subtext {
-  font-size: 0.74rem;
-  color: var(--md-on-surface-variant);
-}
-
-.supplier-bill-no {
-  font-size: 0.68rem;
-  font-family: monospace;
-  color: var(--md-primary);
+.p-kpi-label {
+  font-size: 0.66rem;
   font-weight: 700;
+  color: var(--md-on-surface-variant, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.purchased-item-chip {
+.p-kpi-val {
+  font-size: 0.95rem;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 480px) {
+  .p-kpi-val {
+    font-size: 1.1rem;
+  }
+}
+
+/* 7. Purchase Toolbar (Search + Add Bill) */
+.m3-purchase-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.m3-search-bar-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.m3-search-bar-wrap svg {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+}
+
+.m3-search-input-field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px 7px 32px;
+  border-radius: 10px;
+  border: 1px solid var(--md-outline-variant, #cbd5e1);
+  background-color: var(--md-surface, #ffffff);
+  font-size: 0.78rem;
+  color: var(--md-on-surface, #0f172a);
+}
+
+.m3-search-input-field:focus {
+  outline: none;
+  border-color: #059669;
+}
+
+.m3-add-purchase-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background-color: #059669;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+  transition: all 0.15s ease;
+}
+
+.m3-add-purchase-btn:hover {
+  background-color: #047857;
+}
+
+/* 8. Purchase Status Chips */
+.m3-status-filter-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.m3-status-filter-pills-row::-webkit-scrollbar {
+  display: none;
+}
+
+.m3-status-chip {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--md-outline-variant, #cbd5e1);
+  background: var(--md-surface, #ffffff);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--md-on-surface-variant, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.m3-status-chip.active {
+  background-color: #059669;
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+}
+
+/* 9. Responsive Supplier Ledger Cards (NO HORIZONTAL OVERFLOW!) */
+.m3-supplier-cards-container {
   display: flex;
   flex-direction: column;
-  font-size: 0.78rem;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.item-qty {
-  font-size: 0.7rem;
-  color: var(--md-on-surface-variant);
+.m3-supplier-card {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: var(--md-surface, #ffffff);
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: transform 0.1s ease;
 }
 
-.pending-balance-badge {
+.m3-supplier-card.overdue {
+  border-left: 4px solid #ef4444;
+  background: linear-gradient(to right, rgba(254, 242, 242, 0.6), var(--md-surface, #ffffff));
+}
+
+.m3-supplier-card.pending {
+  border-left: 4px solid #f59e0b;
+}
+
+.m3-supplier-card.paid {
+  border-left: 4px solid #10b981;
+}
+
+.m3-badge-status {
   display: inline-block;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  background-color: #FEF3C7;
-  color: #92400E;
+  font-size: 0.68rem;
   font-weight: 800;
-  font-size: 0.85rem;
-  border: 1px solid #FCD34D;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
 }
 
-.paid-zero-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  background-color: #D1FAE5;
-  color: #065F46;
-  font-weight: 700;
-  font-size: 0.8rem;
+.m3-badge-status.paid {
+  background-color: #d1fae5;
+  color: #065f46;
 }
 
-.due-status-pill {
-  display: inline-flex;
+.m3-badge-status.partial {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.m3-badge-status.unpaid {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.m3-purchased-items-strip {
+  background-color: var(--md-surface-container, #f8fafc);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  word-break: break-word;
+}
+
+.m3-ledger-amount-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 6px;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  font-size: 0.72rem;
-  font-weight: 700;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.due-status-pill.fully-paid {
-  background-color: #D1FAE5;
-  color: #065F46;
+.ledger-amt-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
-.due-status-pill.overdue {
-  background-color: #FEE2E2;
-  color: #991B1B;
-  border: 1px solid #FCA5A5;
+.ledger-amt-col .label {
+  font-size: 0.66rem;
+  color: var(--md-on-surface-variant, #64748b);
+  white-space: nowrap;
 }
 
-.due-status-pill.due-today {
-  background-color: #FEF3C7;
-  color: #92400E;
-  border: 1px solid #FCD34D;
+.ledger-amt-col .val {
+  font-size: 0.86rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.due-status-pill.upcoming {
-  background-color: #EFF6FF;
-  color: #1E40AF;
+.ledger-amt-col.balance {
+  background: #fffbeb;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #fef3c7;
 }
 
-.purchase-status-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.purchase-status-badge.status-paid {
-  background-color: #D1FAE5;
-  color: #065F46;
-}
-
-.purchase-status-badge.status-partial {
-  background-color: #FEF3C7;
-  color: #92400E;
-}
-
-.purchase-status-badge.status-unpaid {
-  background-color: #FEE2E2;
-  color: #991B1B;
-}
-
-.purchase-row-actions {
+.m3-card-footer-action-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.record-payment-btn {
+.m3-pay-now-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  border-radius: 8px;
   background-color: #059669;
-  color: #fff;
+  color: #ffffff;
   font-size: 0.74rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
   transition: background 0.15s ease;
+  white-space: nowrap;
 }
 
-.record-payment-btn:hover {
+.m3-pay-now-btn:hover {
   background-color: #047857;
 }
 
-.delete-row-icon-btn {
-  padding: 5px;
-  border-radius: var(--radius-xs);
-  border: 1px solid var(--md-outline-variant);
-  background: var(--md-surface);
-  color: var(--md-on-surface-variant);
+.m3-del-icon-btn {
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  background: var(--md-surface, #ffffff);
+  color: var(--md-on-surface-variant, #64748b);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
 
-.delete-row-icon-btn:hover {
-  color: #DC2626;
-  border-color: #DC2626;
+.m3-del-icon-btn:hover {
+  color: #dc2626;
+  border-color: #dc2626;
+  background-color: #fee2e2;
 }
 
-.overdue-row {
-  background-color: rgba(239, 68, 68, 0.03);
+/* 10. M3 Mobile Dialogs */
+.m3-mobile-dialog {
+  width: 92%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--md-surface, #ffffff);
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  box-sizing: border-box;
 }
 
-/* Payment & Add Purchase Dialog Form Elements */
-.supplier-bill-summary-box {
-  background-color: var(--md-surface-container, #f1f5f9);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--radius-md);
-  padding: 14px;
-}
-
-.currency-prefix {
-  position: absolute;
-  left: 12px;
-  font-weight: 800;
-  color: var(--md-on-surface-variant);
-}
-
-.payment-mode-btn {
-  padding: 8px 4px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--md-outline-variant);
-  background: var(--md-surface);
-  font-size: 0.74rem;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: center;
-}
-
-.payment-mode-btn.active {
-  background-color: #3B82F6;
-  color: #fff;
-  border-color: #3B82F6;
-}
-
-.calculated-total-bar {
+.dialog-header-clean {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #1E3A8A;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--md-outline-variant, #e2e8f0);
 }
 
-.calculated-total-bar .total-val {
-  font-size: 1.15rem;
-  font-weight: 900;
-  color: #1D4ED8;
+/* Dark mode overrides */
+.dark .m3-report-card-container {
+  background: #0f172a;
+  border-color: #334155;
 }
+
+.dark .m3-kpi-card-simple.sales {
+  background: linear-gradient(145deg, #1e293b 0%, #1e3a8a 100%);
+  border-color: #1e40af;
+}
+
+.dark .m3-kpi-card-simple.profit {
+  background: linear-gradient(145deg, #1e293b 0%, #064e3b 100%);
+  border-color: #065f46;
+}
+
+.dark .m3-invoice-row-card,
+.dark .m3-supplier-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.dark .m3-supplier-card.overdue {
+  background: linear-gradient(to right, rgba(127, 29, 29, 0.3), #1e293b);
+}
+
+.dark .ledger-amt-col.balance {
+  background: rgba(120, 53, 15, 0.3);
+  border-color: #92400e;
+}
+
+.dark .m3-purchased-items-strip {
+  background-color: #0f172a;
+  border-color: #334155;
+}
+
+.dark .m3-mobile-dialog {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+
 
 /* Header & Suggestion Chip Accents */
 .header-report-btn {
