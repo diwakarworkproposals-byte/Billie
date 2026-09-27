@@ -449,7 +449,22 @@ export function AppProvider({ children }) {
   const [customers, setCustomers] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_customers');
-      return saved ? JSON.parse(saved) : DEFAULT_CUSTOMERS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(Boolean).map((c, i) => ({
+            id: c.id || `cust_saved_${i}`,
+            name: c.name || c.companyName || 'Customer',
+            companyName: c.companyName || '',
+            phone: c.phone || '',
+            email: c.email || '',
+            gstNumber: c.gstNumber || '',
+            address: c.address || '',
+            createdAt: c.createdAt || new Date().toISOString()
+          }));
+        }
+      }
+      return DEFAULT_CUSTOMERS;
     } catch {
       return DEFAULT_CUSTOMERS;
     }
@@ -812,9 +827,11 @@ export function AppProvider({ children }) {
     setCustomers((prev) => {
       // Find if customer already exists by ID, by exact phone (if provided), or by case-insensitive name
       const idx = prev.findIndex((c) => {
+        if (!c) return false;
         if (custData.id && c.id === custData.id) return true;
         if (cleanPhone && c.phone && c.phone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, '')) return true;
-        return c.name.toLowerCase() === cleanName.toLowerCase();
+        const existingName = (c.name || c.companyName || '').toLowerCase();
+        return existingName === cleanName.toLowerCase();
       });
 
       if (idx >= 0) {

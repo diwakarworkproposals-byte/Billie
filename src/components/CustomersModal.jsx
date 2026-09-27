@@ -58,27 +58,30 @@ export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBil
   const customerStats = useMemo(() => {
     const statsMap = {};
 
-    customers.forEach((cust) => {
-      const custNameNorm = cust.name.toLowerCase().trim();
+    (customers || []).forEach((cust) => {
+      if (!cust) return;
+      const custId = cust.id || `temp_${Math.random()}`;
+      const custNameNorm = (cust.name || cust.companyName || '').toLowerCase().trim();
       const compNameNorm = (cust.companyName || '').toLowerCase().trim();
-      const cleanPhone = (cust.phone || '').replace(/\D/g, '');
+      const cleanPhone = (cust.phone || '').toString().replace(/\D/g, '');
 
-      const matchedInvoices = invoices.filter((inv) => {
+      const matchedInvoices = (invoices || []).filter((inv) => {
+        if (!inv) return false;
         const invCustName = (inv.customerName || '').toLowerCase().trim();
-        const invPhone = (inv.customerPhone || '').replace(/\D/g, '');
+        const invPhone = (inv.customerPhone || '').toString().replace(/\D/g, '');
 
         if (cleanPhone && invPhone && cleanPhone === invPhone) return true;
-        if (invCustName === custNameNorm) return true;
+        if (custNameNorm && invCustName === custNameNorm) return true;
         if (compNameNorm && invCustName === compNameNorm) return true;
         return false;
       });
 
       const totalSpent = matchedInvoices.reduce(
-        (sum, inv) => sum + (Number(inv.total || inv.grandTotal) || 0),
+        (sum, inv) => sum + (Number(inv?.total || inv?.grandTotal) || 0),
         0
       );
 
-      statsMap[cust.id] = {
+      statsMap[custId] = {
         invoices: matchedInvoices,
         invoiceCount: matchedInvoices.length,
         totalSpent: totalSpent,
@@ -91,13 +94,15 @@ export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBil
 
   // Total summary across all customers
   const overallKPIs = useMemo(() => {
-    const totalCusts = customers.length;
+    const totalCusts = (customers || []).length;
     let totalRevenue = 0;
     let totalInvoices = 0;
 
-    Object.values(customerStats).forEach((stat) => {
-      totalRevenue += stat.totalSpent;
-      totalInvoices += stat.invoiceCount;
+    Object.values(customerStats || {}).forEach((stat) => {
+      if (stat) {
+        totalRevenue += Number(stat.totalSpent) || 0;
+        totalInvoices += Number(stat.invoiceCount) || 0;
+      }
     });
 
     return { totalCusts, totalRevenue, totalInvoices };
@@ -105,17 +110,25 @@ export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBil
 
   // Filtered customer list by search query
   const filteredCustomers = useMemo(() => {
+    if (!Array.isArray(customers)) return [];
     if (!searchQuery.trim()) return customers;
     const q = searchQuery.toLowerCase().trim();
 
     return customers.filter((cust) => {
+      if (!cust) return false;
+      const name = (cust.name || '').toLowerCase();
+      const comp = (cust.companyName || '').toLowerCase();
+      const phone = (cust.phone || '').toString().toLowerCase();
+      const gst = (cust.gstNumber || '').toLowerCase();
+      const email = (cust.email || '').toLowerCase();
+      const addr = (cust.address || '').toLowerCase();
       return (
-        cust.name.toLowerCase().includes(q) ||
-        (cust.companyName && cust.companyName.toLowerCase().includes(q)) ||
-        (cust.phone && cust.phone.includes(q)) ||
-        (cust.gstNumber && cust.gstNumber.toLowerCase().includes(q)) ||
-        (cust.email && cust.email.toLowerCase().includes(q)) ||
-        (cust.address && cust.address.toLowerCase().includes(q))
+        name.includes(q) ||
+        comp.includes(q) ||
+        phone.includes(q) ||
+        gst.includes(q) ||
+        email.includes(q) ||
+        addr.includes(q)
       );
     });
   }, [customers, searchQuery]);
@@ -490,15 +503,17 @@ export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBil
                   lastBillDate: null
                 };
                 const isExpanded = expandedCustId === cust.id;
-                const initials = (cust.name || cust.companyName || 'C')
-                  .split(' ')
-                  .map((w) => w[0])
+                const custDisplayName = cust?.name || cust?.companyName || (isHindi ? 'अनाम ग्राहक' : 'Customer');
+                const initials = (custDisplayName + '')
+                  .trim()
+                  .split(/\s+/)
+                  .map((w) => (w ? w[0] : ''))
                   .join('')
                   .toUpperCase()
-                  .slice(0, 2);
+                  .slice(0, 2) || 'C';
 
                 return (
-                  <div key={cust.id} className="m3-customer-vertical-card animate-fade-in">
+                  <div key={cust.id || `cust_${Math.random()}`} className="m3-customer-vertical-card animate-fade-in">
                     {/* Card Top Row: Avatar, Names, GST Badge & Edit/Delete actions */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
@@ -509,7 +524,7 @@ export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBil
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="cust-primary-name truncate font-bold text-base text-slate-900 dark:text-slate-100">
-                              {cust.name}
+                              {custDisplayName}
                             </h4>
                             {cust.companyName && cust.companyName !== cust.name && (
                               <span className="m3-badge-company-tag">
