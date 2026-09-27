@@ -24,7 +24,8 @@ import {
   User,
   Building,
   FileText,
-  Download
+  Download,
+  Package
 } from 'lucide-react';
 
 export default function ReportingSection({
@@ -66,12 +67,12 @@ export default function ReportingSection({
   const [payNotes, setPayNotes] = useState('');
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState('');
 
-  // Add Purchase Bill Form State
+  // Add Purchase Bill Form State (Supports multiple products per bill)
   const [newSupplierName, setNewSupplierName] = useState('');
   const [newSupplierContact, setNewSupplierContact] = useState('');
-  const [newProduct, setNewProduct] = useState('');
-  const [newQuantity, setNewQuantity] = useState('1');
-  const [newUnitCost, setNewUnitCost] = useState('');
+  const [purchaseItems, setPurchaseItems] = useState([
+    { name: '', quantity: 1, unitCost: '' }
+  ]);
   const [newPaidNow, setNewPaidNow] = useState('0');
   const [newDueDate, setNewDueDate] = useState(() => {
     const d = new Date(Date.now() + 86400000 * 15);
@@ -81,6 +82,31 @@ export default function ReportingSection({
   const [newAddToStock, setNewAddToStock] = useState(true);
   const [addBillError, setAddBillError] = useState('');
   const [addBillSuccess, setAddBillSuccess] = useState('');
+
+  const handleAddItem = () => {
+    setPurchaseItems((prev) => [...prev, { name: '', quantity: 1, unitCost: '' }]);
+  };
+
+  const handleRemoveItem = (index) => {
+    if (purchaseItems.length <= 1) return;
+    setPurchaseItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleItemChange = (index, field, value) => {
+    setPurchaseItems((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const calculateTotalBill = () => {
+    return purchaseItems.reduce((sum, item) => {
+      const q = Math.max(1, Number(item.quantity) || 1);
+      const c = Math.max(0, Number(item.unitCost) || 0);
+      return sum + q * c;
+    }, 0);
+  };
 
   // Cost map from inventory for calculating profit
   const productCostMap = useMemo(() => {
@@ -320,46 +346,68 @@ export default function ReportingSection({
       return;
     }
 
-    if (!newProduct.trim()) {
-      setAddBillError(isHindi ? 'प्रोडक्ट का नाम आवश्यक है!' : 'Product name is required!');
+    if (!purchaseItems || purchaseItems.length === 0) {
+      setAddBillError(isHindi ? 'कम से कम 1 प्रोडक्ट जोड़ना आवश्यक है!' : 'At least 1 product is required!');
       return;
     }
 
-    const qty = Math.max(1, Number(newQuantity) || 1);
-    const unitCost = Math.max(0, Number(newUnitCost) || 0);
-    if (unitCost <= 0) {
-      setAddBillError(isHindi ? 'कृपया खरीद लागत (Cost Price) दर्ज करें!' : 'Please enter unit cost price!');
-      return;
+    const cleanedItems = [];
+    for (let i = 0; i < purchaseItems.length; i++) {
+      const it = purchaseItems[i];
+      const name = (it.name || '').trim();
+      const qty = Math.max(1, Number(it.quantity) || 1);
+      const cost = Number(it.unitCost);
+
+      if (!name) {
+        setAddBillError(
+          isHindi
+            ? `आइटम #${i + 1} का नाम लिखना आवश्यक है!`
+            : `Item #${i + 1} product name is required!`
+        );
+        return;
+      }
+
+      if (isNaN(cost) || cost <= 0) {
+        setAddBillError(
+          isHindi
+            ? `"${name}" की खरीद लागत (Cost Price) दर्ज करना अनिवार्य है!`
+            : `Cost price for "${name}" is mandatory!`
+        );
+        return;
+      }
+
+      cleanedItems.push({
+        name,
+        quantity: qty,
+        unitCost: cost,
+        totalCost: qty * cost
+      });
     }
 
-    const total = qty * unitCost;
+    const total = cleanedItems.reduce((acc, it) => acc + it.totalCost, 0);
     const paid = Math.max(0, Math.min(total, Number(newPaidNow) || 0));
 
     addPurchase({
-      supplierName: newSupplierName,
-      supplierContact: newSupplierContact,
-      product: newProduct,
-      quantity: qty,
-      unitCost,
+      supplierName: newSupplierName.trim(),
+      supplierContact: newSupplierContact.trim(),
+      product:
+        cleanedItems.length === 1
+          ? cleanedItems[0].name
+          : `${cleanedItems[0].name} + ${cleanedItems.length - 1} अन्य`,
+      quantity: cleanedItems.reduce((acc, it) => acc + it.quantity, 0),
+      unitCost: cleanedItems[0]?.unitCost || 0,
       totalAmount: total,
       paidAmount: paid,
       dueDate: newDueDate,
       notes: newNotes,
       addToStock: newAddToStock,
-      items: [
-        {
-          name: newProduct,
-          quantity: qty,
-          unitCost,
-          totalCost: total
-        }
-      ]
+      items: cleanedItems
     });
 
     setAddBillSuccess(
       isHindi
-        ? `✓ बिल जुड़ गया! कुल: ${currency}${total.toLocaleString()}`
-        : `✓ Bill added! Total: ${currency}${total.toLocaleString()}`
+        ? `✓ ${cleanedItems.length} प्रोडक्ट्स का खरीद बिल जुड़ गया! कुल: ${currency}${total.toLocaleString()}`
+        : `✓ Purchase bill added with ${cleanedItems.length} items! Total: ${currency}${total.toLocaleString()}`
     );
 
     setTimeout(() => {
@@ -367,12 +415,10 @@ export default function ReportingSection({
       setAddBillSuccess('');
       setNewSupplierName('');
       setNewSupplierContact('');
-      setNewProduct('');
-      setNewQuantity('1');
-      setNewUnitCost('');
+      setPurchaseItems([{ name: '', quantity: 1, unitCost: '' }]);
       setNewPaidNow('0');
       setNewNotes('');
-    }, 1000);
+    }, 1200);
   };
 
   return (
@@ -765,13 +811,26 @@ export default function ReportingSection({
                       </div>
                     </div>
 
-                    {/* Middle: Product & Quantity Purchased */}
+                    {/* Middle: Products Purchased List */}
                     <div className="m3-purchased-items-strip mt-2">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        📦 {pur.items && pur.items.length > 0
-                          ? pur.items.map((it) => `${it.name} (${it.quantity} pcs @ ${currency}${it.unitCost})`).join(', ')
-                          : pur.product}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                          <Package size={13} className="text-blue-500" />
+                          <span>{isHindi ? 'सामान:' : 'Items:'}</span>
+                        </span>
+                        {pur.items && pur.items.length > 0 ? (
+                          pur.items.map((it, idx) => (
+                            <span key={idx} className="m3-purchase-item-chip">
+                              <strong className="font-bold">{it.name}</strong>
+                              <span className="text-slate-500 font-medium">({it.quantity} pcs × {currency}{it.unitCost})</span>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="m3-purchase-item-chip">
+                            <strong className="font-bold">{pur.product}</strong>
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Financial Summary: Total, Paid, Pending */}
@@ -1128,89 +1187,156 @@ export default function ReportingSection({
                 </div>
               </div>
 
-              {/* Section 2: Product & Cost */}
+              {/* Section 2: Products & Cost List (Multi-Product Bill Support) */}
               <div className="m3-form-card-section">
-                <span className="m3-section-title">
-                  <ShoppingBag size={14} className="text-emerald-500" />
-                  {isHindi ? '2. सामान व लागत (Product & Quantity)' : '2. Product & Cost'}
-                </span>
-
-                <div className="m3-form-field-group mt-2">
-                  <label className="m3-field-label">
-                    {isHindi ? 'प्रोडक्ट / सामान का नाम *' : 'Product / Material Name *'}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newProduct}
-                    onChange={(e) => setNewProduct(e.target.value)}
-                    placeholder={isHindi ? 'जैसे: कॉटन टी-शर्ट, जींस' : 'e.g. Cotton T-Shirt, Jeans'}
-                    className="m3-enhanced-input text-field-only"
-                  />
+                <div className="flex items-center justify-between">
+                  <span className="m3-section-title">
+                    <ShoppingBag size={14} className="text-emerald-500" />
+                    {isHindi ? '2. सामान व खरीद लागत सूची' : '2. Products & Purchase Cost'}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    {purchaseItems.length} {isHindi ? 'प्रोडक्ट्स' : 'Items'}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5 mt-2.5">
-                  {/* Quantity Stepper */}
-                  <div className="m3-form-field-group">
-                    <label className="m3-field-label">
-                      {isHindi ? 'मात्रा (Quantity) *' : 'Quantity *'}
-                    </label>
-                    <div className="m3-stepper-wrap">
-                      <button
-                        type="button"
-                        onClick={() => setNewQuantity(String(Math.max(1, (Number(newQuantity) || 1) - 1)))}
-                        className="m3-stepper-btn"
-                        title="Decrease"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        value={newQuantity}
-                        onChange={(e) => setNewQuantity(e.target.value)}
-                        className="m3-stepper-input"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setNewQuantity(String((Number(newQuantity) || 1) + 1))}
-                        className="m3-stepper-btn"
-                        title="Increase"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  </div>
+                {/* Datalist for fast inventory autocomplete */}
+                <datalist id="inventory-item-suggestions">
+                  {inventory.map((invItem) => (
+                    <option key={invItem.id} value={invItem.name}>
+                      {invItem.costPrice > 0 ? `Cost: ${currency}${invItem.costPrice}` : ''}
+                    </option>
+                  ))}
+                </datalist>
 
-                  {/* Unit Cost */}
-                  <div className="m3-form-field-group">
-                    <label className="m3-field-label">
-                      {isHindi ? 'प्रति पीस लागत मूल्य *' : 'Unit Cost Price *'}
-                    </label>
-                    <div className="m3-outlined-input-wrap">
-                      <span className="m3-input-prefix">{currency}</span>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        value={newUnitCost}
-                        onChange={(e) => setNewUnitCost(e.target.value)}
-                        placeholder="350"
-                        className="m3-enhanced-input"
-                      />
-                    </div>
-                  </div>
+                <div className="m3-purchase-items-list mt-2">
+                  {purchaseItems.map((item, index) => {
+                    const itemQty = Math.max(1, Number(item.quantity) || 1);
+                    const itemCost = Math.max(0, Number(item.unitCost) || 0);
+                    const itemSubtotal = itemQty * itemCost;
+
+                    return (
+                      <div key={index} className="m3-purchase-item-row animate-fade-in">
+                        <div className="item-row-top">
+                          <span className="item-number-badge">#{index + 1}</span>
+                          <div className="item-name-input-wrap">
+                            <input
+                              type="text"
+                              required
+                              list="inventory-item-suggestions"
+                              value={item.name}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                handleItemChange(index, 'name', val);
+                                // Auto-fill cost price if existing product selected and cost is empty
+                                const matched = inventory.find(
+                                  (p) => p.name.toLowerCase() === val.toLowerCase().trim()
+                                );
+                                if (matched && matched.costPrice > 0 && !item.unitCost) {
+                                  handleItemChange(index, 'unitCost', String(matched.costPrice));
+                                }
+                              }}
+                              placeholder={isHindi ? 'प्रोडक्ट का नाम * (जैसे: Cotton Shirt)' : 'Product Name * (e.g. Cotton Shirt)'}
+                              className="m3-enhanced-input text-field-only"
+                            />
+                          </div>
+                          {purchaseItems.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(index)}
+                              className="item-delete-btn"
+                              title={isHindi ? 'हटाएं' : 'Remove item'}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="item-row-bottom">
+                          {/* Quantity Stepper */}
+                          <div className="item-qty-col">
+                            <label className="m3-mini-label">{isHindi ? 'मात्रा (Qty) *' : 'Quantity *'}</label>
+                            <div className="m3-stepper-wrap compact">
+                              <button
+                                type="button"
+                                onClick={() => handleItemChange(index, 'quantity', Math.max(1, (Number(item.quantity) || 1) - 1))}
+                                className="m3-stepper-btn"
+                                title="Decrease"
+                              >
+                                <Minus size={13} />
+                              </button>
+                              <input
+                                type="number"
+                                min="1"
+                                required
+                                value={item.quantity}
+                                onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                className="m3-stepper-input"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleItemChange(index, 'quantity', (Number(item.quantity) || 1) + 1)}
+                                className="m3-stepper-btn"
+                                title="Increase"
+                              >
+                                <Plus size={13} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Unit Cost */}
+                          <div className="item-cost-col">
+                            <label className="m3-mini-label">{isHindi ? 'लागत मूल्य *' : 'Cost Price *'}</label>
+                            <div className="m3-outlined-input-wrap compact">
+                              <span className="m3-input-prefix">{currency}</span>
+                              <input
+                                type="number"
+                                required
+                                min="0.01"
+                                step="any"
+                                value={item.unitCost}
+                                onChange={(e) => handleItemChange(index, 'unitCost', e.target.value)}
+                                placeholder="350"
+                                className="m3-enhanced-input"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Item Subtotal */}
+                          <div className="item-subtotal-col">
+                            <label className="m3-mini-label">{isHindi ? 'कुल' : 'Total'}</label>
+                            <div className="item-subtotal-badge">
+                              {currency}{itemSubtotal.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+
+                {/* Button to Add More Products */}
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="m3-add-more-item-btn mt-2.5"
+                >
+                  <Plus size={15} />
+                  <span>{isHindi ? '+ और प्रोडक्ट जोड़ें (Add More Products)' : '+ Add Another Product'}</span>
+                </button>
 
                 {/* Live Total Calculation Banner */}
                 <div className="m3-calculated-bill-banner mt-3">
                   <div className="flex items-center gap-2">
                     <Receipt size={18} className="text-blue-600 dark:text-blue-400" />
-                    <span className="banner-label">{isHindi ? 'कुल खरीद बिल (Total Bill):' : 'Total Bill Amount:'}</span>
+                    <div>
+                      <span className="banner-label">{isHindi ? 'कुल खरीद बिल (Total Bill):' : 'Total Bill Amount:'}</span>
+                      <span className="text-[11px] text-slate-500 block">
+                        {purchaseItems.length} {isHindi ? 'प्रोडक्ट्स शामिल' : 'items included'}
+                      </span>
+                    </div>
                   </div>
                   <span className="banner-value">
-                    {currency}{(Math.max(1, Number(newQuantity) || 1) * Math.max(0, Number(newUnitCost) || 0)).toLocaleString()}
+                    {currency}{calculateTotalBill().toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -1252,8 +1378,7 @@ export default function ReportingSection({
                       <button
                         type="button"
                         onClick={() => {
-                          const total = Math.max(1, Number(newQuantity) || 1) * Math.max(0, Number(newUnitCost) || 0);
-                          setNewPaidNow(String(total));
+                          setNewPaidNow(String(calculateTotalBill()));
                         }}
                         className="m3-quick-fill-chip active"
                       >

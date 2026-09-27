@@ -51,6 +51,7 @@ const STEPS = {
   // Stock Management Flow
   STOCK_ASK_PRODUCT: 'STOCK_ASK_PRODUCT',
   STOCK_ASK_QUANTITY: 'STOCK_ASK_QUANTITY',
+  STOCK_ASK_COST_PRICE: 'STOCK_ASK_COST_PRICE',
   STOCK_ASK_PRICE: 'STOCK_ASK_PRICE',
   STOCK_ASK_MORE: 'STOCK_ASK_MORE'
 };
@@ -163,6 +164,9 @@ export default function InvoiceWizard({
         break;
       case STEPS.STOCK_ASK_QUANTITY:
         hint = p.hints.stock_qty;
+        break;
+      case STEPS.STOCK_ASK_COST_PRICE:
+        hint = p.hints.stock_cost;
         break;
       case STEPS.STOCK_ASK_PRICE:
         hint = p.hints.stock_price;
@@ -577,6 +581,25 @@ export default function InvoiceWizard({
         const qty = extractNumber(trimmed, 1);
         draftStockRef.current.quantity = qty;
         setDraftStockItem((prev) => ({ ...prev, quantity: qty }));
+        setStep(STEPS.STOCK_ASK_COST_PRICE);
+        const prodName =
+          draftStockRef.current.name || (activeLang === 'hi' ? 'प्रोडक्ट' : 'Product');
+        replyBillie(p.stock_ask_cost(prodName), activeLang);
+        break;
+      }
+
+      case STEPS.STOCK_ASK_COST_PRICE: {
+        const costPrice = extractNumber(trimmed, 0);
+        if (costPrice <= 0) {
+          replyBillie(
+            activeLang === 'hi'
+              ? 'खरीद लागत (Cost Price) दर्ज करना अनिवार्य है, कृपया लागत मूल्य बताएं:'
+              : 'Cost price is mandatory, please specify the unit cost price:',
+            activeLang
+          );
+          return;
+        }
+        draftStockRef.current.costPrice = costPrice;
         setStep(STEPS.STOCK_ASK_PRICE);
         const prodName =
           draftStockRef.current.name || (activeLang === 'hi' ? 'प्रोडक्ट' : 'Product');
@@ -593,9 +616,10 @@ export default function InvoiceWizard({
         draftStockRef.current.price = price;
         const finalProdName = draftStockRef.current.name || 'Product';
         const finalQty = draftStockRef.current.quantity || 1;
+        const finalCost = draftStockRef.current.costPrice || 0;
 
-        // Add or update stock in context
-        addOrUpdateStock(finalProdName, finalQty, price);
+        // Add or update stock in context with mandatory cost price
+        addOrUpdateStock(finalProdName, finalQty, price, finalCost);
 
         // Find updated total
         const existingItem = inventory.find(

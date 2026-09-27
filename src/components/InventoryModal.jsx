@@ -27,6 +27,7 @@ export default function InventoryModal({ isOpen, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLowStockOnly, setFilterLowStockOnly] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [formError, setFormError] = useState('');
 
   // New product form fields
   const [newName, setNewName] = useState('');
@@ -62,11 +63,20 @@ export default function InventoryModal({ isOpen, onClose }) {
   };
 
   const handleSaveEdit = (id) => {
+    const cost = Number(editFields.costPrice);
+    if (isNaN(cost) || cost <= 0) {
+      alert(
+        isHindi
+          ? 'प्रोडक्ट की खरीद लागत (Cost Price) दर्ज करना अनिवार्य है!'
+          : 'Cost price of the product is mandatory!'
+      );
+      return;
+    }
     updateProduct(id, {
       name: editFields.name.trim() || 'Product',
       quantity: Math.max(0, Number(editFields.quantity) || 0),
       price: Math.max(0, Number(editFields.price) || 0),
-      costPrice: Math.max(0, Number(editFields.costPrice) || 0),
+      costPrice: cost,
       lowStockThreshold: Math.max(1, Number(editFields.lowStockThreshold) || 5)
     });
     setEditingId(null);
@@ -89,13 +99,28 @@ export default function InventoryModal({ isOpen, onClose }) {
 
   const handleAddNewSubmit = (e) => {
     e.preventDefault();
-    if (!newName.trim()) return;
+    setFormError('');
+
+    if (!newName.trim()) {
+      setFormError(isHindi ? 'प्रोडक्ट का नाम लिखना आवश्यक है!' : 'Product name is required!');
+      return;
+    }
+
+    const cost = Number(newCostPrice);
+    if (!newCostPrice || isNaN(cost) || cost <= 0) {
+      setFormError(
+        isHindi
+          ? 'प्रोडक्ट की खरीद लागत मूल्य (Cost Price) दर्ज करना अनिवार्य है!'
+          : 'Cost price of the product is mandatory!'
+      );
+      return;
+    }
 
     addOrUpdateStock(
       newName.trim(),
       Number(newQty) || 0,
       Number(newPrice) || 0,
-      Number(newCostPrice) || 0
+      cost
     );
 
     // Reset form
@@ -103,6 +128,7 @@ export default function InventoryModal({ isOpen, onClose }) {
     setNewQty('');
     setNewPrice('');
     setNewCostPrice('');
+    setFormError('');
     setIsAddingNew(false);
   };
 
@@ -214,12 +240,22 @@ export default function InventoryModal({ isOpen, onClose }) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setIsAddingNew(false)}
+                  onClick={() => {
+                    setIsAddingNew(false);
+                    setFormError('');
+                  }}
                   className="text-xs text-slate-400 hover:text-slate-600"
                 >
                   <X size={15} />
                 </button>
               </div>
+
+              {formError && (
+                <div className="form-error-alert mb-3 animate-slide-up" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', fontSize: '0.8rem', fontWeight: 600 }}>
+                  <AlertTriangle size={15} style={{ flexShrink: 0, color: '#dc2626' }} />
+                  <span>{formError}</span>
+                </div>
+              )}
 
               <div className="form-grid-3">
                 <div className="form-group">
@@ -229,7 +265,10 @@ export default function InventoryModal({ isOpen, onClose }) {
                     required
                     placeholder={isHindi ? 'जैसे Polo T-Shirt' : 'e.g. Polo T-Shirt'}
                     value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
+                    onChange={(e) => {
+                      setNewName(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="m3-text-field"
                   />
                 </div>
@@ -261,14 +300,22 @@ export default function InventoryModal({ isOpen, onClose }) {
 
               <div className="form-grid-2 mt-2">
                 <div className="form-group">
-                  <label className="form-label">{isHindi ? 'लागत मूल्य / Cost Price (वैकल्पिक)' : 'Cost Price (Optional)'}</label>
+                  <label className="form-label" style={{ color: '#b91c1c', fontWeight: 700 }}>
+                    {isHindi ? 'खरीद लागत मूल्य (Cost Price) * (अनिवार्य)' : 'Cost Price / Unit * (Mandatory)'}
+                  </label>
                   <input
                     type="number"
-                    min="0"
-                    placeholder="350"
+                    required
+                    min="0.01"
+                    step="any"
+                    placeholder={isHindi ? 'लागत दर्ज करें (जैसे: 350)' : 'e.g. 350'}
                     value={newCostPrice}
-                    onChange={(e) => setNewCostPrice(e.target.value)}
+                    onChange={(e) => {
+                      setNewCostPrice(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="m3-text-field"
+                    style={{ borderColor: !newCostPrice ? '#fca5a5' : undefined }}
                   />
                 </div>
 
@@ -412,12 +459,16 @@ export default function InventoryModal({ isOpen, onClose }) {
                               <span className="text-xs">{currency}</span>
                               <input
                                 type="number"
-                                min="0"
+                                required
+                                min="0.01"
+                                step="any"
                                 value={editFields.costPrice}
                                 onChange={(e) =>
                                   setEditFields({ ...editFields, costPrice: e.target.value })
                                 }
+                                placeholder="Cost *"
                                 className="inline-edit-input w-20 text-right"
+                                style={{ borderColor: (!editFields.costPrice || Number(editFields.costPrice) <= 0) ? '#fca5a5' : undefined }}
                               />
                             </div>
                           ) : (

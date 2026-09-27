@@ -403,6 +403,7 @@ export const PROMPTS = {
     // Stock flow prompts
     stock_ask_product: "Kya product ka stock add karna hai?",
     stock_ask_quantity: (product) => `"${product}" ka kitna piece ya quantity add karna hai?`,
+    stock_ask_cost: (product) => `"${product}" ka khareed lagat (Cost Price) kitna hai? (Yeh anivarya hai)`,
     stock_ask_price: (product) => `"${product}" ka selling price / rate kitna rakhna hai? (ya purana rate continue karein)`,
     stock_ask_more: "Aur kisi product ka stock add karna hai? ('haan' ya 'nahi' bolein)",
     stock_added: (product, qty, total) => `✓ ${product} ka ${qty} piece stock add ho gaya! Ab total stock: ${total} piece hai.`,
@@ -420,6 +421,7 @@ export const PROMPTS = {
       discount: "Discount bataiye (jaise 10% ya 0)...",
       stock_product: "Stock ke product ka naam bataiye...",
       stock_qty: "Kitna stock add karna hai (jaise 10, 20)...",
+      stock_cost: "Khareed lagat (Cost Price) bataiye...",
       stock_price: "Selling price / rate bataiye..."
     }
   },
@@ -440,6 +442,7 @@ export const PROMPTS = {
     // Stock flow prompts
     stock_ask_product: "Which product do you want to add stock for?",
     stock_ask_quantity: (product) => `How many units of "${product}" to add to stock?`,
+    stock_ask_cost: (product) => `What is the cost price per unit for "${product}"? (Mandatory)`,
     stock_ask_price: (product) => `What is the selling price per unit for "${product}"?`,
     stock_ask_more: "Would you like to restock another product? (say 'yes' or 'no')",
     stock_added: (product, qty, total) => `✓ Added ${qty} units of ${product}. Total stock is now ${total}.`,
@@ -457,6 +460,7 @@ export const PROMPTS = {
       discount: "Say or type Discount (e.g. '10%' or '0')...",
       stock_product: "Say or type product to restock...",
       stock_qty: "Say or type quantity to add...",
+      stock_cost: "Say or type unit cost price...",
       stock_price: "Say or type selling price..."
     }
   }

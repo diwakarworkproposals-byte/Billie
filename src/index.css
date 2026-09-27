@@ -4597,6 +4597,241 @@ input:checked + .slider:before {
   color: #f8fafc;
 }
 
+/* Multi-Product Purchase Ledger Bill Styles */
+.m3-purchase-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.m3-purchase-item-row {
+  padding: 10px 12px;
+  background: var(--md-surface, #ffffff);
+  border: 1.5px solid var(--md-outline-variant, #e2e8f0);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.m3-purchase-item-row:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .m3-purchase-item-row,
+.dark .m3-purchase-item-row {
+  background: #151d2c;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .m3-purchase-item-row:hover,
+.dark .m3-purchase-item-row:hover {
+  border-color: #3b82f6;
+}
+
+.item-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-number-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  border-radius: 6px;
+  padding: 3px 8px;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .item-number-badge,
+.dark .item-number-badge {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.item-name-input-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name-input-wrap .m3-enhanced-input {
+  height: 38px;
+  font-size: 0.85rem;
+}
+
+.item-delete-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.item-delete-btn:hover {
+  background: #fecaca;
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .item-delete-btn,
+.dark .item-delete-btn {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+[data-theme="dark"] .item-delete-btn:hover,
+.dark .item-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+.item-row-bottom {
+  display: grid;
+  grid-template-columns: 1.2fr 1.3fr 1fr;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+@media (max-width: 540px) {
+  .item-row-bottom {
+    grid-template-columns: 1fr 1fr;
+  }
+  .item-subtotal-col {
+    grid-column: span 2;
+  }
+}
+
+.item-qty-col,
+.item-cost-col,
+.item-subtotal-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.m3-mini-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--md-on-surface-variant, #64748b);
+  margin-bottom: 3px;
+  display: block;
+}
+
+[data-theme="dark"] .m3-mini-label,
+.dark .m3-mini-label {
+  color: #94a3b8;
+}
+
+.m3-stepper-wrap.compact {
+  height: 38px;
+}
+
+.m3-stepper-wrap.compact .m3-stepper-btn {
+  width: 32px;
+}
+
+.m3-stepper-wrap.compact .m3-stepper-input {
+  font-size: 0.85rem;
+}
+
+.m3-outlined-input-wrap.compact .m3-enhanced-input {
+  height: 38px;
+  font-size: 0.85rem;
+  padding: 0 8px 0 26px;
+}
+
+.m3-outlined-input-wrap.compact .m3-input-prefix {
+  left: 8px;
+  font-size: 0.8rem;
+}
+
+.item-subtotal-badge {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 10px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .item-subtotal-badge,
+.dark .item-subtotal-badge {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.m3-add-more-item-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px dashed #3b82f6;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.m3-add-more-item-btn:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+[data-theme="dark"] .m3-add-more-item-btn,
+.dark .m3-add-more-item-btn {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .m3-add-more-item-btn:hover,
+.dark .m3-add-more-item-btn:hover {
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.m3-purchase-item-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  background: var(--md-surface-container-high, #f1f5f9);
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  color: var(--md-on-surface, #0f172a);
+}
+
+[data-theme="dark"] .m3-purchase-item-chip,
+.dark .m3-purchase-item-chip {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
 /* Live Total Calculated Banner */
 .m3-calculated-bill-banner {
   display: flex;
