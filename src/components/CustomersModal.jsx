@@ -52,8 +52,6 @@ export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBil
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  if (!isOpen) return null;
-
   // Compute map of customer ID/name to invoices and spend stats
   const customerStats = useMemo(() => {
     const statsMap = {};
@@ -116,22 +114,24 @@ export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBil
 
     return customers.filter((cust) => {
       if (!cust) return false;
-      const name = (cust.name || '').toLowerCase();
-      const comp = (cust.companyName || '').toLowerCase();
-      const phone = (cust.phone || '').toString().toLowerCase();
-      const gst = (cust.gstNumber || '').toLowerCase();
-      const email = (cust.email || '').toLowerCase();
-      const addr = (cust.address || '').toLowerCase();
+      const cName = (cust.name || '').toLowerCase();
+      const cComp = (cust.companyName || '').toLowerCase();
+      const cPhone = (cust.phone || '').toString().toLowerCase();
+      const cGst = (cust.gstNumber || '').toLowerCase();
+      const cEmail = (cust.email || '').toLowerCase();
+      const cAddr = (cust.address || '').toLowerCase();
       return (
-        name.includes(q) ||
-        comp.includes(q) ||
-        phone.includes(q) ||
-        gst.includes(q) ||
-        email.includes(q) ||
-        addr.includes(q)
+        cName.includes(q) ||
+        cComp.includes(q) ||
+        cPhone.includes(q) ||
+        cGst.includes(q) ||
+        cEmail.includes(q) ||
+        cAddr.includes(q)
       );
     });
   }, [customers, searchQuery]);
+
+  if (!isOpen) return null;
 
   const resetForm = () => {
     setName('');

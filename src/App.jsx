@@ -149,14 +149,16 @@ function BillieApp() {
       />
 
       {/* Customers Directory & Invoices Modal */}
-      <CustomersModal
-        isOpen={isCustomersOpen}
-        onClose={() => setIsCustomersOpen(false)}
-        onSelectCustomerForBill={(cust) => {
-          setActiveCustomerForBill(cust);
-          setIsCustomersOpen(false);
-        }}
-      />
+      {isCustomersOpen && (
+        <CustomersModal
+          isOpen={isCustomersOpen}
+          onClose={() => setIsCustomersOpen(false)}
+          onSelectCustomerForBill={(cust) => {
+            setActiveCustomerForBill(cust);
+            setIsCustomersOpen(false);
+          }}
+        />
+      )}
 
       {/* Reporting & Accounting Modal Dialog */}
       {isReportingOpen && (
@@ -208,16 +210,30 @@ class ErrorBoundary extends React.Component {
             <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
               एप्लिकेशन को पुनः लोड करें। आपका बिल व डेटा पूरी तरह सुरक्षित है।
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                this.setState({ hasError: false });
-                window.location.reload();
-              }}
-              style={{ padding: '10px 24px', borderRadius: '10px', background: '#2563eb', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
-            >
-              रीफ्रेश करें (Reload App)
-            </button>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  this.setState({ hasError: false });
+                  window.location.reload();
+                }}
+                style={{ padding: '10px 20px', borderRadius: '10px', background: '#2563eb', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.88rem' }}
+              >
+                रीफ्रेश करें (Reload App)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem('billie_invoices');
+                  localStorage.removeItem('billie_customers');
+                  this.setState({ hasError: false });
+                  window.location.reload();
+                }}
+                style={{ padding: '10px 16px', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', fontWeight: 700, border: '1px solid #fecaca', cursor: 'pointer', fontSize: '0.85rem' }}
+              >
+                डेटा रीसेट करें (Reset Data)
+              </button>
+            </div>
           </div>
         </div>
       );

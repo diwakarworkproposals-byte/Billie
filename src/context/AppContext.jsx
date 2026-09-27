@@ -250,139 +250,9 @@ export const DEFAULT_PURCHASES = [
   }
 ];
 
-const DEFAULT_INVOICES = [
-  {
-    id: 'inv_demo_today',
-    invoiceNumber: 'INV-2026-003',
-    customerName: 'Amit Sharma',
-    customerEmail: 'amit.sharma@gmail.com',
-    customerPhone: '+91 98101 23456',
-    date: new Date().toLocaleDateString(),
-    rawDate: new Date().toISOString().split('T')[0],
-    product: 'T-Shirt, Leather Belt',
-    quantity: 3,
-    price: 1450,
-    discount: 0,
-    discountType: 'flat',
-    subtotal: 1450,
-    totalDiscount: 0,
-    taxRate: 0,
-    taxAmount: 0,
-    total: 1450,
-    currency: '₹',
-    items: [
-      {
-        name: 'T-Shirt',
-        quantity: 2,
-        price: 500,
-        subtotal: 1000,
-        lineDiscount: 0,
-        lineTotal: 1000
-      },
-      {
-        name: 'Leather Belt',
-        quantity: 1,
-        price: 450,
-        subtotal: 450,
-        lineDiscount: 0,
-        lineTotal: 450
-      }
-    ]
-  },
-  {
-    id: 'inv_demo_yesterday',
-    invoiceNumber: 'INV-2026-002',
-    customerName: 'Neha Verma',
-    customerEmail: 'neha.v@yahoo.com',
-    customerPhone: '+91 98991 99887',
-    date: new Date(Date.now() - 86400000).toLocaleDateString(),
-    rawDate: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    product: 'Jeans',
-    quantity: 2,
-    price: 1200,
-    discount: 100,
-    discountType: 'flat',
-    subtotal: 2400,
-    totalDiscount: 100,
-    taxRate: 5,
-    taxAmount: 115,
-    total: 2415,
-    currency: '₹',
-    items: [
-      {
-        name: 'Jeans',
-        quantity: 2,
-        price: 1200,
-        subtotal: 2400,
-        lineDiscount: 100,
-        lineTotal: 2300
-      }
-    ]
-  },
-  {
-    id: 'inv_demo_1',
-    invoiceNumber: 'INV-2026-001',
-    customerName: 'Rajesh Enterprises',
-    customerEmail: 'rajesh@enterprise.in',
-    customerPhone: '+91 98711 22334',
-    date: new Date(Date.now() - 86400000 * 3).toLocaleDateString(),
-    rawDate: new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0],
-    product: 'Formal Shirt',
-    quantity: 3,
-    price: 900,
-    discount: 100,
-    discountType: 'flat',
-    subtotal: 2700,
-    totalDiscount: 100,
-    taxRate: 5,
-    taxAmount: 130,
-    total: 2730,
-    currency: '₹',
-    items: [
-      {
-        name: 'Formal Shirt',
-        quantity: 3,
-        price: 900,
-        subtotal: 2700,
-        lineDiscount: 100,
-        lineTotal: 2600
-      }
-    ]
-  }
-];
+const DEFAULT_INVOICES = [];
 
-const DEFAULT_CUSTOMERS = [
-  {
-    id: 'cust_1',
-    name: 'Amit Sharma',
-    companyName: 'Sharma Garments',
-    phone: '+91 98101 23456',
-    email: 'amit.sharma@gmail.com',
-    gstNumber: '07AAACS1429B1Z2',
-    address: 'Sector 14, Gurugram, Haryana',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'cust_2',
-    name: 'Neha Verma',
-    companyName: '',
-    phone: '+91 98991 99887',
-    email: 'neha.v@yahoo.com',
-    gstNumber: '',
-    address: 'Lajpat Nagar, New Delhi',
-    createdAt: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: 'cust_3',
-    name: 'Rajesh Enterprises',
-    companyName: 'Rajesh Enterprises Pvt Ltd',
-    phone: '+91 98711 22334',
-    email: 'rajesh@enterprise.in',
-    gstNumber: '07AAAAA0000A1Z5',
-    address: 'Chandni Chowk, Delhi - 110006',
-    createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
-  }
-];
+const DEFAULT_CUSTOMERS = [];
 
 export function AppProvider({ children }) {
   // 1. Registered Users Database (Managed by Admin)
@@ -415,11 +285,18 @@ export function AppProvider({ children }) {
     }
   });
 
-  // 4. Saved Invoices History
+  // 4. Saved Invoices History (Cleaned of all old demo bills per user request)
   const [invoices, setInvoices] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_invoices');
-      return saved ? JSON.parse(saved) : DEFAULT_INVOICES;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Remove old demo bills
+          return parsed.filter((inv) => inv && !String(inv.id || '').startsWith('inv_demo_'));
+        }
+      }
+      return DEFAULT_INVOICES;
     } catch {
       return DEFAULT_INVOICES;
     }
@@ -445,23 +322,25 @@ export function AppProvider({ children }) {
     }
   });
 
-  // 7. Customers Database State
+  // 7. Customers Database State (Cleaned of demo customers per user request)
   const [customers, setCustomers] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_customers');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter(Boolean).map((c, i) => ({
-            id: c.id || `cust_saved_${i}`,
-            name: c.name || c.companyName || 'Customer',
-            companyName: c.companyName || '',
-            phone: c.phone || '',
-            email: c.email || '',
-            gstNumber: c.gstNumber || '',
-            address: c.address || '',
-            createdAt: c.createdAt || new Date().toISOString()
-          }));
+          return parsed
+            .filter((c) => c && !['cust_1', 'cust_2', 'cust_3'].includes(c.id))
+            .map((c, i) => ({
+              id: c.id || `cust_saved_${i}`,
+              name: c.name || c.companyName || 'Customer',
+              companyName: c.companyName || '',
+              phone: c.phone || '',
+              email: c.email || '',
+              gstNumber: c.gstNumber || '',
+              address: c.address || '',
+              createdAt: c.createdAt || new Date().toISOString()
+            }));
         }
       }
       return DEFAULT_CUSTOMERS;
