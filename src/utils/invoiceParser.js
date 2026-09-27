@@ -48,7 +48,7 @@ export function calculateInvoiceTotals(items, defaultTaxRate = 0) {
 }
 
 // Hindi Devanagari to ASCII digits mapping
-const HINDI_DEVANAGARI_DIGITS = {
+export const HINDI_DEVANAGARI_DIGITS = {
   '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
   '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
 };
@@ -286,60 +286,183 @@ export function isNegative(text = '') {
 }
 
 // Natural Language One-Shot Extractor for Invoice
-export function parseOneShotInvoice(text = '') {
-  const str = text.trim();
-  const result = {
-    customerName: '',
-    product: '',
-    quantity: 1,
-    price: 0,
-    discount: 0,
-    discountType: 'percent',
-    hasFullDetails: false
-  };
-
-  const custMatch = 
-    str.match(/(?:for|to|customer)\s+([A-Za-z0-9\s&.'-]+?)(?:,|\s+with|\s+product|\s+ke\s+liye|\s+\d+\s+|$)/i) ||
-    str.match(/([A-Za-z0-9\s&.'-]+?)\s+(?:ke\s+liye|ka\s+bill)/i);
-
-  if (custMatch && custMatch[1]) {
-    result.customerName = custMatch[1].trim();
+export function parseOneShotInvoice(rawText = '') {
+  let text = (rawText || '').trim();
+  if (!text) {
+    return {
+      customerName: '',
+      product: '',
+      quantity: 1,
+      price: 0,
+      discount: 0,
+      discountType: 'percent',
+      hasFullDetails: false
+    };
   }
 
-  const qtyProductMatch = 
-    str.match(/(\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s*(?:x|\s+units?\s+of|\s+pieces?\s+of|\s+piece|\s+nag|\s+)\s*([A-Za-z0-9\s-]+?)(?:\s+(?:at|@|for|me|mein|costing|price|rate|with|discount|$))/i);
+  // Normalize Devanagari digits to ASCII
+  text = text.replace(/[०-९]/g, (d) => HINDI_DEVANAGARI_DIGITS[d] || d);
 
-  if (qtyProductMatch) {
-    result.quantity = extractNumber(qtyProductMatch[1], 1);
-    result.product = qtyProductMatch[2].trim();
-  } else {
-    const prodMatch = str.match(/product\s+([A-Za-z0-9\s-]+?)(?:,|\s+qty|\s+price|\s+with|$)/i);
-    if (prodMatch) result.product = prodMatch[1].trim();
-    const qtyMatch = str.match(/(?:quantity|qty|piece)\s+([A-Za-z0-9\s]+)/i);
-    if (qtyMatch) result.quantity = extractNumber(qtyMatch[1], 1);
-  }
+  let customerName = '';
+  let product = '';
+  let quantity = 1;
+  let price = 0;
+  let discount = 0;
+  let discountType = 'percent';
 
-  const priceMatch = str.match(/(?:at|@|price|cost|rate|for|me|mein)\s*[$₹€£]?\s*([0-9A-Za-z\s]+?)(?:,|\s+with|\s+discount|$)/i);
-  if (priceMatch) {
-    result.price = extractNumber(priceMatch[1], 0);
-  }
+  // 1. Extract Discount (if any)
+  const discMatch = 
+    text.match(/(?:discount|off|chhut|chhoot)\s*[$₹€£]?\s*(\d+(?:\.\d+)?)\s*(%)?/i) ||
+    text.match(/(\d+(?:\.\d+)?)\s*(%)\s*(?:discount|off|chhut|chhoot)/i) ||
+    text.match(/(\d+(?:\.\d+)?)\s*(?:rupaye|rs)?\s*(?:discount|off|chhut|chhoot)/i);
 
-  const discountMatch = str.match(/(?:discount|off|chhut)\s*[$₹€£]?\s*([0-9A-Za-z\s]+?)(%)?/i) ||
-                        str.match(/([0-9A-Za-z\s]+?)(%)?\s*(?:discount|off|chhut)/i);
-  if (discountMatch) {
-    result.discount = extractNumber(discountMatch[1], 0);
-    if (discountMatch[2] === '%' || str.includes(`${result.discount}%`)) {
-      result.discountType = 'percent';
+  if (discMatch) {
+    discount = parseFloat(discMatch[1]) || 0;
+    if (discMatch[2] === '%' || text.includes(`${discount}%`)) {
+      discountType = 'percent';
     } else {
-      result.discountType = 'flat';
+      discountType = 'flat';
+    }
+    text = text.replace(discMatch[0], ' ');
+  }
+
+  // 2. Extract Price (Unit price, rate, per piece, at X, X rupaye)
+  const pricePatterns = [
+    // jiski unit price 1200 / unit price 1200 / rate 1200 / price 1200
+    /(?:jiski|jiska)?\s*(?:unit\s+price|per\s+piece|per\s+unit|rate|price|keemat|cost|lagat|bhav)\s*(?:is|hai|h|of|:)?\s*[$₹€£]?\s*(\d+(?:\.\d+)?)/i,
+    // 1200 rupaye / 1200 rs / 1200 inr / 1200 each
+    /(\d+(?:\.\d+)?)\s*(?:rupaye|rupees|rs|inr|₹|per\s+piece|each|ka\s+ek)/i,
+    // at 1200 / @ 1200
+    /(?:at|@)\s*[$₹€£]?\s*(\d+(?:\.\d+)?)/i,
+    // 1200 me / 1200 mein
+    /[$₹€£]?\s*(\d+(?:\.\d+)?)\s*(?:me|mein)\s*(?:bill|parcha|invoice)?/i
+  ];
+
+  let matchedPriceStr = '';
+  for (const pat of pricePatterns) {
+    const pMatch = text.match(pat);
+    if (pMatch && pMatch[1]) {
+      price = parseFloat(pMatch[1]);
+      matchedPriceStr = pMatch[0];
+      break;
     }
   }
 
-  if (result.customerName && result.product && result.price > 0) {
-    result.hasFullDetails = true;
+  // 3. Extract Customer Name
+  const custPatterns = [
+    // "... for/to Rahul Sharma at/with/..." (positive lookahead so delimiter is not consumed)
+    /(?:bill\s+for|invoice\s+for|bill\s+to|invoice\s+to|for|to)\s+([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:ke\s+liye|unit\s+price|at|@|\d+|with|for|ka|ki|ke|product)|$)/i,
+    // "Rahul Sharma ke liye" or "Rahul Sharma ke naam pe/se"
+    /([A-Za-z\u0900-\u097F\s&.'-]+?)\s+(?:ke\s+liye|ke\s+naam\s+(?:pe|par|se)|ko\s+(?=\d+|becho|de\s+do|bech))/i,
+    // "5 sofa for Rahul Sharma at 1200"
+    /(?:for|to)\s+([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:unit\s+price|at|@|price|rate|\d+)|$)/i,
+    // "Rahul Sharma 5 sofa 1200 ka bill" -> start of text before number
+    /^([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s+)/i
+  ];
+
+  let matchedCustStr = '';
+  for (const cPat of custPatterns) {
+    const cMatch = text.match(cPat);
+    if (cMatch && cMatch[1]) {
+      const candidate = cMatch[1].trim();
+      const cleanCandidate = candidate
+        .replace(/^(generate\s+bill\s+for|create\s+bill\s+for|bill\s+for|invoice\s+for|make\s+bill\s+for|generate\s+invoice\s+for|naya\s+bill|bill\s+banao|bill\s+generate\s+karo)\s+/i, '')
+        .replace(/^(please|kripya|ek)\s+/i, '')
+        .trim();
+
+      if (cleanCandidate && cleanCandidate.length > 1 && !['bill', 'invoice', 'stock', 'parchi'].includes(cleanCandidate.toLowerCase())) {
+        customerName = cleanCandidate;
+        matchedCustStr = cMatch[0];
+        break;
+      }
+    }
   }
 
-  return result;
+  // 4. Extract Quantity & Product
+  const qtyNumPattern = /(\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s*(?:x|units?|pieces?|pcs?|nag|piece)?\s+([A-Za-z\u0900-\u097F\s-]+)/i;
+  
+  let remainingText = text;
+  if (matchedPriceStr) {
+    remainingText = remainingText.replace(matchedPriceStr, ' ');
+  }
+  if (matchedCustStr) {
+    remainingText = remainingText.replace(matchedCustStr, ' ');
+  }
+
+  // Remove command prefixes/suffixes using word boundaries so words like 'chair' are untouched
+  const cleanRemaining = remainingText
+    .replace(/\b(?:ka\s+bill\s+generate\s+karo|ka\s+bill\s+banao|ka\s+bill\s+bana\s+do|bill\s+generate\s+karo|bill\s+banao|bill\s+banado|bill\s+bana\s+do|bana\s+do|banao|kar\s+do|de\s+do|invoice\s+banao|bill\s+kaato|generate\s+bill|create\s+bill|make\s+bill|ka\s+bill|ka\s+invoice|bill|invoice)\b/gi, ' ')
+    .replace(/\b(?:jiski\s+unit\s+price|jiska\s+rate|jiski\s+keemat|unit\s+price|per\s+piece|rate\s+hai|price\s+hai|hai|h|becho|bech\s+do|de\s+do|rupaye|rupees|rs|inr|each|ke\s+liye)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const qtyMatch = cleanRemaining.match(qtyNumPattern);
+  if (qtyMatch) {
+    quantity = extractNumber(qtyMatch[1], 1);
+    let rawProd = qtyMatch[2].trim();
+
+    rawProd = rawProd
+      .replace(/^(x|units?\s+of|pieces?\s+of|piece\s+of|nag)\s+/i, '')
+      .replace(/\s+(?:ke\s+liye|ka\s+bill|bana\s+do|banao|kar\s+do|de\s+do|generate\s+karo|ka|ki|ke|me|mein|at|@|for|rate|price|hai|jiski|jiska)$/i, '')
+      .trim();
+
+    // Strip customer name if it slipped inside product
+    if (customerName) {
+      const custRegex = new RegExp(`\\b(?:for\\s+)?${customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+      rawProd = rawProd.replace(custRegex, ' ').trim();
+    }
+
+    // Strip common filler words from product
+    rawProd = rawProd
+      .replace(/\b(?:bana\s+do|banao|kar\s+do|bill|invoice|jiski|jiska|unit\s+price|rate|hai|for)\b/gi, ' ')
+      .replace(/\s+\d+$/, '') // strip trailing price numbers
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (rawProd) {
+      product = rawProd
+        .split(' ')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+    }
+  }
+
+  // Fallback for price if not matched earlier
+  if (price === 0) {
+    const trailingNumbers = cleanRemaining.match(/\b(\d{2,})\b/g);
+    if (trailingNumbers && trailingNumbers.length > 0) {
+      const lastNum = parseFloat(trailingNumbers[trailingNumbers.length - 1]);
+      if (lastNum !== quantity) {
+        price = lastNum;
+      }
+    }
+  }
+
+  // If customerName was not found yet, check if there is a name before product
+  if (!customerName) {
+    const forMatch = text.match(/(?:for|to|naam|customer)\s+([A-Za-z\s]+?)(?=\s+(?:unit\s+price|at|@|price|rate|\d+)|$)/i);
+    if (forMatch) customerName = forMatch[1].trim();
+  }
+
+  // Capitalize Customer Name properly
+  if (customerName) {
+    customerName = customerName
+      .split(' ')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  const hasFullDetails = Boolean(customerName && product && price > 0);
+
+  return {
+    customerName,
+    product,
+    quantity: Math.max(1, quantity),
+    price,
+    discount,
+    discountType,
+    hasFullDetails
+  };
 }
 
 // Direct voice command to edit or adjust stock:
