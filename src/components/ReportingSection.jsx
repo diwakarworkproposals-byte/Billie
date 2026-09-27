@@ -8,6 +8,7 @@ import {
   Clock,
   Search,
   Plus,
+  Minus,
   ChevronDown,
   ShoppingBag,
   Phone,
@@ -18,7 +19,9 @@ import {
   Trash2,
   Calendar,
   Layers,
-  Sparkles
+  Sparkles,
+  User,
+  Building
 } from 'lucide-react';
 
 export default function ReportingSection({
@@ -808,66 +811,93 @@ export default function ReportingSection({
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 1: RECORD PURCHASE PAYMENT DIALOG                  */}
+      {/* MODAL 1: RECORD PURCHASE PAYMENT DIALOG (MATERIAL DESIGN 3) */}
       {/* ========================================================= */}
       {activePaymentPurchase && (
         <div className="modal-backdrop animate-fade-in" onClick={() => setActivePaymentPurchase(null)}>
           <div
-            className="m3-mobile-dialog animate-scale-up"
+            className="m3-modal-sheet-dialog animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="dialog-header-clean">
-              <div className="flex items-center gap-2">
-                <CreditCard size={18} className="text-emerald-600" />
-                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                  {isHindi ? 'सप्लायर भुगतान दर्ज करें' : 'Record Supplier Payment'}
-                </h3>
+            {/* Header */}
+            <div className="m3-dialog-header-enhanced">
+              <div className="flex items-center gap-3">
+                <div className="m3-dialog-icon-pill emerald">
+                  <CreditCard size={20} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="m3-dialog-title">
+                    {isHindi ? 'सप्लायर भुगतान दर्ज करें' : 'Record Supplier Payment'}
+                  </h3>
+                  <p className="m3-dialog-subtitle">
+                    {isHindi ? 'सप्लायर उधारी खाते में पेमेंट' : 'Settle pending dues in ledger'}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setActivePaymentPurchase(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="m3-dialog-close-circle"
+                title={isHindi ? 'बंद करें' : 'Close'}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleConfirmPayment} className="p-3.5 space-y-3">
+            <form onSubmit={handleConfirmPayment} className="m3-dialog-body-scroll">
               {paymentSuccessMsg && (
-                <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-lg text-xs flex items-center gap-2">
-                  <CheckCircle2 size={15} />
+                <div className="m3-alert-banner success animate-fade-in">
+                  <CheckCircle2 size={16} />
                   <span>{paymentSuccessMsg}</span>
                 </div>
               )}
 
-              {/* Bill Details Summary */}
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    {activePaymentPurchase.supplierName}
+              {/* Supplier & Due Balance Spotlight Card */}
+              <div className="m3-modal-ledger-summary-card">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="m3-modal-sup-tag">{isHindi ? 'सप्लायर खाता' : 'Supplier Account'}</span>
+                    <h4 className="m3-modal-sup-name">{activePaymentPurchase.supplierName}</h4>
+                    {activePaymentPurchase.supplierContact && (
+                      <span className="m3-modal-sup-phone">
+                        <Phone size={11} /> {activePaymentPurchase.supplierContact}
+                      </span>
+                    )}
+                  </div>
+                  <span className="m3-modal-bill-badge">
+                    {activePaymentPurchase.purchaseNumber}
                   </span>
-                  <span className="font-bold text-amber-600">
-                    {isHindi ? 'बकाया:' : 'Due:'} {currency}{Number(activePaymentPurchase.pendingAmount).toLocaleString()}
-                  </span>
+                </div>
+
+                <div className="m3-modal-ledger-grid mt-3">
+                  <div className="m3-modal-stat-box">
+                    <span className="lbl">{isHindi ? 'कुल बिल' : 'Total Bill'}</span>
+                    <span className="val">{currency}{Number(activePaymentPurchase.totalAmount).toLocaleString()}</span>
+                  </div>
+                  <div className="m3-modal-stat-box">
+                    <span className="lbl">{isHindi ? 'चुकाया' : 'Paid'}</span>
+                    <span className="val text-emerald-600">{currency}{Number(activePaymentPurchase.paidAmount).toLocaleString()}</span>
+                  </div>
+                  <div className="m3-modal-stat-box due">
+                    <span className="lbl">{isHindi ? 'कुल बाकी' : 'Balance Due'}</span>
+                    <span className="val text-amber-600 font-extrabold">{currency}{Number(activePaymentPurchase.pendingAmount).toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
               {/* Payment Amount Input */}
-              <div className="form-group">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    {isHindi ? 'भुगतान राशि (Amount)' : 'Payment Amount'}
+              <div className="m3-form-field-group">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="m3-field-label">
+                    {isHindi ? 'भुगतान राशि (Payment Amount) *' : 'Payment Amount *'}
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setPayAmount(String(activePaymentPurchase.pendingAmount))}
-                    className="text-[11px] font-bold text-blue-600 hover:underline"
-                  >
-                    {isHindi ? 'पूरा भरें' : 'Pay Full'}
-                  </button>
+                  <span className="text-[11px] font-bold text-amber-600">
+                    {isHindi ? 'बाकी:' : 'Max Due:'} {currency}{Number(activePaymentPurchase.pendingAmount).toLocaleString()}
+                  </span>
                 </div>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 font-bold text-slate-400">{currency}</span>
+
+                <div className="m3-outlined-input-wrap">
+                  <span className="m3-input-prefix">{currency}</span>
                   <input
                     type="number"
                     required
@@ -876,62 +906,86 @@ export default function ReportingSection({
                     value={payAmount}
                     onChange={(e) => setPayAmount(e.target.value)}
                     placeholder="0"
-                    className="w-full pl-7 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                    className="m3-enhanced-input"
                   />
+                </div>
+
+                {/* Quick Fill Amount Chips */}
+                <div className="m3-quick-pills-row mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPayAmount(String(activePaymentPurchase.pendingAmount))}
+                    className="m3-quick-fill-chip active"
+                  >
+                    ✓ {isHindi ? 'पूरा भरें' : 'Pay Full'} ({currency}{Number(activePaymentPurchase.pendingAmount).toLocaleString()})
+                  </button>
+                  {activePaymentPurchase.pendingAmount > 100 && (
+                    <button
+                      type="button"
+                      onClick={() => setPayAmount(String(Math.round(activePaymentPurchase.pendingAmount / 2)))}
+                      className="m3-quick-fill-chip"
+                    >
+                      {isHindi ? '50% (आधा)' : '50% (Half)'} ({currency}{Math.round(activePaymentPurchase.pendingAmount / 2).toLocaleString()})
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Payment Mode Selector */}
-              <div className="form-group">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 block">
-                  {isHindi ? 'माध्यम (Payment Mode)' : 'Payment Mode'}
+              <div className="m3-form-field-group">
+                <label className="m3-field-label">
+                  {isHindi ? 'भुगतान का माध्यम (Payment Mode)' : 'Payment Mode'}
                 </label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {['UPI', 'Cash', 'NEFT', 'Cheque'].map((mode) => (
+                <div className="m3-mode-chips-grid">
+                  {[
+                    { mode: 'UPI', label: 'UPI (GPay/PhonePe)', icon: '⚡' },
+                    { mode: 'Cash', label: isHindi ? 'नकद (Cash)' : 'Cash', icon: '💵' },
+                    { mode: 'NEFT', label: isHindi ? 'बैंक / NEFT' : 'NEFT / Bank', icon: '🏦' },
+                    { mode: 'Cheque', label: isHindi ? 'चेक (Cheque)' : 'Cheque', icon: '📄' }
+                  ].map(({ mode, label, icon }) => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => setPayMethod(mode)}
-                      className={`py-1.5 text-xs font-bold rounded border text-center transition-all ${
-                        payMethod === mode
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                      }`}
+                      className={`m3-mode-chip ${payMethod === mode ? 'selected' : ''}`}
                     >
-                      {mode}
+                      <span className="icon">{icon}</span>
+                      <span className="text">{label}</span>
+                      {payMethod === mode && <Check size={13} className="check-icon" />}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Notes */}
-              <div className="form-group">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 block">
-                  {isHindi ? 'नोट्स / UTR नंबर (वैकल्पिक)' : 'Notes / Ref ID (Optional)'}
+              {/* Notes / UTR Ref Input */}
+              <div className="m3-form-field-group">
+                <label className="m3-field-label">
+                  {isHindi ? 'नोट्स / UTR नंबर (वैकल्पिक)' : 'Notes / UTR Reference ID (Optional)'}
                 </label>
                 <input
                   type="text"
                   value={payNotes}
                   onChange={(e) => setPayNotes(e.target.value)}
-                  placeholder={isHindi ? 'जैसे: GPay से भुगतान' : 'e.g. Paid via GPay'}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  placeholder={isHindi ? 'जैसे: GPay से भुगतान किया / UTR: 384920' : 'e.g. Paid via GPay / UTR: 384920'}
+                  className="m3-enhanced-input text-field-only"
                 />
               </div>
 
-              <div className="flex gap-2 pt-1">
+              {/* Action Buttons */}
+              <div className="m3-dialog-actions-row">
                 <button
                   type="button"
                   onClick={() => setActivePaymentPurchase(null)}
-                  className="flex-1 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg"
+                  className="m3-btn-secondary"
                 >
                   {isHindi ? 'रद्द करें' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center justify-center gap-1.5"
+                  className="m3-btn-primary emerald"
                 >
-                  <Check size={14} />
-                  <span>{isHindi ? 'कन्फर्म करें' : 'Confirm'}</span>
+                  <Check size={16} />
+                  <span>{isHindi ? 'भुगतान सुरक्षित करें' : 'Confirm Payment'}</span>
                 </button>
               </div>
             </form>
@@ -940,184 +994,314 @@ export default function ReportingSection({
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 2: ADD NEW PURCHASE BILL DIALOG                    */}
+      {/* MODAL 2: ADD NEW PURCHASE BILL DIALOG (MATERIAL DESIGN 3) */}
       {/* ========================================================= */}
       {isAddPurchaseOpen && (
         <div className="modal-backdrop animate-fade-in" onClick={() => setIsAddPurchaseOpen(false)}>
           <div
-            className="m3-mobile-dialog animate-scale-up"
+            className="m3-modal-sheet-dialog animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="dialog-header-clean">
-              <div className="flex items-center gap-2">
-                <ShoppingBag size={18} className="text-blue-600" />
-                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                  {isHindi ? 'नया सप्लायर खरीद बिल' : 'Add Purchase Bill'}
-                </h3>
+            {/* Header */}
+            <div className="m3-dialog-header-enhanced">
+              <div className="flex items-center gap-3">
+                <div className="m3-dialog-icon-pill blue">
+                  <ShoppingBag size={20} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="m3-dialog-title">
+                    {isHindi ? 'नया सप्लायर खरीद बिल' : 'Add Purchase Bill'}
+                  </h3>
+                  <p className="m3-dialog-subtitle">
+                    {isHindi ? 'सप्लायर से माल खरीददारी व खाता दर्ज करें' : 'Record purchase & supplier ledger'}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAddPurchaseOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="m3-dialog-close-circle"
+                title={isHindi ? 'बंद करें' : 'Close'}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddPurchaseSubmit} className="p-3.5 space-y-3">
+            <form onSubmit={handleAddPurchaseSubmit} className="m3-dialog-body-scroll">
               {addBillError && (
-                <div className="p-2 bg-rose-50 text-rose-800 rounded text-xs flex items-center gap-1.5">
-                  <AlertTriangle size={14} />
+                <div className="m3-alert-banner error animate-fade-in">
+                  <AlertTriangle size={15} />
                   <span>{addBillError}</span>
                 </div>
               )}
               {addBillSuccess && (
-                <div className="p-2 bg-emerald-50 text-emerald-800 rounded text-xs flex items-center gap-1.5">
-                  <CheckCircle2 size={14} />
+                <div className="m3-alert-banner success animate-fade-in">
+                  <CheckCircle2 size={15} />
                   <span>{addBillSuccess}</span>
                 </div>
               )}
 
-              {/* Supplier & Phone */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    {isHindi ? 'सप्लायर का नाम *' : 'Supplier Name *'}
+              {/* Section 1: Supplier Info */}
+              <div className="m3-form-card-section">
+                <span className="m3-section-title">
+                  <Building size={14} className="text-blue-500" />
+                  {isHindi ? '1. सप्लायर विवरण (Supplier Details)' : '1. Supplier Details'}
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+                  <div className="m3-form-field-group">
+                    <label className="m3-field-label">
+                      {isHindi ? 'सप्लायर / फर्म का नाम *' : 'Supplier / Firm Name *'}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={newSupplierName}
+                        onChange={(e) => setNewSupplierName(e.target.value)}
+                        placeholder={isHindi ? 'जैसे: वर्धमान टेक्सटाइल्स' : 'e.g. Vardhman Textiles'}
+                        className="m3-enhanced-input text-field-only"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="m3-form-field-group">
+                    <label className="m3-field-label">
+                      {isHindi ? 'मोबाइल / फोन नंबर' : 'Phone / Contact'}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={newSupplierContact}
+                        onChange={(e) => setNewSupplierContact(e.target.value)}
+                        placeholder="+91 98XXX XXXXX"
+                        className="m3-enhanced-input text-field-only"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Product & Cost */}
+              <div className="m3-form-card-section">
+                <span className="m3-section-title">
+                  <ShoppingBag size={14} className="text-emerald-500" />
+                  {isHindi ? '2. सामान व लागत (Product & Quantity)' : '2. Product & Cost'}
+                </span>
+
+                <div className="m3-form-field-group mt-2">
+                  <label className="m3-field-label">
+                    {isHindi ? 'प्रोडक्ट / सामान का नाम *' : 'Product / Material Name *'}
                   </label>
                   <input
                     type="text"
                     required
-                    value={newSupplierName}
-                    onChange={(e) => setNewSupplierName(e.target.value)}
-                    placeholder="e.g. Vardhman"
-                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                    value={newProduct}
+                    onChange={(e) => setNewProduct(e.target.value)}
+                    placeholder={isHindi ? 'जैसे: कॉटन टी-शर्ट, जींस' : 'e.g. Cotton T-Shirt, Jeans'}
+                    className="m3-enhanced-input text-field-only"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    {isHindi ? 'फोन नंबर' : 'Phone'}
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplierContact}
-                    onChange={(e) => setNewSupplierContact(e.target.value)}
-                    placeholder="+91 98XXX"
-                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                  />
+
+                <div className="grid grid-cols-2 gap-2.5 mt-2.5">
+                  {/* Quantity Stepper */}
+                  <div className="m3-form-field-group">
+                    <label className="m3-field-label">
+                      {isHindi ? 'मात्रा (Quantity) *' : 'Quantity *'}
+                    </label>
+                    <div className="m3-stepper-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setNewQuantity(String(Math.max(1, (Number(newQuantity) || 1) - 1)))}
+                        className="m3-stepper-btn"
+                        title="Decrease"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={newQuantity}
+                        onChange={(e) => setNewQuantity(e.target.value)}
+                        className="m3-stepper-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNewQuantity(String((Number(newQuantity) || 1) + 1))}
+                        className="m3-stepper-btn"
+                        title="Increase"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Unit Cost */}
+                  <div className="m3-form-field-group">
+                    <label className="m3-field-label">
+                      {isHindi ? 'प्रति पीस लागत मूल्य *' : 'Unit Cost Price *'}
+                    </label>
+                    <div className="m3-outlined-input-wrap">
+                      <span className="m3-input-prefix">{currency}</span>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={newUnitCost}
+                        onChange={(e) => setNewUnitCost(e.target.value)}
+                        placeholder="350"
+                        className="m3-enhanced-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Total Calculation Banner */}
+                <div className="m3-calculated-bill-banner mt-3">
+                  <div className="flex items-center gap-2">
+                    <Receipt size={18} className="text-blue-600 dark:text-blue-400" />
+                    <span className="banner-label">{isHindi ? 'कुल खरीद बिल (Total Bill):' : 'Total Bill Amount:'}</span>
+                  </div>
+                  <span className="banner-value">
+                    {currency}{(Math.max(1, Number(newQuantity) || 1) * Math.max(0, Number(newUnitCost) || 0)).toLocaleString()}
+                  </span>
                 </div>
               </div>
 
-              {/* Product */}
-              <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  {isHindi ? 'सामान / प्रोडक्ट का नाम *' : 'Product / Material *'}
+              {/* Section 3: Payment & Due Date */}
+              <div className="m3-form-card-section">
+                <span className="m3-section-title">
+                  <Clock size={14} className="text-amber-500" />
+                  {isHindi ? '3. भुगतान व ड्यू डेट (Payment & Dues)' : '3. Payment & Due Date'}
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+                  {/* Paid Now */}
+                  <div className="m3-form-field-group">
+                    <label className="m3-field-label">
+                      {isHindi ? 'अभी कितना भुगतान किया (Paid Now)' : 'Amount Paid Now'}
+                    </label>
+                    <div className="m3-outlined-input-wrap">
+                      <span className="m3-input-prefix">{currency}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newPaidNow}
+                        onChange={(e) => setNewPaidNow(e.target.value)}
+                        placeholder="0"
+                        className="m3-enhanced-input"
+                      />
+                    </div>
+
+                    {/* Quick Paid Chips */}
+                    <div className="m3-quick-pills-row mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setNewPaidNow('0')}
+                        className="m3-quick-fill-chip"
+                      >
+                        {isHindi ? 'उधार (₹0)' : 'Unpaid (₹0)'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const total = Math.max(1, Number(newQuantity) || 1) * Math.max(0, Number(newUnitCost) || 0);
+                          setNewPaidNow(String(total));
+                        }}
+                        className="m3-quick-fill-chip active"
+                      >
+                        {isHindi ? 'पूर्ण चुकाया' : 'Fully Paid'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Due Date */}
+                  <div className="m3-form-field-group">
+                    <label className="m3-field-label">
+                      {isHindi ? 'पेमेंट ड्यू डेट (Due Date) *' : 'Payment Due Date *'}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        required
+                        value={newDueDate}
+                        onChange={(e) => setNewDueDate(e.target.value)}
+                        className="m3-enhanced-input text-field-only"
+                      />
+                    </div>
+
+                    {/* Quick Date Chips */}
+                    <div className="m3-quick-pills-row mt-1.5">
+                      {[7, 15, 30].map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => {
+                            const d = new Date(Date.now() + 86400000 * days);
+                            setNewDueDate(d.toISOString().split('T')[0]);
+                          }}
+                          className="m3-quick-fill-chip"
+                        >
+                          +{days} {isHindi ? 'दिन' : 'days'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Restock Switch Card */}
+              <div className="m3-switch-card">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newAddToStock}
+                    onChange={(e) => setNewAddToStock(e.target.checked)}
+                    className="m3-checkbox-input"
+                  />
+                  <div>
+                    <span className="m3-switch-title">
+                      📦 {isHindi ? 'इन्वेंटरी स्टॉक में भी जोड़ें (Auto Restock)' : 'Add to Inventory Stock'}
+                    </span>
+                    <p className="m3-switch-desc">
+                      {isHindi
+                        ? 'यह माल और मात्रा आपकी इन्वेंटरी में अपने आप जुड़ जाएगी'
+                        : 'Automatically increment your store stock count with this purchase'}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Notes (Optional) */}
+              <div className="m3-form-field-group">
+                <label className="m3-field-label">
+                  {isHindi ? 'बिल नंबर / नोट्स (वैकल्पिक)' : 'Bill Number / Notes (Optional)'}
                 </label>
                 <input
                   type="text"
-                  required
-                  value={newProduct}
-                  onChange={(e) => setNewProduct(e.target.value)}
-                  placeholder="e.g. T-Shirt Fabric, Jeans"
-                  className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  value={newNotes}
+                  onChange={(e) => setNewNotes(e.target.value)}
+                  placeholder={isHindi ? 'जैसे: बिल नंबर #7890 या माल की स्थिति' : 'e.g. Bill #7890 or material grade'}
+                  className="m3-enhanced-input text-field-only"
                 />
               </div>
 
-              {/* Quantity & Unit Cost */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    {isHindi ? 'मात्रा (Qty) *' : 'Quantity *'}
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={newQuantity}
-                    onChange={(e) => setNewQuantity(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    {isHindi ? 'प्रति पीस लागत *' : 'Unit Cost *'}
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={newUnitCost}
-                    onChange={(e) => setNewUnitCost(e.target.value)}
-                    placeholder="320"
-                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-              </div>
-
-              {/* Total Calculation Strip */}
-              <div className="flex justify-between items-center p-2 bg-blue-50 dark:bg-blue-950/40 rounded text-xs text-blue-900 dark:text-blue-200 font-bold">
-                <span>{isHindi ? 'कुल खरीद बिल:' : 'Total Bill:'}</span>
-                <span className="text-sm">
-                  {currency}{(Math.max(1, Number(newQuantity) || 1) * Math.max(0, Number(newUnitCost) || 0)).toLocaleString()}
-                </span>
-              </div>
-
-              {/* Paid Now & Due Date */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    {isHindi ? 'अभी कितना दिया' : 'Paid Now'}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={newPaidNow}
-                    onChange={(e) => setNewPaidNow(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                    {isHindi ? 'पेमेंट ड्यू डेट *' : 'Due Date *'}
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newDueDate}
-                    onChange={(e) => setNewDueDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-              </div>
-
-              {/* Restock Checkbox */}
-              <div className="flex items-center gap-2 pt-0.5">
-                <input
-                  type="checkbox"
-                  id="add-stock-cb"
-                  checked={newAddToStock}
-                  onChange={(e) => setNewAddToStock(e.target.checked)}
-                  className="rounded text-blue-600 h-3.5 w-3.5 cursor-pointer"
-                />
-                <label htmlFor="add-stock-cb" className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                  {isHindi ? 'इन्वेंटरी स्टॉक में भी जोड़ें' : 'Also add to inventory stock'}
-                </label>
-              </div>
-
-              <div className="flex gap-2 pt-1">
+              {/* Action Buttons */}
+              <div className="m3-dialog-actions-row">
                 <button
                   type="button"
                   onClick={() => setIsAddPurchaseOpen(false)}
-                  className="flex-1 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg"
+                  className="m3-btn-secondary"
                 >
                   {isHindi ? 'रद्द करें' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-1.5"
+                  className="m3-btn-primary blue"
                 >
-                  <Plus size={14} />
-                  <span>{isHindi ? 'बिल सेव करें' : 'Save Bill'}</span>
+                  <Plus size={16} />
+                  <span>{isHindi ? 'खरीद बिल सेव करें' : 'Save Purchase Bill'}</span>
                 </button>
               </div>
             </form>

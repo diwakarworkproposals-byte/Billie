@@ -12,7 +12,8 @@ import {
   Sun,
   Moon,
   FileText,
-  Hash
+  Hash,
+  Languages
 } from 'lucide-react';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
 
@@ -28,7 +29,7 @@ const CURRENCIES = [
 ];
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const { user, settings, updateSettings, invoices, deleteInvoice } = useApp();
+  const { user, settings, updateSettings, invoices, deleteInvoice, setLanguage } = useApp();
   const [activeTab, setActiveTab] = useState('settings'); // 'settings' | 'history'
 
   if (!isOpen) return null;
@@ -182,6 +183,39 @@ export default function SettingsModal({ isOpen, onClose }) {
                     className={`theme-pill ${settings.theme === 'dark' ? 'active' : ''}`}
                   >
                     Dark
+                  </button>
+                </div>
+              </div>
+
+              {/* Language Selector (Hindi / English) */}
+              <div className="settings-toggle-row">
+                <div className="toggle-info">
+                  <div className="toggle-label-row">
+                    <Languages size={18} className="text-indigo-600 dark:text-indigo-400" />
+                    <span className="toggle-title">
+                      {settings.language === 'hi' ? 'ऐप व आवाज़ की भाषा (Language)' : 'App & Voice Language'}
+                    </span>
+                  </div>
+                  <span className="toggle-desc">
+                    {settings.language === 'hi'
+                      ? 'Billie ऐप और आवाज़ (Voice) की मुख्य भाषा चुनें'
+                      : 'Choose your preferred language for voice and app UI'}
+                  </span>
+                </div>
+                <div className="theme-pills">
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('hi')}
+                    className={`theme-pill ${settings.language === 'hi' ? 'active' : ''}`}
+                  >
+                    🇮🇳 हिंदी (Hindi)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLanguage('en')}
+                    className={`theme-pill ${settings.language === 'en' ? 'active' : ''}`}
+                  >
+                    🇬🇧 English
                   </button>
                 </div>
               </div>
