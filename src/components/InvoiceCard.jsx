@@ -105,10 +105,11 @@ export default function InvoiceCard({
             {items.map((item, idx) => {
               const qty = Number(item.quantity) || 1;
               const price = Number(item.price) || 0;
-              const disc = Number(item.discount) || 0;
               const sub = qty * price;
-              const discAmount = item.discountType === 'percent'
-                ? (sub * disc) / 100
+              const disc = Number(item.discount) || (invoice.discountType === 'percent' ? Number(invoice.discount) || 0 : 0);
+              const discType = item.discountType || invoice.discountType || 'percent';
+              const discAmount = discType === 'percent'
+                ? (sub * Math.min(100, disc)) / 100
                 : disc;
               const lineTot = Math.max(0, sub - discAmount);
 
@@ -121,8 +122,8 @@ export default function InvoiceCard({
                   </td>
                   <td className="text-center font-medium">{qty}</td>
                   <td className="text-right">{currency} {price.toFixed(2)}</td>
-                  <td className="text-right text-amber-600">
-                    {disc > 0 ? (item.discountType === 'percent' ? `${disc}%` : `${currency} ${disc}`) : '-'}
+                  <td className="text-right text-amber-600 font-medium">
+                    {disc > 0 ? (discType === 'percent' ? `${disc}%` : `${currency} ${disc.toFixed(2)}`) : '-'}
                   </td>
                   <td className="text-right font-semibold">{currency} {lineTot.toFixed(2)}</td>
                 </tr>
@@ -133,37 +134,65 @@ export default function InvoiceCard({
       </div>
 
       {/* Calculation Summary Block */}
-      <div className="calculation-summary-container">
-        <div className="calc-row">
-          <span className="calc-label">{isHindi ? 'सबटोटल (Subtotal)' : 'Subtotal'}</span>
-          <span className="calc-value">{currency} {(Number(invoice.subtotal) || 0).toFixed(2)}</span>
-        </div>
+      {(() => {
+        const subtotalNum = Number(invoice.subtotal) || 0;
+        let finalDiscAmount = 0;
+        if (invoice.discountAmount !== undefined && Number(invoice.discountAmount) > 0) {
+          finalDiscAmount = Number(invoice.discountAmount);
+        } else if (invoice.totalDiscount !== undefined && Number(invoice.totalDiscount) > 0) {
+          finalDiscAmount = Number(invoice.totalDiscount);
+        } else if (Number(invoice.discount) > 0) {
+          if (invoice.discountType === 'percent' || invoice.isPercentDiscount) {
+            finalDiscAmount = (subtotalNum * Math.min(100, Number(invoice.discount))) / 100;
+          } else {
+            finalDiscAmount = Math.min(subtotalNum, Number(invoice.discount));
+          }
+        }
 
-        {(Number(invoice.discountAmount) > 0 || Number(invoice.discount) > 0) && (
-          <div className="calc-row text-rose-500">
-            <span className="calc-label">{isHindi ? 'कुल छूट (Discount)' : 'Total Discount'}</span>
-            <span className="calc-value">
-              -{currency} {(Number(invoice.discountAmount || invoice.discount) || 0).toFixed(2)}
-            </span>
+        const taxRateNum = Number(invoice.taxRate) || 0;
+        const taxAmountNum = Number(invoice.taxAmount) || ((Math.max(0, subtotalNum - finalDiscAmount) * taxRateNum) / 100);
+        let grandTotalNum = invoice.total !== undefined ? Number(invoice.total) : (subtotalNum - finalDiscAmount + taxAmountNum);
+        if (grandTotalNum === subtotalNum && finalDiscAmount > 0) {
+          grandTotalNum = Math.max(0, subtotalNum - finalDiscAmount + taxAmountNum);
+        }
+
+        return (
+          <div className="calculation-summary-container">
+            <div className="calc-row">
+              <span className="calc-label">{isHindi ? 'सबटोटल (Subtotal)' : 'Subtotal'}</span>
+              <span className="calc-value">{currency} {subtotalNum.toFixed(2)}</span>
+            </div>
+
+            {finalDiscAmount > 0 && (
+              <div className="calc-row text-rose-500">
+                <span className="calc-label">
+                  {isHindi ? 'कुल छूट (Discount)' : 'Total Discount'}
+                  {invoice.discountType === 'percent' && Number(invoice.discount) > 0 ? ` (${invoice.discount}%)` : ''}
+                </span>
+                <span className="calc-value">
+                  -{currency} {finalDiscAmount.toFixed(2)}
+                </span>
+              </div>
+            )}
+
+            {taxAmountNum > 0 && (
+              <div className="calc-row">
+                <span className="calc-label">{isHindi ? `टैक्स / GST (${taxRateNum}%)` : `Tax (${taxRateNum}%)`}</span>
+                <span className="calc-value">+{currency} {taxAmountNum.toFixed(2)}</span>
+              </div>
+            )}
+
+            <div className="calc-divider" />
+
+            <div className="calc-row grand-total-row">
+              <span className="total-label">{isHindi ? 'कुल योग (Grand Total)' : 'Grand Total'}</span>
+              <span className="total-amount">
+                {currency} {grandTotalNum.toFixed(2)}
+              </span>
+            </div>
           </div>
-        )}
-
-        {Number(invoice.taxAmount) > 0 && (
-          <div className="calc-row">
-            <span className="calc-label">{isHindi ? `टैक्स / GST (${invoice.taxRate || 0}%)` : `Tax (${invoice.taxRate || 0}%)`}</span>
-            <span className="calc-value">+{currency} {(Number(invoice.taxAmount) || 0).toFixed(2)}</span>
-          </div>
-        )}
-
-        <div className="calc-divider" />
-
-        <div className="calc-row grand-total-row">
-          <span className="total-label">{isHindi ? 'कुल योग (Grand Total)' : 'Grand Total'}</span>
-          <span className="total-amount">
-            {currency} {(Number(invoice.total || invoice.grandTotal) || 0).toFixed(2)}
-          </span>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Actions Toolbar */}
       <div className="invoice-actions-bar">

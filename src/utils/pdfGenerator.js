@@ -138,10 +138,11 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
   const tableRows = items.map((item, index) => {
     const qty = Number(item.quantity) || 1;
     const price = Number(item.price) || 0;
-    const discount = Number(item.discount) || 0;
     const lineSubtotal = qty * price;
+    const discount = Number(item.discount) || (invoice.discountType === 'percent' ? Number(invoice.discount) || 0 : 0);
+    const discType = item.discountType || invoice.discountType || 'percent';
     const lineDiscount = discount > 0 
-      ? (discount <= 100 && item.discountType === 'percent' ? (lineSubtotal * discount) / 100 : discount)
+      ? (discType === 'percent' ? (lineSubtotal * Math.min(100, discount)) / 100 : Math.min(lineSubtotal, discount))
       : 0;
     const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
 
@@ -150,7 +151,7 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
       item.name || 'Item',
       qty.toString(),
       `${currency} ${price.toFixed(2)}`,
-      discount > 0 ? (item.discountType === 'percent' ? `${discount}%` : `${currency} ${discount.toFixed(2)}`) : '-',
+      discount > 0 ? (discType === 'percent' ? `${discount}%` : `${currency} ${discount.toFixed(2)}`) : '-',
       `${currency} ${lineTotal.toFixed(2)}`
     ];
   });
@@ -198,12 +199,24 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
     ? Number(invoice.subtotal) 
     : items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.price)), 0);
 
-  const discountVal = invoice.discountAmount !== undefined 
-    ? Number(invoice.discountAmount) 
-    : (Number(invoice.discount) || 0);
+  let discountVal = 0;
+  if (invoice.discountAmount !== undefined && Number(invoice.discountAmount) > 0) {
+    discountVal = Number(invoice.discountAmount);
+  } else if (invoice.totalDiscount !== undefined && Number(invoice.totalDiscount) > 0) {
+    discountVal = Number(invoice.totalDiscount);
+  } else if (Number(invoice.discount) > 0) {
+    if (invoice.discountType === 'percent' || invoice.isPercentDiscount) {
+      discountVal = (subtotal * Math.min(100, Number(invoice.discount))) / 100;
+    } else {
+      discountVal = Math.min(subtotal, Number(invoice.discount));
+    }
+  }
 
   const taxVal = Number(invoice.taxAmount) || 0;
-  const grandTotal = invoice.total !== undefined ? Number(invoice.total) : (subtotal - discountVal + taxVal);
+  let grandTotal = invoice.total !== undefined ? Number(invoice.total) : (subtotal - discountVal + taxVal);
+  if (grandTotal === subtotal && discountVal > 0) {
+    grandTotal = Math.max(0, subtotal - discountVal + taxVal);
+  }
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -222,7 +235,10 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
   if (discountVal > 0) {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mutedTextColor);
-    doc.text('Discount:', summaryX, currentSumY);
+    const discLabel = invoice.discountType === 'percent' && Number(invoice.discount) > 0
+      ? `Discount (${invoice.discount}%):`
+      : 'Discount:';
+    doc.text(discLabel, summaryX, currentSumY);
     doc.setTextColor(220, 38, 38); // Red
     doc.setFont('helvetica', 'bold');
     doc.text(`-${currency} ${discountVal.toFixed(2)}`, valueX, currentSumY, { align: 'right' });

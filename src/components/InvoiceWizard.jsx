@@ -300,7 +300,12 @@ export default function InvoiceWizard({
     chosenLang = lang,
     chosenPaymentMode = 'cash'
   ) => {
-    const totals = calculateInvoiceTotals(itemsList, settings.defaultTaxRate || 0);
+    const totals = calculateInvoiceTotals(
+      itemsList,
+      settings.defaultTaxRate || 0,
+      discountVal,
+      discountType
+    );
     const invoiceNum = getNextInvoiceNumber();
     const currency = settings.currency || '₹';
 
@@ -328,13 +333,15 @@ export default function InvoiceWizard({
       product: itemsList.length > 0 ? itemsList.map((i) => i.name).join(', ') : 'Standard Service',
       quantity: itemsList.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
       price: itemsList[0]?.price || 0,
-      discount: discountVal,
-      discountType: discountType,
+      discount: totals.discount,
+      discountType: totals.discountType,
       subtotal: totals.subtotal,
-      discountAmount: totals.totalDiscount,
+      discountAmount: totals.discountAmount,
+      totalDiscount: totals.totalDiscount,
       taxRate: totals.taxRate,
       taxAmount: totals.taxAmount,
       total: totals.grandTotal,
+      grandTotal: totals.grandTotal,
       currency: currency,
       items: totals.items
     };
@@ -344,13 +351,15 @@ export default function InvoiceWizard({
     setStep(STEPS.COMPLETED);
 
     const p = PROMPTS[chosenLang] || PROMPTS.hi;
+    const discLabel = totals.discountType === 'percent' && totals.discount > 0 ? `${totals.discount}%` : '';
     const msg = p.invoice_ready(
       invoiceNum,
       completeInvoice.customerName,
       totals.subtotal.toFixed(2),
       totals.totalDiscount.toFixed(2),
       totals.grandTotal.toFixed(2),
-      currency
+      currency,
+      discLabel
     );
 
     // Final message spoken -> task is finished, turn off hands-free voice!
@@ -881,16 +890,33 @@ export default function InvoiceWizard({
           normTrim === '0' ||
           normTrim === 'zero' ||
           normTrim === 'kuch nahi' ||
-          normTrim === 'shunya'
+          normTrim === 'shunya' ||
+          normTrim === 'koi nahi' ||
+          normTrim === 'no' ||
+          normTrim === 'nahi' ||
+          normTrim === 'none'
         ) {
           discount = 0;
+          discountType = 'percent';
         } else if (
           trimmed.includes('%') ||
           normTrim.includes('percent') ||
-          normTrim.includes('pratishat')
+          normTrim.includes('pratishat') ||
+          normTrim.includes('pratishath') ||
+          normTrim.includes('pc') ||
+          normTrim.includes('pct')
         ) {
           discount = extractNumber(trimmed, 0);
           discountType = 'percent';
+        } else if (
+          normTrim.includes('rs') ||
+          normTrim.includes('rupaye') ||
+          normTrim.includes('rupees') ||
+          normTrim.includes('₹') ||
+          normTrim.includes('flat')
+        ) {
+          discount = extractNumber(trimmed, 0);
+          discountType = 'flat';
         } else {
           discount = extractNumber(trimmed, 0);
           discountType = discount > 0 && discount <= 50 ? 'percent' : 'flat';
@@ -1655,6 +1681,37 @@ export default function InvoiceWizard({
                         {currentTotal.toFixed(2)}
                       </span>
                     </div>
+                    {draftDiscountRef.current && draftDiscountRef.current.discount > 0 && (
+                      <div className="draft-subtotal-row text-rose-500 font-medium">
+                        <span>
+                          {lang === 'hi' ? 'छूट (Discount):' : 'Discount:'}
+                          {draftDiscountRef.current.discountType === 'percent' ? ` (${draftDiscountRef.current.discount}%)` : ''}
+                        </span>
+                        <span className="val font-semibold">
+                          -{settings.currency || '₹'}
+                          {(draftDiscountRef.current.discountType === 'percent'
+                            ? (currentTotal * Math.min(100, draftDiscountRef.current.discount)) / 100
+                            : Math.min(currentTotal, draftDiscountRef.current.discount)
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {draftDiscountRef.current && draftDiscountRef.current.discount > 0 && (
+                      <div className="draft-subtotal-row font-bold text-emerald-600 border-t border-slate-200 dark:border-slate-700 pt-1 mt-1">
+                        <span>
+                          {lang === 'hi' ? 'कुल देय (Net Total):' : 'Net Total:'}
+                        </span>
+                        <span className="val">
+                          {settings.currency || '₹'}
+                          {Math.max(
+                            0,
+                            currentTotal - (draftDiscountRef.current.discountType === 'percent'
+                              ? (currentTotal * Math.min(100, draftDiscountRef.current.discount)) / 100
+                              : Math.min(currentTotal, draftDiscountRef.current.discount))
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 

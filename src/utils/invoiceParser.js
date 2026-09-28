@@ -1,31 +1,81 @@
 // Calculation engine
-export function calculateInvoiceTotals(items, defaultTaxRate = 0) {
+export function calculateInvoiceTotals(
+  items = [],
+  defaultTaxRate = 0,
+  overallDiscount = 0,
+  overallDiscountType = 'percent'
+) {
   let subtotal = 0;
-  let totalDiscount = 0;
+  let itemLevelDiscountSum = 0;
 
+  // First pass: Calculate subtotal and any item-level discounts
+  items.forEach((item) => {
+    const qty = Math.max(0, Number(item.quantity) || 1);
+    const unitPrice = Math.max(0, Number(item.price) || 0);
+    const lineSub = qty * unitPrice;
+    subtotal += lineSub;
+
+    const discVal = Number(item.discount) || 0;
+    if (discVal > 0) {
+      if (item.discountType === 'percent' || item.isPercentDiscount) {
+        itemLevelDiscountSum += (lineSub * Math.min(100, discVal)) / 100;
+      } else {
+        itemLevelDiscountSum += Math.min(lineSub, discVal);
+      }
+    }
+  });
+
+  const parsedOverallDisc = Math.max(0, Number(overallDiscount) || 0);
+  const hasOverallDiscount = parsedOverallDisc > 0;
+  const isPercent = overallDiscountType === 'percent';
+
+  let totalDiscount = 0;
+  if (hasOverallDiscount) {
+    if (isPercent) {
+      totalDiscount = (subtotal * Math.min(100, parsedOverallDisc)) / 100;
+    } else {
+      totalDiscount = Math.min(subtotal, parsedOverallDisc);
+    }
+  } else {
+    totalDiscount = itemLevelDiscountSum;
+  }
+
+  // Second pass: Process each item with correct discount & lineTotal
   const processedItems = items.map((item) => {
     const qty = Math.max(0, Number(item.quantity) || 1);
     const unitPrice = Math.max(0, Number(item.price) || 0);
     const lineSubtotal = qty * unitPrice;
 
-    let discountVal = Number(item.discount) || 0;
+    let itemDisc = Number(item.discount) || 0;
+    let itemDiscType = item.discountType || 'percent';
     let lineDiscount = 0;
 
-    if (item.discountType === 'percent' || item.isPercentDiscount) {
-      lineDiscount = (lineSubtotal * Math.min(100, Math.max(0, discountVal))) / 100;
-    } else {
-      lineDiscount = Math.min(lineSubtotal, Math.max(0, discountVal));
+    if (hasOverallDiscount) {
+      if (isPercent) {
+        itemDisc = parsedOverallDisc;
+        itemDiscType = 'percent';
+        lineDiscount = (lineSubtotal * Math.min(100, itemDisc)) / 100;
+      } else {
+        lineDiscount = subtotal > 0 ? (lineSubtotal / subtotal) * totalDiscount : 0;
+        itemDisc = lineDiscount;
+        itemDiscType = 'flat';
+      }
+    } else if (itemDisc > 0) {
+      if (itemDiscType === 'percent' || item.isPercentDiscount) {
+        lineDiscount = (lineSubtotal * Math.min(100, itemDisc)) / 100;
+      } else {
+        lineDiscount = Math.min(lineSubtotal, itemDisc);
+      }
     }
 
     const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
-
-    subtotal += lineSubtotal;
-    totalDiscount += lineDiscount;
 
     return {
       ...item,
       quantity: qty,
       price: unitPrice,
+      discount: itemDisc,
+      discountType: itemDiscType,
       subtotal: lineSubtotal,
       lineDiscount,
       lineTotal
@@ -40,7 +90,10 @@ export function calculateInvoiceTotals(items, defaultTaxRate = 0) {
   return {
     items: processedItems,
     subtotal,
+    discount: parsedOverallDisc,
+    discountType: overallDiscountType || 'percent',
     totalDiscount,
+    discountAmount: totalDiscount,
     taxRate,
     taxAmount,
     grandTotal
@@ -316,13 +369,24 @@ export function parseOneShotInvoice(rawText = '') {
 
   // 1. Extract Discount (if any)
   const discMatch = 
-    text.match(/(?:discount|off|chhut|chhoot)\s*[$₹€£]?\s*(\d+(?:\.\d+)?)\s*(%)?/i) ||
-    text.match(/(\d+(?:\.\d+)?)\s*(%)\s*(?:discount|off|chhut|chhoot)/i) ||
-    text.match(/(\d+(?:\.\d+)?)\s*(?:rupaye|rs)?\s*(?:discount|off|chhut|chhoot)/i);
+    text.match(/(?:discount|off|chhut|chhoot)\s*[$₹€£]?\s*(\d+(?:\.\d+)?)\s*(%|percent|pratishat)?/i) ||
+    text.match(/(\d+(?:\.\d+)?)\s*(%|percent|pratishat)\s*(?:discount|off|chhut|chhoot)?/i) ||
+    text.match(/(\d+(?:\.\d+)?)\s*[$₹€£]?\s*(?:rupaye|rupees|rs|inr)?\s*(?:discount|off|chhut|chhoot)/i) ||
+    text.match(/(?:flat\s+)?(\d+(?:\.\d+)?)\s*(%)/i);
 
   if (discMatch) {
     discount = parseFloat(discMatch[1]) || 0;
-    if (discMatch[2] === '%' || text.includes(`${discount}%`)) {
+    const indicator = (discMatch[2] || '').toLowerCase();
+    const matchedSegment = discMatch[0].toLowerCase();
+    if (
+      indicator === '%' ||
+      indicator === 'percent' ||
+      indicator === 'pratishat' ||
+      matchedSegment.includes('%') ||
+      matchedSegment.includes('percent') ||
+      matchedSegment.includes('pratishat') ||
+      (discount > 0 && discount <= 50 && !matchedSegment.includes('rs') && !matchedSegment.includes('rupaye') && !matchedSegment.includes('₹'))
+    ) {
       discountType = 'percent';
     } else {
       discountType = 'flat';
@@ -551,8 +615,8 @@ export const PROMPTS = {
     ask_discount: "Koi discount dena hai? (jaise '10%' ya flat amount, ya '0' bolein)",
     ask_payment_mode: "Payment किस मोड में मिला है? नीचे से चुनें या बोलें (Cash, UPI, Card, ya Cheque):",
     item_added: (name, qty, price, currency) => `✓ ${qty}x ${name} (${currency}${price}) add ho gaya.`,
-    invoice_ready: (invoiceNum, cust, subtotal, discount, total, currency) => 
-      `✨ ${cust} ka bill taiyar hai! Subtotal: ${currency}${subtotal}, Discount: -${currency}${discount}, Total: ${currency}${total}. Ab aap PDF download kar sakte hain.`,
+    invoice_ready: (invoiceNum, cust, subtotal, discount, total, currency, discLabel = '') => 
+      `✨ ${cust} ka bill taiyar hai! Subtotal: ${currency}${subtotal}${Number(discount) > 0 ? `, Discount: -${currency}${discount}${discLabel ? ` (${discLabel})` : ''}` : ''}, Total: ${currency}${total}. Ab aap PDF download kar sakte hain.`,
     cancelled: "Cancel ho gaya hai. Dobara bolne ke liye ready hoon.",
     
     // Stock flow prompts
@@ -598,8 +662,8 @@ export const PROMPTS = {
     ask_discount: "Any discount to apply? (e.g. '10%' or flat amount, or say '0' for none)",
     ask_payment_mode: "How was payment received? Select below or say (Cash, UPI, Card, or Cheque):",
     item_added: (name, qty, price, currency) => `✓ Added ${qty}x ${name} (${currency}${price}).`,
-    invoice_ready: (invoiceNum, cust, subtotal, discount, total, currency) => 
-      `✨ Invoice ${invoiceNum} generated for ${cust}! Subtotal: ${currency}${subtotal}, Discount: -${currency}${discount}, Total: ${currency}${total}. You can now download the PDF.`,
+    invoice_ready: (invoiceNum, cust, subtotal, discount, total, currency, discLabel = '') => 
+      `✨ Invoice ${invoiceNum} generated for ${cust}! Subtotal: ${currency}${subtotal}${Number(discount) > 0 ? `, Discount: -${currency}${discount}${discLabel ? ` (${discLabel})` : ''}` : ''}, Total: ${currency}${total}. You can now download the PDF.`,
     cancelled: "Cancelled. I'm ready whenever you need me!",
 
     // Stock flow prompts
