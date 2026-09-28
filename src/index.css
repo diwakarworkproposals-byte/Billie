@@ -1,7 +1,8 @@
 /* Billie - Material Design 3 Progressive Web App CSS */
 
 :root {
-  --font-family: 'Plus Jakarta Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   
   /* Material 3 Light Palette */
   --md-primary: #1A73E8;
@@ -348,71 +349,87 @@ html, body {
   background: transparent !important;
 }
 
-/* Hero Card (Transparent Floating Layout) */
+/* Hero Card (Semi-Opaque Frosted Glass Layout) */
 .hero-assistant-card {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(255, 255, 255, 0.58) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
   border-radius: var(--radius-xl);
-  padding: 28px 24px 16px 24px;
+  padding: 34px 28px 26px 28px;
   text-align: center;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   margin-top: 10px;
 }
 
 [data-theme="dark"] .hero-assistant-card,
 .dark .hero-assistant-card {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
 }
 
 .hero-avatar {
-  width: 58px;
-  height: 58px;
+  width: 60px;
+  height: 60px;
   border-radius: var(--radius-lg);
   background: linear-gradient(135deg, #1A73E8, #3B82F6, #06B6D4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
-  box-shadow: 0 8px 24px rgba(26, 115, 232, 0.35);
+  margin-bottom: 18px;
+  box-shadow: 0 10px 28px rgba(26, 115, 232, 0.35), 0 0 0 3px rgba(255, 255, 255, 0.7);
 }
 
 .hero-title {
-  font-size: 1.75rem;
+  font-family: var(--font-display);
+  font-size: 1.85rem;
   font-weight: 800;
-  color: var(--md-on-surface);
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
+  color: #0f172a;
+  margin-bottom: 10px;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+[data-theme="dark"] .hero-title,
+.dark .hero-title {
+  color: #ffffff;
 }
 
 .hero-subtitle {
-  font-size: 0.96rem;
-  color: var(--md-on-surface-variant);
-  line-height: 1.55;
+  font-family: var(--font-family);
+  font-size: 1rem;
+  color: #475569;
+  line-height: 1.62;
   max-width: 580px;
-  margin: 0 auto 24px auto;
+  margin: 0 auto 26px auto;
   font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+[data-theme="dark"] .hero-subtitle,
+.dark .hero-subtitle {
+  color: #94a3b8;
 }
 
 .highlight-pill {
-  background-color: rgba(255, 255, 255, 0.7);
-  color: var(--md-primary);
-  border: 1px solid rgba(26, 115, 232, 0.25);
-  padding: 2px 8px;
-  border-radius: var(--radius-xs);
+  font-family: var(--font-display);
   font-weight: 700;
-  font-family: inherit;
+  background-color: rgba(26, 115, 232, 0.12);
+  color: #1a73e8;
+  border: 1px solid rgba(26, 115, 232, 0.25);
+  padding: 3px 9px;
+  border-radius: 8px;
+  display: inline-block;
+  margin: 1px 2px;
 }
 
 [data-theme="dark"] .highlight-pill,
 .dark .highlight-pill {
   background-color: rgba(30, 41, 59, 0.7);
-  color: var(--md-primary);
+  color: #8ab4f8;
   border-color: rgba(138, 180, 248, 0.3);
 }
 
@@ -428,39 +445,43 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 18px;
+  padding: 10px 18px;
   border-radius: var(--radius-full);
   border: 1.5px solid rgba(255, 255, 255, 0.9);
-  background-color: rgba(255, 255, 255, 0.75);
+  background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  color: var(--md-on-surface);
-  font-size: 0.84rem;
+  color: #0f172a;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
   font-weight: 650;
+  letter-spacing: -0.01em;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.9);
 }
 
 .suggestion-chip:hover {
   background-color: #ffffff;
   border-color: var(--md-primary);
+  color: var(--md-primary);
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(26, 115, 232, 0.18);
+  box-shadow: 0 8px 22px rgba(26, 115, 232, 0.18);
 }
 
 [data-theme="dark"] .suggestion-chip,
 .dark .suggestion-chip {
-  background-color: rgba(15, 23, 42, 0.70);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  color: #f8fafc;
+  background-color: rgba(30, 41, 59, 0.75);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="dark"] .suggestion-chip:hover,
 .dark .suggestion-chip:hover {
-  background-color: rgba(30, 41, 59, 0.90);
+  background-color: rgba(51, 65, 85, 0.90);
   border-color: var(--md-primary);
+  color: #ffffff;
 }
 
 .suggestion-chip.active-sparkle {
@@ -1867,10 +1888,15 @@ input:checked + .slider:before {
     grid-template-columns: repeat(2, 1fr);
   }
   .hero-assistant-card {
-    padding: 24px 16px;
+    padding: 26px 18px 22px 18px;
+    border-radius: var(--radius-lg);
   }
   .hero-title {
-    font-size: 1.35rem;
+    font-size: 1.55rem;
+    line-height: 1.3;
+  }
+  .hero-subtitle {
+    font-size: 0.92rem;
   }
   .bottom-search-wrapper {
     bottom: 20px;
