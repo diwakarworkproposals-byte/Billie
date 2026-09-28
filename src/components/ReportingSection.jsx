@@ -28,6 +28,28 @@ import {
   Package
 } from 'lucide-react';
 
+const formatPayModeBadge = (mode, isHindi) => {
+  const m = String(mode || 'cash').toLowerCase().trim();
+  if (m.includes('upi') || m.includes('gpay') || m.includes('phonepe') || m.includes('paytm') || m.includes('online') || m.includes('qr')) {
+    return '⚡ UPI';
+  }
+  if (m.includes('card') || m.includes('debit') || m.includes('credit')) {
+    return '💳 ' + (isHindi ? 'कार्ड' : 'Card');
+  }
+  if (m.includes('cheque') || m.includes('check')) {
+    return '📝 ' + (isHindi ? 'चेक' : 'Cheque');
+  }
+  return '💵 ' + (isHindi ? 'नकद' : 'Cash');
+};
+
+const getPayModeClass = (mode) => {
+  const m = String(mode || 'cash').toLowerCase().trim();
+  if (m.includes('upi') || m.includes('gpay') || m.includes('phonepe') || m.includes('paytm')) return 'mode-upi';
+  if (m.includes('card') || m.includes('debit') || m.includes('credit')) return 'mode-card';
+  if (m.includes('cheque') || m.includes('check')) return 'mode-cheque';
+  return 'mode-cash';
+};
+
 export default function ReportingSection({
   initialMode = 'sales',
   onClose,
@@ -51,7 +73,8 @@ export default function ReportingSection({
   const [reportMode, setReportMode] = useState(initialMode);
 
   // Time filter for Sales: 'today' (Daily) | 'week' (Weekly) | 'month' (Monthly) | 'all' (All Time)
-  const [salesTimeFilter, setSalesTimeFilter] = useState('today');
+  // Initially null so total bills are not dumped until a period filter is clicked
+  const [salesTimeFilter, setSalesTimeFilter] = useState(null);
 
   // Purchase filters
   const [purchaseStatusFilter, setPurchaseStatusFilter] = useState('all'); // 'all' | 'pending' | 'due' | 'paid'
@@ -119,12 +142,44 @@ export default function ReportingSection({
     return map;
   }, [inventory]);
 
-  // Helper to parse dates safely
-  const parseDateSafe = (dateStr, rawDate) => {
-    if (rawDate) return new Date(rawDate);
-    if (!dateStr) return new Date();
+  // Helper to parse dates safely with fallback
+  const parseDateSafe = (dateStr, rawDate, timestamp, id) => {
+    if (timestamp && typeof timestamp === 'number' && !isNaN(timestamp)) {
+      return new Date(timestamp);
+    }
+    if (rawDate) {
+      const d = new Date(rawDate);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (typeof id === 'string' && id.startsWith('inv_')) {
+      const idTime = parseInt(id.replace('inv_', ''), 10);
+      if (idTime > 1500000000000 && idTime < 3000000000000) {
+        const d = new Date(idTime);
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+    if (!dateStr) return new Date(0);
     const d = new Date(dateStr);
-    return isNaN(d.getTime()) ? new Date() : d;
+    if (!isNaN(d.getTime())) return d;
+
+    // Handle DD/MM/YYYY or DD-MM-YYYY
+    const parts = String(dateStr).split(/[/.-]/);
+    if (parts.length === 3) {
+      if (parts[2].length === 4) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        const d2 = new Date(year, month, day);
+        if (!isNaN(d2.getTime())) return d2;
+      } else if (parts[0].length === 4) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const d2 = new Date(year, month, day);
+        if (!isNaN(d2.getTime())) return d2;
+      }
+    }
+    return new Date(0);
   };
 
   // -------------------------------------------------------------
@@ -132,7 +187,7 @@ export default function ReportingSection({
   // -------------------------------------------------------------
   const processedInvoices = useMemo(() => {
     return invoices.map((inv) => {
-      const invDate = parseDateSafe(inv.date, inv.rawDate);
+      const invDate = parseDateSafe(inv.date, inv.rawDate, inv.timestamp, inv.id);
       let invCost = 0;
 
       if (inv.items && Array.isArray(inv.items)) {
@@ -166,26 +221,32 @@ export default function ReportingSection({
 
   // Filtered Invoices according to selected time range (Daily, Weekly, Monthly, All)
   const filteredSalesInvoices = useMemo(() => {
+    if (!salesTimeFilter) return [];
+
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
     const weekAgo = todayStart - 86400000 * 7;
     const monthAgo = todayStart - 86400000 * 30;
 
     return processedInvoices.filter((inv) => {
       const t = inv.parsedDate.getTime();
+      if (t <= 0) return false;
       if (salesTimeFilter === 'today') {
-        const invDay = inv.parsedDate.toISOString().split('T')[0];
-        return invDay === todayStr || t >= todayStart;
+        return t >= todayStart && t <= todayEnd;
       }
       if (salesTimeFilter === 'week') {
-        return t >= weekAgo;
+        return t >= weekAgo && t <= todayEnd;
       }
       if (salesTimeFilter === 'month') {
-        return t >= monthAgo;
+        return t >= monthAgo && t <= todayEnd;
       }
-      return true;
+      if (salesTimeFilter === 'all') {
+        return true;
+      }
+      return false;
     });
-  }, [processedInvoices, salesTimeFilter, todayStr]);
+  }, [processedInvoices, salesTimeFilter]);
 
   // Aggregate Sales KPIs
   const salesKPIs = useMemo(() => {
@@ -209,6 +270,47 @@ export default function ReportingSection({
       profitMargin,
       invoiceCount
     };
+  }, [filteredSalesInvoices]);
+
+  // Payment Mode Breakdown for currently active time filter
+  const paymentModeBreakdown = useMemo(() => {
+    const stats = {
+      cash: { count: 0, amount: 0 },
+      upi: { count: 0, amount: 0 },
+      card: { count: 0, amount: 0 },
+      cheque: { count: 0, amount: 0 }
+    };
+
+    filteredSalesInvoices.forEach((inv) => {
+      const mode = (inv.paymentMode || inv.paymentMethod || 'cash').toLowerCase().trim();
+      const amt = Number(inv.total) || 0;
+      if (
+        mode.includes('upi') ||
+        mode.includes('gpay') ||
+        mode.includes('phonepe') ||
+        mode.includes('paytm') ||
+        mode.includes('online') ||
+        mode.includes('qr')
+      ) {
+        stats.upi.count += 1;
+        stats.upi.amount += amt;
+      } else if (
+        mode.includes('card') ||
+        mode.includes('debit') ||
+        mode.includes('credit')
+      ) {
+        stats.card.count += 1;
+        stats.card.amount += amt;
+      } else if (mode.includes('cheque') || mode.includes('check')) {
+        stats.cheque.count += 1;
+        stats.cheque.amount += amt;
+      } else {
+        stats.cash.count += 1;
+        stats.cash.amount += amt;
+      }
+    });
+
+    return stats;
   }, [filteredSalesInvoices]);
 
   // -------------------------------------------------------------
@@ -521,155 +623,265 @@ export default function ReportingSection({
             </button>
           </div>
 
-          {/* Simple, High-Visibility M3 KPI Cards (100% Mobile Responsive) */}
-          <div className="m3-mobile-kpi-container">
-            {/* Total Sales Card */}
-            <div className="m3-kpi-card-simple sales">
-              <span className="m3-kpi-tag">
-                {salesTimeFilter === 'today'
-                  ? (isHindi ? 'आज की कुल बिक्री (Daily Sales)' : "Today's Total Sales")
-                  : salesTimeFilter === 'week'
-                  ? (isHindi ? 'इस सप्ताह की बिक्री (Weekly)' : "This Week's Sales")
-                  : salesTimeFilter === 'month'
-                  ? (isHindi ? 'इस महीने की बिक्री (Monthly)' : "This Month's Sales")
-                  : (isHindi ? 'कुल बिक्री (All Sales)' : 'Total Sales')}
-              </span>
-              <div className="m3-kpi-big-number text-blue-600 dark:text-blue-400">
-                {currency}{salesKPIs.totalRevenue.toLocaleString()}
+          {/* Prompt card when no filter is clicked yet */}
+          {salesTimeFilter === null ? (
+            <div className="m3-report-prompt-box animate-slide-up mt-3">
+              <div className="prompt-icon-bubble">
+                <Calendar size={28} className="text-blue-600" />
               </div>
-              <span className="m3-kpi-subtext">
-                {salesKPIs.invoiceCount} {isHindi ? 'बिल कटे हैं' : 'bills created'}
-              </span>
-            </div>
-
-            {/* Total Profit Card */}
-            <div className="m3-kpi-card-simple profit">
-              <span className="m3-kpi-tag">
-                {salesTimeFilter === 'today'
-                  ? (isHindi ? 'आज का शुद्ध मुनाफ़ा (Daily Profit)' : "Today's Net Profit")
-                  : (isHindi ? 'शुद्ध मुनाफ़ा (Net Profit)' : 'Net Profit Earned')}
-              </span>
-              <div className="m3-kpi-big-number text-emerald-600 dark:text-emerald-400">
-                +{currency}{salesKPIs.totalProfit.toLocaleString()}
-              </div>
-              <span className="m3-kpi-subtext text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
-                <ArrowUpRight size={13} />
-                <span>{salesKPIs.profitMargin.toFixed(1)}% {isHindi ? 'मुनाफ़ा मार्जिन' : 'profit margin'}</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Mobile-First Invoice List (Cards, NOT a breaking table!) */}
-          <div className="m3-list-section mt-4">
-            <div className="flex items-center justify-between mb-2.5 px-1">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                {isHindi ? 'कटे हुए बिलों का ब्यौरा' : 'Bills Generated'} ({filteredSalesInvoices.length})
+              <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-100 mt-2">
+                {isHindi ? 'बिक्री रिपोर्ट देखने के लिए अवधि चुनें' : 'Select Time Period to View Sales Report'}
               </h4>
-              <span className="text-[11px] text-slate-400">
-                {salesTimeFilter === 'today' ? (isHindi ? 'आज के बिल' : 'Today') : ''}
-              </span>
-            </div>
-
-            {filteredSalesInvoices.length === 0 ? (
-              <div className="m3-empty-state-box">
-                <Receipt size={32} className="text-slate-300 mx-auto mb-2" />
-                <p className="text-xs text-slate-500">
-                  {isHindi ? 'इस अवधि में कोई बिल नहीं कटा है।' : 'No bills found for this period.'}
-                </p>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                {isHindi
+                  ? 'ऊपर दिए गए बटनों (आज, इस सप्ताह, इस महीने, या कुल) में से चुनें ताकि आपको उस अवधि की कुल बिक्री, मुनाफ़ा, पेमेंट माध्यम और कटे हुए बिल दिखाई दें।'
+                  : 'Choose a filter above (Today, This Week, This Month, or All Time) to view sales, net profit, payment collections and bills for that period.'}
+              </p>
+              <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setSalesTimeFilter('today')}
+                  className="m3-quick-filter-cta today m3-ripple"
+                >
+                  <Sparkles size={14} />
+                  <span>{isHindi ? 'आज के बिल देखें (Today)' : "View Today's Bills"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSalesTimeFilter('all')}
+                  className="m3-quick-filter-cta all m3-ripple"
+                >
+                  <Layers size={14} />
+                  <span>{isHindi ? 'सभी बिल देखें (All Time)' : 'View All Bills'}</span>
+                </button>
               </div>
-            ) : (
-              <div className="m3-sales-cards-container">
-                {filteredSalesInvoices.map((inv) => (
-                  <div key={inv.id} className="m3-sales-card">
-                    {/* Top Row: Customer Name, Phone, Invoice No & Payment Badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
-                            {inv.customerName || (isHindi ? 'कैश ग्राहक' : 'Cash Customer')}
-                          </h4>
-                          <span className="m3-badge-inv-num">{inv.invoiceNumber}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 flex-wrap">
+            </div>
+          ) : (
+            <>
+              {/* Simple, High-Visibility M3 KPI Cards (100% Mobile Responsive) */}
+              <div className="m3-mobile-kpi-container">
+                {/* Total Sales Card */}
+                <div className="m3-kpi-card-simple sales">
+                  <span className="m3-kpi-tag">
+                    {salesTimeFilter === 'today'
+                      ? (isHindi ? 'आज की कुल बिक्री (Daily Sales)' : "Today's Total Sales")
+                      : salesTimeFilter === 'week'
+                      ? (isHindi ? 'इस सप्ताह की बिक्री (Weekly)' : "This Week's Sales")
+                      : salesTimeFilter === 'month'
+                      ? (isHindi ? 'इस महीने की बिक्री (Monthly)' : "This Month's Sales")
+                      : (isHindi ? 'कुल बिक्री (All Sales)' : 'Total Sales')}
+                  </span>
+                  <div className="m3-kpi-big-number text-blue-600 dark:text-blue-400">
+                    {currency}{salesKPIs.totalRevenue.toLocaleString()}
+                  </div>
+                  <span className="m3-kpi-subtext">
+                    {salesKPIs.invoiceCount} {isHindi ? 'बिल कटे हैं' : 'bills created'}
+                  </span>
+                </div>
+
+                {/* Total Profit Card */}
+                <div className="m3-kpi-card-simple profit">
+                  <span className="m3-kpi-tag">
+                    {salesTimeFilter === 'today'
+                      ? (isHindi ? 'आज का शुद्ध मुनाफ़ा (Daily Profit)' : "Today's Net Profit")
+                      : (isHindi ? 'शुद्ध मुनाफ़ा (Net Profit)' : 'Net Profit Earned')}
+                  </span>
+                  <div className="m3-kpi-big-number text-emerald-600 dark:text-emerald-400">
+                    +{currency}{salesKPIs.totalProfit.toLocaleString()}
+                  </div>
+                  <span className="m3-kpi-subtext text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
+                    <ArrowUpRight size={13} />
+                    <span>{salesKPIs.profitMargin.toFixed(1)}% {isHindi ? 'मुनाफ़ा मार्जिन' : 'profit margin'}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Mode Collection Breakdown for the active time period */}
+              <div className="m3-paymode-breakdown-card mt-3 animate-slide-up">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="paymode-card-title flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">
+                    <CreditCard size={14} className="text-indigo-500" />
+                    <span>
+                      {salesTimeFilter === 'today'
+                        ? (isHindi ? 'आज का भुगतान माध्यम संग्रह (Daily Collection by Mode)' : "Today's Collection by Mode")
+                        : salesTimeFilter === 'week'
+                        ? (isHindi ? 'इस सप्ताह का भुगतान संग्रह' : "This Week's Collection by Mode")
+                        : salesTimeFilter === 'month'
+                        ? (isHindi ? 'इस महीने का भुगतान संग्रह' : "This Month's Collection by Mode")
+                        : (isHindi ? 'कुल भुगतान संग्रह (All Time Collection)' : "All-Time Collection by Mode")}
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    {salesKPIs.invoiceCount} {isHindi ? 'बिलों से' : 'bills'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* Cash */}
+                  <div className="m3-paymode-stat-box cash">
+                    <div className="flex items-center justify-between">
+                      <span className="stat-label">💵 {isHindi ? 'नकद (Cash)' : 'Cash'}</span>
+                      <span className="stat-count">{paymentModeBreakdown.cash.count} {isHindi ? 'बिल' : 'bills'}</span>
+                    </div>
+                    <div className="stat-amt">
+                      {currency}{paymentModeBreakdown.cash.amount.toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* UPI */}
+                  <div className="m3-paymode-stat-box upi">
+                    <div className="flex items-center justify-between">
+                      <span className="stat-label">⚡ UPI / QR</span>
+                      <span className="stat-count">{paymentModeBreakdown.upi.count} {isHindi ? 'बिल' : 'bills'}</span>
+                    </div>
+                    <div className="stat-amt">
+                      {currency}{paymentModeBreakdown.upi.amount.toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Card */}
+                  <div className="m3-paymode-stat-box card">
+                    <div className="flex items-center justify-between">
+                      <span className="stat-label">💳 {isHindi ? 'कार्ड (Card)' : 'Card'}</span>
+                      <span className="stat-count">{paymentModeBreakdown.card.count} {isHindi ? 'बिल' : 'bills'}</span>
+                    </div>
+                    <div className="stat-amt">
+                      {currency}{paymentModeBreakdown.card.amount.toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Cheque */}
+                  <div className="m3-paymode-stat-box cheque">
+                    <div className="flex items-center justify-between">
+                      <span className="stat-label">📝 {isHindi ? 'चेक (Cheque)' : 'Cheque'}</span>
+                      <span className="stat-count">{paymentModeBreakdown.cheque.count} {isHindi ? 'बिल' : 'bills'}</span>
+                    </div>
+                    <div className="stat-amt">
+                      {currency}{paymentModeBreakdown.cheque.amount.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile-First Invoice List (Cards, NOT a breaking table!) */}
+              <div className="m3-list-section mt-4">
+                <div className="flex items-center justify-between mb-2.5 px-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    {isHindi ? 'कटे हुए बिलों का ब्यौरा' : 'Bills Generated'} ({filteredSalesInvoices.length})
+                  </h4>
+                  <span className="text-[11px] text-slate-400">
+                    {salesTimeFilter === 'today'
+                      ? (isHindi ? 'आज के बिल' : 'Today')
+                      : salesTimeFilter === 'week'
+                      ? (isHindi ? 'इस सप्ताह के बिल' : 'This Week')
+                      : salesTimeFilter === 'month'
+                      ? (isHindi ? 'इस महीने के बिल' : 'This Month')
+                      : (isHindi ? 'सभी बिल' : 'All Time')}
+                  </span>
+                </div>
+
+                {filteredSalesInvoices.length === 0 ? (
+                  <div className="m3-empty-state-box">
+                    <Receipt size={32} className="text-slate-300 mx-auto mb-2" />
+                    <p className="text-xs text-slate-500">
+                      {salesTimeFilter === 'today'
+                        ? (isHindi ? 'आज कोई बिल नहीं कटा है।' : 'No bills generated today.')
+                        : (isHindi ? 'इस अवधि में कोई बिल नहीं कटा है।' : 'No bills found for this period.')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="m3-sales-cards-container">
+                    {filteredSalesInvoices.map((inv) => (
+                      <div key={inv.id} className="m3-sales-card">
+                        {/* Row 1: Customer Name & Phone */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
+                              {inv.customerName || (isHindi ? 'कैश ग्राहक' : 'Cash Customer')}
+                            </h4>
+                            {inv.customerCompany && (
+                              <span className="text-[11px] text-slate-400 font-medium">({inv.customerCompany})</span>
+                            )}
+                          </div>
                           {inv.customerPhone && (
-                            <span className="flex items-center gap-1 font-medium">
-                              <Phone size={11} className="text-blue-500" />
+                            <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                              <Phone size={10} />
                               {inv.customerPhone}
                             </span>
                           )}
-                          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                            <Calendar size={11} />
+                        </div>
+
+                        {/* Row 2: Invoice Number, Date, and Payment Mode ALL ON THE SAME LINE */}
+                        <div className="m3-inv-same-line-strip flex items-center gap-2 mt-1.5 flex-wrap">
+                          <span className="m3-badge-inv-num">
+                            <Receipt size={12} className="inline mr-1 text-blue-600" />
+                            {inv.invoiceNumber}
+                          </span>
+                          <span className="m3-badge-date-pill flex items-center gap-1 text-[11px] text-slate-500">
+                            <Calendar size={11} className="text-slate-400" />
                             {inv.date} {inv.time ? `• ${inv.time}` : ''}
                           </span>
+                          <span className={`m3-badge-paymode-pill ${getPayModeClass(inv.paymentMode || inv.paymentMethod)}`}>
+                            {formatPayModeBadge(inv.paymentMode || inv.paymentMethod, isHindi)}
+                          </span>
+                        </div>
+
+                        {/* Middle: Items Purchased Strip */}
+                        <div className="m3-purchased-items-strip mt-2">
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            🛍️ {inv.items && inv.items.length > 0
+                              ? inv.items.map((it) => `${it.name} (${it.quantity} pcs @ ${currency}${it.price})`).join(', ')
+                              : (inv.product || 'Items')}
+                          </span>
+                        </div>
+
+                        {/* Financial Amount Grid: Items Count, Net Profit, Total Bill */}
+                        <div className="m3-ledger-amount-grid mt-2.5">
+                          <div className="ledger-amt-col">
+                            <span className="label">{isHindi ? 'कुल आइटम' : 'Items Qty'}</span>
+                            <span className="val font-semibold">
+                              {inv.items?.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0) || 1} pcs
+                            </span>
+                          </div>
+                          <div className="ledger-amt-col">
+                            <span className="label">{isHindi ? 'शुद्ध मुनाफ़ा' : 'Net Profit'}</span>
+                            <span className="val font-bold text-emerald-600 dark:text-emerald-400">
+                              +{currency}{Number(inv.netProfit || 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="ledger-amt-col balance" style={{ background: '#eff6ff', borderColor: '#dbeafe' }}>
+                            <span className="label text-blue-700 dark:text-blue-300 font-bold">{isHindi ? 'कुल बिल' : 'Total Bill'}</span>
+                            <span className="val font-black text-blue-700 dark:text-blue-300">
+                              {currency}{Number(inv.total).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bottom Row: Tax Invoice Generated & PDF View/Download Button */}
+                        <div className="m3-card-footer-action-row mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                          <div className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                            <Receipt size={13} className="text-indigo-500" />
+                            <span>{isHindi ? 'पक्का बिल जनरेटेड' : 'Tax Invoice'}</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => generateInvoicePDF(inv, user, settings)}
+                            className="m3-view-pdf-btn m3-ripple"
+                            title={isHindi ? 'इस बिल का PDF देखें व डाउनलोड करें' : 'View & Download Invoice PDF'}
+                          >
+                            <FileText size={13} />
+                            <span>{isHindi ? 'बिल PDF देखें' : 'View PDF'}</span>
+                            <Download size={12} className="opacity-70" />
+                          </button>
                         </div>
                       </div>
-
-                      {/* Payment Mode / Status Badge */}
-                      <div>
-                        <span className="m3-badge-status paid">
-                          {inv.paymentMethod?.toLowerCase() === 'upi'
-                            ? '⚡ UPI'
-                            : inv.paymentMethod?.toLowerCase() === 'card'
-                            ? '💳 Card'
-                            : '💵 ' + (isHindi ? 'नकद (Cash)' : 'Cash')}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Middle: Items Purchased Strip */}
-                    <div className="m3-purchased-items-strip mt-2">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        🛍️ {inv.items && inv.items.length > 0
-                          ? inv.items.map((it) => `${it.name} (${it.quantity} pcs @ ${currency}${it.price})`).join(', ')
-                          : (inv.product || 'Items')}
-                      </span>
-                    </div>
-
-                    {/* Financial Amount Grid: Items Count, Net Profit, Total Bill */}
-                    <div className="m3-ledger-amount-grid mt-2.5">
-                      <div className="ledger-amt-col">
-                        <span className="label">{isHindi ? 'कुल आइटम' : 'Items Qty'}</span>
-                        <span className="val font-semibold">
-                          {inv.items?.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0) || 1} pcs
-                        </span>
-                      </div>
-                      <div className="ledger-amt-col">
-                        <span className="label">{isHindi ? 'शुद्ध मुनाफ़ा' : 'Net Profit'}</span>
-                        <span className="val font-bold text-emerald-600 dark:text-emerald-400">
-                          +{currency}{Number(inv.netProfit || 0).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="ledger-amt-col balance" style={{ background: '#eff6ff', borderColor: '#dbeafe' }}>
-                        <span className="label text-blue-700 dark:text-blue-300 font-bold">{isHindi ? 'कुल बिल' : 'Total Bill'}</span>
-                        <span className="val font-black text-blue-700 dark:text-blue-300">
-                          {currency}{Number(inv.total).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Bottom Row: Tax Invoice Generated & PDF View/Download Button */}
-                    <div className="m3-card-footer-action-row mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                      <div className="text-xs text-slate-500 font-medium flex items-center gap-1">
-                        <Receipt size={13} className="text-indigo-500" />
-                        <span>{isHindi ? 'पक्का बिल जनरेटेड' : 'Tax Invoice'}</span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => generateInvoicePDF(inv, user, settings)}
-                        className="m3-view-pdf-btn m3-ripple"
-                        title={isHindi ? 'इस बिल का PDF देखें व डाउनलोड करें' : 'View & Download Invoice PDF'}
-                      >
-                        <FileText size={13} />
-                        <span>{isHindi ? 'बिल PDF देखें' : 'View PDF'}</span>
-                        <Download size={12} className="opacity-70" />
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       )}
 

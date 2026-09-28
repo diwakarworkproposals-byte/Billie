@@ -75,10 +75,16 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
   doc.setTextColor(...darkTextColor);
   doc.text(invoice.dueDate || 'Upon Receipt', 196, startY + 20, { align: 'right' });
 
+  doc.setTextColor(...mutedTextColor);
+  doc.text(`Payment Mode:`, 150, startY + 26);
+  doc.setTextColor(...darkTextColor);
+  const payModeText = (invoice.paymentMode || invoice.paymentMethod || 'Cash').toUpperCase();
+  doc.text(payModeText, 196, startY + 26, { align: 'right' });
+
   // 3. Bill To Box
   const hasExtraDetails = invoice.customerCompany || invoice.customerGst || invoice.customerAddress;
   const billToHeight = hasExtraDetails ? 32 : 24;
-  const billToY = Math.max(currentY + 6, startY + 28);
+  const billToY = Math.max(currentY + 6, startY + 33);
   doc.setFillColor(...lightBg);
   doc.roundedRect(14, billToY, 182, billToHeight, 3, 3, 'F');
   doc.setDrawColor(226, 232, 240);

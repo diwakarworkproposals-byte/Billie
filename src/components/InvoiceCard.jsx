@@ -83,6 +83,9 @@ export default function InvoiceCard({
           <span className="meta-label">{isHindi ? 'दिनांक (Date)' : 'Issue Date'}</span>
           <span className="meta-val">{invoice.date || new Date().toLocaleDateString()}</span>
           <span className="meta-sub">{invoice.dueDate || (isHindi ? 'तुरंत देय' : 'Due on Receipt')}</span>
+          <span className="inline-block mt-1 px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+            {invoice.paymentMode ? `💳 ${invoice.paymentMode.toUpperCase()}` : '💵 CASH'}
+          </span>
         </div>
       </div>
 

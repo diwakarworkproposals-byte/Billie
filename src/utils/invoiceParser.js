@@ -452,6 +452,29 @@ export function parseOneShotInvoice(rawText = '') {
       .join(' ');
   }
 
+  let paymentMode = 'cash';
+  const normRaw = rawText.toLowerCase();
+  if (
+    normRaw.includes('upi') ||
+    normRaw.includes('gpay') ||
+    normRaw.includes('phonepe') ||
+    normRaw.includes('paytm') ||
+    normRaw.includes('online') ||
+    normRaw.includes('qr')
+  ) {
+    paymentMode = 'upi';
+  } else if (
+    normRaw.includes('card') ||
+    normRaw.includes('debit') ||
+    normRaw.includes('credit')
+  ) {
+    paymentMode = 'card';
+  } else if (normRaw.includes('cheque') || normRaw.includes('check')) {
+    paymentMode = 'cheque';
+  } else {
+    paymentMode = 'cash';
+  }
+
   const hasFullDetails = Boolean(customerName && product && price > 0);
 
   return {
@@ -461,6 +484,7 @@ export function parseOneShotInvoice(rawText = '') {
     price,
     discount,
     discountType,
+    paymentMode,
     hasFullDetails
   };
 }
@@ -521,6 +545,7 @@ export const PROMPTS = {
     ask_more_items: "Aur kuch add karna hai? ('haan' ya 'nahi' bolein)",
     ask_next_product: "Agla product kya hai?",
     ask_discount: "Koi discount dena hai? (jaise '10%' ya flat amount, ya '0' bolein)",
+    ask_payment_mode: "Payment किस मोड में मिला है? नीचे से चुनें या बोलें (Cash, UPI, Card, ya Cheque):",
     item_added: (name, qty, price, currency) => `✓ ${qty}x ${name} (${currency}${price}) add ho gaya.`,
     invoice_ready: (invoiceNum, cust, subtotal, discount, total, currency) => 
       `✨ ${cust} ka bill taiyar hai! Subtotal: ${currency}${subtotal}, Discount: -${currency}${discount}, Total: ${currency}${total}. Ab aap PDF download kar sakte hain.`,
@@ -548,6 +573,7 @@ export const PROMPTS = {
       price: "Price / rate bataiye (jaise 500, 1200)...",
       more_items: "'haan' ya 'nahi' bolein...",
       discount: "Discount bataiye (jaise 10% ya 0)...",
+      payment_mode: "Payment mode चुनें (Cash, UPI, Card, Cheque)...",
       stock_product: "Stock ke product ka naam bataiye...",
       stock_qty: "Kitna stock add karna hai (jaise 10, 20)...",
       stock_cost: "Khareed lagat (Cost Price) bataiye...",
@@ -566,6 +592,7 @@ export const PROMPTS = {
     ask_more_items: "Would you like to add another item? (say 'yes' or 'no')",
     ask_next_product: "What is the next product or service?",
     ask_discount: "Any discount to apply? (e.g. '10%' or flat amount, or say '0' for none)",
+    ask_payment_mode: "How was payment received? Select below or say (Cash, UPI, Card, or Cheque):",
     item_added: (name, qty, price, currency) => `✓ Added ${qty}x ${name} (${currency}${price}).`,
     invoice_ready: (invoiceNum, cust, subtotal, discount, total, currency) => 
       `✨ Invoice ${invoiceNum} generated for ${cust}! Subtotal: ${currency}${subtotal}, Discount: -${currency}${discount}, Total: ${currency}${total}. You can now download the PDF.`,
@@ -593,6 +620,7 @@ export const PROMPTS = {
       price: "Say or type Unit Price (e.g. '500')...",
       more_items: "Say 'yes' to add more or 'no' to finish...",
       discount: "Say or type Discount (e.g. '10%' or '0')...",
+      payment_mode: "Select payment mode (Cash, UPI, Card, Cheque)...",
       stock_product: "Say or type product to restock...",
       stock_qty: "Say or type quantity to add...",
       stock_cost: "Say or type unit cost price...",

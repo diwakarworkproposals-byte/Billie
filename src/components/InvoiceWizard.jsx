@@ -19,7 +19,8 @@ import {
   Building,
   CheckCircle2,
   Search,
-  X
+  X,
+  CreditCard
 } from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
 import StockReportCard from './StockReportCard';
@@ -56,6 +57,7 @@ const STEPS = {
   ASK_PRICE: 'ASK_PRICE',
   ASK_MORE_ITEMS: 'ASK_MORE_ITEMS',
   ASK_DISCOUNT: 'ASK_DISCOUNT',
+  ASK_PAYMENT_MODE: 'ASK_PAYMENT_MODE',
   COMPLETED: 'COMPLETED',
 
   // Stock Management Flow
@@ -126,6 +128,8 @@ export default function InvoiceWizard({
     price: 0
   });
   const [finalInvoice, setFinalInvoice] = useState(null);
+  const draftDiscountRef = useRef({ discount: 0, discountType: 'percent' });
+  const draftPaymentModeRef = useRef('cash');
 
   // Search query for picking existing customer during billing
   const [existingCustSearch, setExistingCustSearch] = useState('');
@@ -238,6 +242,9 @@ export default function InvoiceWizard({
       case STEPS.ASK_DISCOUNT:
         hint = p.hints.discount;
         break;
+      case STEPS.ASK_PAYMENT_MODE:
+        hint = p.hints.payment_mode;
+        break;
       case STEPS.STOCK_ASK_PRODUCT:
         hint = p.hints.stock_product;
         break;
@@ -284,7 +291,8 @@ export default function InvoiceWizard({
     itemsList,
     discountVal = 0,
     discountType = 'percent',
-    chosenLang = lang
+    chosenLang = lang,
+    chosenPaymentMode = 'cash'
   ) => {
     const totals = calculateInvoiceTotals(itemsList, settings.defaultTaxRate || 0);
     const invoiceNum = getNextInvoiceNumber();
@@ -304,7 +312,12 @@ export default function InvoiceWizard({
       customerPhone: custPhone,
       customerGst: custGst,
       customerAddress: custAddress,
-      date: new Date().toLocaleDateString(),
+      paymentMode: chosenPaymentMode || 'cash',
+      paymentMethod: chosenPaymentMode || 'cash',
+      rawDate: new Date().toISOString(),
+      timestamp: Date.now(),
+      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       dueDate: chosenLang === 'hi' ? 'तुरंत देय (Due on Receipt)' : 'Due on Receipt',
       product: itemsList.length > 0 ? itemsList.map((i) => i.name).join(', ') : 'Standard Service',
       quantity: itemsList.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0),
@@ -530,7 +543,8 @@ export default function InvoiceWizard({
         ],
         oneShot.discount,
         oneShot.discountType,
-        activeLang
+        activeLang,
+        oneShot.paymentMode || 'cash'
       );
       return;
     }
@@ -856,7 +870,45 @@ export default function InvoiceWizard({
           discountType = discount > 0 && discount <= 50 ? 'percent' : 'flat';
         }
 
-        finalizeInvoice(draftCustomer, draftItems, discount, discountType, activeLang);
+        draftDiscountRef.current = { discount, discountType };
+        setStep(STEPS.ASK_PAYMENT_MODE);
+        replyBillie(p.ask_payment_mode, activeLang);
+        break;
+      }
+
+      case STEPS.ASK_PAYMENT_MODE: {
+        const normTrim = trimmed.toLowerCase();
+        let selectedMode = 'cash';
+        if (
+          normTrim.includes('upi') ||
+          normTrim.includes('gpay') ||
+          normTrim.includes('phonepe') ||
+          normTrim.includes('paytm') ||
+          normTrim.includes('online') ||
+          normTrim.includes('qr')
+        ) {
+          selectedMode = 'upi';
+        } else if (
+          normTrim.includes('card') ||
+          normTrim.includes('debit') ||
+          normTrim.includes('credit')
+        ) {
+          selectedMode = 'card';
+        } else if (normTrim.includes('cheque') || normTrim.includes('check')) {
+          selectedMode = 'cheque';
+        } else {
+          selectedMode = 'cash';
+        }
+
+        draftPaymentModeRef.current = selectedMode;
+        finalizeInvoice(
+          draftCustomer,
+          draftItems,
+          draftDiscountRef.current.discount,
+          draftDiscountRef.current.discountType,
+          activeLang,
+          selectedMode
+        );
         break;
       }
 
@@ -1397,6 +1449,107 @@ export default function InvoiceWizard({
           </div>
         )}
 
+        {/* INTERACTIVE CONTROLS 4: PAYMENT MODE SELECTION */}
+        {step === STEPS.ASK_PAYMENT_MODE && (
+          <div className="m3-paymode-picker animate-slide-up">
+            <div className="flex items-center justify-between mb-2">
+              <span className="picker-header-title">
+                <CreditCard size={15} className="text-blue-500" />
+                <span>{lang === 'hi' ? 'पेमेंट का माध्यम चुनें (Payment Mode):' : 'Select Payment Mode:'}</span>
+              </span>
+              <span className="text-[11px] text-slate-400">
+                {lang === 'hi' ? 'टैप करें या बोलें' : 'Tap or speak'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  finalizeInvoice(
+                    draftCustomer,
+                    draftItems,
+                    draftDiscountRef.current.discount,
+                    draftDiscountRef.current.discountType,
+                    lang,
+                    'cash'
+                  );
+                }}
+                className="m3-paymode-choice-btn cash m3-ripple"
+              >
+                <div className="paymode-choice-icon">💵</div>
+                <div className="paymode-choice-text">
+                  <span className="paymode-choice-name">{lang === 'hi' ? 'नकद (Cash)' : 'Cash'}</span>
+                  <span className="paymode-choice-desc">{lang === 'hi' ? 'कैश भुगतान' : 'Cash in hand'}</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  finalizeInvoice(
+                    draftCustomer,
+                    draftItems,
+                    draftDiscountRef.current.discount,
+                    draftDiscountRef.current.discountType,
+                    lang,
+                    'upi'
+                  );
+                }}
+                className="m3-paymode-choice-btn upi m3-ripple"
+              >
+                <div className="paymode-choice-icon">⚡</div>
+                <div className="paymode-choice-text">
+                  <span className="paymode-choice-name">UPI / QR</span>
+                  <span className="paymode-choice-desc">GPay, PhonePe, Paytm</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  finalizeInvoice(
+                    draftCustomer,
+                    draftItems,
+                    draftDiscountRef.current.discount,
+                    draftDiscountRef.current.discountType,
+                    lang,
+                    'card'
+                  );
+                }}
+                className="m3-paymode-choice-btn card m3-ripple"
+              >
+                <div className="paymode-choice-icon">💳</div>
+                <div className="paymode-choice-text">
+                  <span className="paymode-choice-name">{lang === 'hi' ? 'कार्ड (Card)' : 'Card'}</span>
+                  <span className="paymode-choice-desc">Debit / Credit Card</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  finalizeInvoice(
+                    draftCustomer,
+                    draftItems,
+                    draftDiscountRef.current.discount,
+                    draftDiscountRef.current.discountType,
+                    lang,
+                    'cheque'
+                  );
+                }}
+                className="m3-paymode-choice-btn cheque m3-ripple"
+              >
+                <div className="paymode-choice-icon">📝</div>
+                <div className="paymode-choice-text">
+                  <span className="paymode-choice-name">{lang === 'hi' ? 'चेक (Cheque)' : 'Cheque'}</span>
+                  <span className="paymode-choice-desc">Bank Cheque / DD</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Live Drafting Progress Card during active invoice creation */}
         {step !== STEPS.IDLE &&
           step !== STEPS.COMPLETED &&
@@ -1426,6 +1579,9 @@ export default function InvoiceWizard({
                 </span>
                 <span className={`step-badge ${step === STEPS.ASK_DISCOUNT ? 'active' : ''}`}>
                   6. {lang === 'hi' ? 'डिस्काउंट' : 'Discount'}
+                </span>
+                <span className={`step-badge ${step === STEPS.ASK_PAYMENT_MODE ? 'active' : ''}`}>
+                  7. {lang === 'hi' ? 'पेमेंट' : 'Payment'}
                 </span>
               </div>
 
