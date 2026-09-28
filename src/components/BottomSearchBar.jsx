@@ -185,7 +185,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
         className={`bottom-search-bar ${isListening || isVoiceSessionActive ? 'listening-active' : ''}`}
       >
         <div className="search-leading-icon">
-          <Sparkles className="sparkle-icon" size={19} />
+          <Sparkles className="sparkle-icon" size={20} />
         </div>
 
         {/* Quick Language Toggle Pill */}
@@ -243,7 +243,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
               <span className="wave-bar w3" />
             </div>
           ) : (
-            <Mic size={19} />
+            <Mic size={20} />
           )}
         </button>
 
@@ -255,7 +255,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           title="Send"
           aria-label="Submit"
         >
-          <Send size={17} />
+          <Send size={18} />
         </button>
       </form>
     </div>
