@@ -66,11 +66,12 @@ html, body {
   height: 100%;
   font-family: var(--font-family);
   background:
-    radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.35) 0%, transparent 45%),
-    radial-gradient(circle at 90% 15%, rgba(147, 51, 234, 0.30) 0%, transparent 45%),
-    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.28) 0%, transparent 50%),
-    radial-gradient(circle at 15% 85%, rgba(99, 102, 241, 0.25) 0%, transparent 45%),
-    linear-gradient(135deg, #dbeafe 0%, #ede9fe 40%, #e0f2fe 75%, #f1f5f9 100%) !important;
+    radial-gradient(circle at 5% 5%, rgba(37, 99, 235, 0.55) 0%, transparent 45%),
+    radial-gradient(circle at 95% 10%, rgba(139, 92, 246, 0.50) 0%, transparent 45%),
+    radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.45) 0%, transparent 50%),
+    radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.40) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.28) 0%, transparent 50%),
+    linear-gradient(135deg, #bfdbfe 0%, #ddd6fe 35%, #bae6fd 70%, #c7d2fe 100%) !important;
   color: var(--md-on-surface);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -82,11 +83,12 @@ html, body {
 .dark html,
 .dark body {
   background:
-    radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.45) 0%, transparent 50%),
-    radial-gradient(circle at 90% 15%, rgba(124, 58, 237, 0.40) 0%, transparent 50%),
-    radial-gradient(circle at 85% 85%, rgba(14, 165, 233, 0.35) 0%, transparent 50%),
-    radial-gradient(circle at 15% 85%, rgba(99, 102, 241, 0.30) 0%, transparent 45%),
-    linear-gradient(135deg, #070c18 0%, #0d1527 45%, #060913 100%) !important;
+    radial-gradient(circle at 5% 5%, rgba(59, 130, 246, 0.65) 0%, transparent 50%),
+    radial-gradient(circle at 95% 10%, rgba(147, 51, 234, 0.60) 0%, transparent 50%),
+    radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.55) 0%, transparent 50%),
+    radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.50) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.35) 0%, transparent 50%),
+    linear-gradient(135deg, #050b18 0%, #0d152a 45%, #080c18 100%) !important;
 }
 
 #root {
@@ -104,21 +106,23 @@ html, body {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.35) 0%, transparent 45%),
-    radial-gradient(circle at 90% 15%, rgba(147, 51, 234, 0.30) 0%, transparent 45%),
-    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.28) 0%, transparent 50%),
-    radial-gradient(circle at 15% 85%, rgba(99, 102, 241, 0.25) 0%, transparent 45%),
-    linear-gradient(135deg, #dbeafe 0%, #ede9fe 40%, #e0f2fe 75%, #f1f5f9 100%) !important;
+    radial-gradient(circle at 5% 5%, rgba(37, 99, 235, 0.55) 0%, transparent 45%),
+    radial-gradient(circle at 95% 10%, rgba(139, 92, 246, 0.50) 0%, transparent 45%),
+    radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.45) 0%, transparent 50%),
+    radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.40) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.28) 0%, transparent 50%),
+    linear-gradient(135deg, #bfdbfe 0%, #ddd6fe 35%, #bae6fd 70%, #c7d2fe 100%) !important;
 }
 
 [data-theme="dark"] .billie-app-viewport,
 .dark .billie-app-viewport {
   background:
-    radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.45) 0%, transparent 50%),
-    radial-gradient(circle at 90% 15%, rgba(124, 58, 237, 0.40) 0%, transparent 50%),
-    radial-gradient(circle at 85% 85%, rgba(14, 165, 233, 0.35) 0%, transparent 50%),
-    radial-gradient(circle at 15% 85%, rgba(99, 102, 241, 0.30) 0%, transparent 45%),
-    linear-gradient(135deg, #070c18 0%, #0d1527 45%, #060913 100%) !important;
+    radial-gradient(circle at 5% 5%, rgba(59, 130, 246, 0.65) 0%, transparent 50%),
+    radial-gradient(circle at 95% 10%, rgba(147, 51, 234, 0.60) 0%, transparent 50%),
+    radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.55) 0%, transparent 50%),
+    radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.50) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.35) 0%, transparent 50%),
+    linear-gradient(135deg, #050b18 0%, #0d152a 45%, #080c18 100%) !important;
 }
 
 /* Header */
