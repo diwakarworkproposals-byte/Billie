@@ -217,7 +217,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           <button
             type="button"
             onClick={handleClear}
-            className="search-clear-btn"
+            className="bottom-bar-clear-btn"
             title="Clear text"
           >
             <X size={16} />

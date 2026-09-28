@@ -127,6 +127,11 @@ export default function InvoiceWizard({
     quantity: 1,
     price: 0
   });
+  const currentItemRef = useRef({
+    name: '',
+    quantity: 1,
+    price: 0
+  });
   const [finalInvoice, setFinalInvoice] = useState(null);
   const draftDiscountRef = useRef({ discount: 0, discountType: 'percent' });
   const draftPaymentModeRef = useRef('cash');
@@ -195,6 +200,7 @@ export default function InvoiceWizard({
     setDraftCustomerDetails(draftCustomerDetailsRef.current);
     setDraftCustomer(cust.name);
     setDraftItems([]);
+    currentItemRef.current = { name: '', quantity: 1, price: 0 };
     setCurrentItem({ name: '', quantity: 1, price: 0 });
     setFinalInvoice(null);
     setActiveStockReport(null);
@@ -552,8 +558,15 @@ export default function InvoiceWizard({
     // -------------------------------------------------------------
     // BILLING: Start Invoice from IDLE or explicit intent
     // -------------------------------------------------------------
-    if (step === STEPS.IDLE || step === STEPS.COMPLETED || isInvoiceIntent(trimmed)) {
-      if (isInvoiceIntent(trimmed)) {
+    const isExplicitRestart =
+      norm.includes('naya bill') ||
+      norm.includes('new bill') ||
+      norm.includes('start again') ||
+      norm.includes('naya bill banao') ||
+      norm.includes('restart');
+
+    if (step === STEPS.IDLE || step === STEPS.COMPLETED || isExplicitRestart) {
+      if (isInvoiceIntent(trimmed) || isExplicitRestart) {
         setDraftCustomer(oneShot.customerName || '');
         setDraftCustomerDetails({
           name: oneShot.customerName || '',
@@ -570,6 +583,7 @@ export default function InvoiceWizard({
           address: ''
         };
         setDraftItems([]);
+        currentItemRef.current = { name: '', quantity: 1, price: 0 };
         setCurrentItem({ name: '', quantity: 1, price: 0 });
         setFinalInvoice(null);
         setActiveStockReport(null);
@@ -777,7 +791,19 @@ export default function InvoiceWizard({
 
       case STEPS.ASK_PRODUCT: {
         const prod = trimmed.replace(/^(product\s*is|item\s*is|service\s*is)\s+/i, '').trim();
-        currentItemRef.current.name = prod;
+        const leadingQtyMatch = prod.match(/^(\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s*(?:x|units?|pieces?|pcs?|nag|piece)?\s+([A-Za-z\u0900-\u097F\s-]+)$/i);
+
+        if (leadingQtyMatch) {
+          const qty = extractNumber(leadingQtyMatch[1], 1);
+          const cleanProdName = leadingQtyMatch[2].trim();
+          currentItemRef.current = { name: cleanProdName, quantity: qty, price: 0 };
+          setCurrentItem({ name: cleanProdName, quantity: qty, price: 0 });
+          setStep(STEPS.ASK_PRICE);
+          replyBillie(p.ask_price(cleanProdName), activeLang);
+          break;
+        }
+
+        currentItemRef.current = { name: prod, quantity: 1, price: 0 };
         setCurrentItem((prev) => ({ ...prev, name: prod }));
         setStep(STEPS.ASK_QUANTITY);
         replyBillie(p.ask_quantity(prod), activeLang);

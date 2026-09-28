@@ -160,19 +160,23 @@ export function isInvoiceIntent(text = '') {
     'new invoice',
     'make invoice',
     'start invoice',
-    'bill',
     'generate bill',
     'create bill',
     'new bill',
     'make bill',
+    'start bill',
     'invoice customer',
     'bill customer'
   ];
 
   const allTriggers = [...hindiTriggers, ...englishTriggers];
 
-  return allTriggers.some((t) => normalized.includes(t)) || 
-         (normalized.startsWith('invoice') && normalized.length > 7);
+  return (
+    allTriggers.some((t) => normalized.includes(t)) ||
+    normalized === 'bill' ||
+    normalized === 'billing' ||
+    (normalized.startsWith('invoice') && normalized.length > 7)
+  );
 }
 
 // Add Stock Intent Detection
