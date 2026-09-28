@@ -10,7 +10,8 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register(swUrl, { scope: import.meta.env.BASE_URL })
       .then((registration) => {
-        console.log('[Billie PWA] Service Worker registered with scope:', registration.scope);
+        registration.update();
+        console.log('[Billie PWA] Service Worker registered and checked for updates:', registration.scope);
       })
       .catch((error) => {
         console.warn('[Billie PWA] Service Worker registration failed:', error);

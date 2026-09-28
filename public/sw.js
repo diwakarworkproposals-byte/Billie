@@ -1,4 +1,4 @@
-const CACHE_NAME = 'billie-cache-v2';
+const CACHE_NAME = 'billie-cache-v4';
 
 // Install: Cache critical static assets relative to current scope
 self.addEventListener('install', (event) => {
@@ -35,7 +35,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Stale-while-revalidate for assets, Network-first for navigation
+// Fetch: Network-first for fresh updates, Cache fallback for offline
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
@@ -69,10 +69,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets, scripts, stylesheets, and fonts
+  // For static assets, scripts, stylesheets, and fonts: Network-first with cache fallback
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      const fetchPromise = fetch(request).then((networkResponse) => {
+    fetch(request)
+      .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -80,10 +80,8 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      }).catch(() => cachedResponse);
-
-      return cachedResponse || fetchPromise;
-    })
+      })
+      .catch(() => caches.match(request))
   );
 });
 
