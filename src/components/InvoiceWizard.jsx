@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Sparkles,
@@ -17,7 +17,9 @@ import {
   UserPlus,
   Phone,
   Building,
-  CheckCircle2
+  CheckCircle2,
+  Search,
+  X
 } from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
 import StockReportCard from './StockReportCard';
@@ -123,8 +125,22 @@ export default function InvoiceWizard({
     quantity: 1,
     price: 0
   });
-  const currentItemRef = useRef({ name: '', quantity: 1, price: 0 });
   const [finalInvoice, setFinalInvoice] = useState(null);
+
+  // Search query for picking existing customer during billing
+  const [existingCustSearch, setExistingCustSearch] = useState('');
+
+  const filteredExistingCustomers = useMemo(() => {
+    if (!existingCustSearch.trim()) return customers;
+    const q = existingCustSearch.toLowerCase().trim();
+    return customers.filter((c) => {
+      const name = (c.name || '').toLowerCase();
+      const company = (c.companyName || '').toLowerCase();
+      const phone = (c.phone || '').toLowerCase();
+      const gst = (c.gstNumber || '').toLowerCase();
+      return name.includes(q) || company.includes(q) || phone.includes(q) || gst.includes(q);
+    });
+  }, [customers, existingCustSearch]);
 
   // Stock drafting state
   const [draftStockItem, setDraftStockItem] = useState({
@@ -591,6 +607,7 @@ export default function InvoiceWizard({
           norm.includes('पुराना') ||
           norm.includes('मौजूदा')
         ) {
+          setExistingCustSearch('');
           setStep(STEPS.PICK_EXISTING_CUSTOMER);
           replyBillie(p.ask_existing_customer, activeLang);
         } else if (norm.includes('naya') || norm.includes('new') || norm.includes('नया')) {
@@ -669,6 +686,7 @@ export default function InvoiceWizard({
             address: matched.address || ''
           };
           setDraftCustomerDetails(draftCustomerDetailsRef.current);
+          setExistingCustSearch('');
           setStep(STEPS.ASK_PRODUCT);
           replyBillie(
             activeLang === 'hi'
@@ -1047,15 +1065,6 @@ export default function InvoiceWizard({
 
             <button
               type="button"
-              onClick={() => triggerChip('stock check karo')}
-              className="suggestion-chip m3-ripple"
-            >
-              <Package size={14} className="text-blue-500" />
-              <span>📦 stock check karo</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => triggerChip('stock add karo')}
               className="suggestion-chip m3-ripple"
             >
@@ -1185,6 +1194,7 @@ export default function InvoiceWizard({
             <button
               type="button"
               onClick={() => {
+                setExistingCustSearch('');
                 setStep(STEPS.PICK_EXISTING_CUSTOMER);
                 const p = PROMPTS[lang] || PROMPTS.hi;
                 replyBillie(p.ask_existing_customer, lang);
@@ -1217,52 +1227,90 @@ export default function InvoiceWizard({
                 <span>{lang === 'hi' ? 'मौजूदा ग्राहक चुनें (Tap to Select):' : 'Select Existing Customer:'}</span>
               </span>
               <span className="text-[11px] text-slate-400">
-                {customers.length} {lang === 'hi' ? 'ग्राहक उपलब्ध' : 'available'}
+                {filteredExistingCustomers.length} / {customers.length} {lang === 'hi' ? 'ग्राहक' : 'customers'}
               </span>
             </div>
 
             <div className="existing-chips-scroll custom-scrollbar">
-              {customers.map((cust) => (
-                <button
-                  key={cust.id}
-                  type="button"
-                  onClick={() => {
-                    setDraftCustomer(cust.name);
-                    draftCustomerDetailsRef.current = {
-                      name: cust.name,
-                      companyName: cust.companyName || '',
-                      phone: cust.phone || '',
-                      gstNumber: cust.gstNumber || '',
-                      address: cust.address || ''
-                    };
-                    setDraftCustomerDetails(draftCustomerDetailsRef.current);
-                    setStep(STEPS.ASK_PRODUCT);
-                    const p = PROMPTS[lang] || PROMPTS.hi;
-                    replyBillie(
-                      lang === 'hi'
-                        ? `✓ ग्राहक "${cust.name}" की डिटेल्स लोड हो गई हैं! ${p.ask_product}`
-                        : `✓ Customer "${cust.name}" loaded! ${p.ask_product}`,
-                      lang
-                    );
-                  }}
-                  className="m3-existing-cust-chip m3-ripple"
-                >
-                  <div className="chip-avatar">
-                    {(cust.name || 'C').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="chip-info">
-                    <span className="chip-name">{cust.name}</span>
-                    {cust.companyName && <span className="chip-company">({cust.companyName})</span>}
-                    {cust.phone && <span className="chip-phone">📞 {cust.phone}</span>}
-                    {cust.gstNumber && <span className="chip-gst">GST: {cust.gstNumber}</span>}
-                  </div>
-                </button>
-              ))}
+              {filteredExistingCustomers.length === 0 ? (
+                <div className="py-4 text-center text-xs text-slate-400">
+                  {lang === 'hi'
+                    ? `"${existingCustSearch}" से कोई ग्राहक नहीं मिला`
+                    : `No customers found matching "${existingCustSearch}"`}
+                </div>
+              ) : (
+                filteredExistingCustomers.map((cust) => (
+                  <button
+                    key={cust.id}
+                    type="button"
+                    onClick={() => {
+                      setExistingCustSearch('');
+                      setDraftCustomer(cust.name);
+                      draftCustomerDetailsRef.current = {
+                        name: cust.name,
+                        companyName: cust.companyName || '',
+                        phone: cust.phone || '',
+                        gstNumber: cust.gstNumber || '',
+                        address: cust.address || ''
+                      };
+                      setDraftCustomerDetails(draftCustomerDetailsRef.current);
+                      setStep(STEPS.ASK_PRODUCT);
+                      const p = PROMPTS[lang] || PROMPTS.hi;
+                      replyBillie(
+                        lang === 'hi'
+                          ? `✓ ग्राहक "${cust.name}" की डिटेल्स लोड हो गई हैं! ${p.ask_product}`
+                          : `✓ Customer "${cust.name}" loaded! ${p.ask_product}`,
+                        lang
+                      );
+                    }}
+                    className="m3-existing-cust-chip m3-ripple"
+                  >
+                    <div className="chip-avatar">
+                      {(cust.name || 'C').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="chip-info">
+                      <span className="chip-name">{cust.name}</span>
+                      {cust.companyName && <span className="chip-company">({cust.companyName})</span>}
+                      {cust.phone && <span className="chip-phone">📞 {cust.phone}</span>}
+                      {cust.gstNumber && <span className="chip-gst">GST: {cust.gstNumber}</span>}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* Bottom Search Bar for Existing Customers - Increased Length / Full Width */}
+            <div className="m3-existing-cust-search-bottom mt-3">
+              <div className="m3-existing-search-input-wrap">
+                <Search size={16} className="search-icon text-slate-400 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={existingCustSearch}
+                  onChange={(e) => setExistingCustSearch(e.target.value)}
+                  placeholder={
+                    lang === 'hi'
+                      ? 'यहाँ नाम, कंपनी या फोन नंबर से सर्च करें...'
+                      : 'Search by name, company, phone or GSTIN...'
+                  }
+                  className="m3-existing-search-input"
+                />
+                {existingCustSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setExistingCustSearch('')}
+                    className="search-clear-btn"
+                    title="Clear"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             </div>
 
             <button
               type="button"
               onClick={() => {
+                setExistingCustSearch('');
                 setStep(STEPS.ASK_CUSTOMER);
                 const p = PROMPTS[lang] || PROMPTS.hi;
                 replyBillie(p.ask_customer, lang);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, User, Sparkles, ShieldCheck, BarChart3, Users } from 'lucide-react';
+import { Settings, User, Sparkles, ShieldCheck, Users } from 'lucide-react';
 
 export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onOpenReporting, onOpenCustomers }) {
   const { user, settings, setIsVoiceSessionActive } = useApp();
@@ -37,21 +37,6 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
           >
             <Users size={16} className="text-blue-600 dark:text-blue-400" />
             <span className="header-btn-text">{isHindi ? 'ग्राहक' : 'Customers'}</span>
-          </button>
-        )}
-        {/* Reporting Button */}
-        {onOpenReporting && (
-          <button
-            type="button"
-            onClick={() => {
-              if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
-              onOpenReporting();
-            }}
-            className="header-report-btn m3-ripple"
-            title={isHindi ? 'बिजनेस रिपोर्टिंग: बिक्री, मुनाफ़ा व खरीद खाता' : 'Reports: Sales, Profit & Purchases'}
-          >
-            <BarChart3 size={16} className="text-indigo-600 dark:text-indigo-400" />
-            <span className="header-btn-text">{isHindi ? 'रिपोर्ट्स' : 'Reports'}</span>
           </button>
         )}
 
