@@ -545,17 +545,22 @@ export default function InvoiceWizard({
         }
       }
 
+      const itemsToFinalize =
+        oneShot.items && oneShot.items.length > 0
+          ? oneShot.items
+          : [
+              {
+                name: oneShot.product,
+                quantity: oneShot.quantity,
+                price: oneShot.price,
+                discount: oneShot.discount,
+                discountType: oneShot.discountType
+              }
+            ];
+
       finalizeInvoice(
         oneShot.customerName,
-        [
-          {
-            name: oneShot.product,
-            quantity: oneShot.quantity,
-            price: oneShot.price,
-            discount: oneShot.discount,
-            discountType: oneShot.discountType
-          }
-        ],
+        itemsToFinalize,
         oneShot.discount,
         oneShot.discountType,
         activeLang,
@@ -571,6 +576,7 @@ export default function InvoiceWizard({
       norm.includes('naya bill') ||
       norm.includes('new bill') ||
       norm.includes('start again') ||
+      norm.includes('naya bill bana') ||
       norm.includes('naya bill banao') ||
       norm.includes('restart');
 
@@ -1085,7 +1091,7 @@ export default function InvoiceWizard({
       default: {
         replyBillie(
           activeLang === 'hi'
-            ? "मैं तैयार हूँ! बिल बनाने के लिए 'bill banao' बोलें, या स्टॉक के लिए 'stock check karo' या 'stock add karo' बोलें।"
+            ? "मैं तैयार हूँ! बिल बनाने के लिए 'bill bana' बोलें, या स्टॉक के लिए 'stock check karo' या 'stock add karo' बोलें।"
             : "I'm ready! Say 'generate invoice' to bill, or 'check stock' / 'add stock' for inventory.",
           activeLang
         );
@@ -1143,7 +1149,7 @@ export default function InvoiceWizard({
             {lang === 'hi' ? (
               <>
                 माइक दबाकर बोलें या लिखें:{' '}
-                <span className="highlight-pill">bill banao</span>,{' '}
+                <span className="highlight-pill">bill bana</span>,{' '}
                 <span className="highlight-pill">stock check karo</span>, या{' '}
                 <span className="highlight-pill">stock add karo</span>. Billie तुरंत जवाब देगा!
               </>
@@ -1160,11 +1166,11 @@ export default function InvoiceWizard({
           <div className="suggestion-chips-container">
             <button
               type="button"
-              onClick={() => triggerChip('bill banao')}
+              onClick={() => triggerChip('bill bana')}
               className="suggestion-chip active-sparkle m3-ripple"
             >
               <Sparkles size={14} />
-              <span>🇮🇳 bill banao (बिल)</span>
+              <span>🇮🇳 bill bana (बिल)</span>
             </button>
 
             <button

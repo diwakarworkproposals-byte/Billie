@@ -182,24 +182,28 @@ export function isInvoiceIntent(text = '') {
   const normalized = text.toLowerCase().trim();
 
   const hindiTriggers = [
+    'bill bana',
     'bill banao',
     'bill bana do',
-    'bill bana',
     'bill banaye',
     'bill banana hai',
     'naya bill',
+    'naya bill bana',
     'naya bill banao',
     'naya bill banana',
+    'invoice bana',
     'invoice banao',
     'invoice banaye',
     'invoice banado',
     'invoice banana hai',
+    'parchi bana',
     'parchi banao',
     'parcha banao',
     'rasid banao',
     'khata banao',
     'hisab banao',
     'bill generate karo',
+    'बिल बना',
     'बिल बनाओ',
     'नया बिल',
     'इन्वॉइस बनाओ',
@@ -343,6 +347,30 @@ export function isNegative(text = '') {
 }
 
 // Natural Language One-Shot Extractor for Invoice
+// Helper to repeatedly clean Hindi postpositions, bill commands, and filler words from product names
+export function cleanProductName(rawProd, customerName = '') {
+  if (!rawProd) return '';
+  let p = rawProd.trim();
+  p = p.replace(/^(?:x|units?\s+of|pieces?\s+of|piece\s+of|nag|piece|items?|aur|and)\s+/i, '');
+  if (customerName) {
+    const custRegex = new RegExp(`\\b(?:for\\s+)?${customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    p = p.replace(custRegex, ' ');
+  }
+  // Repeatedly strip trailing Hindi postpositions and bill filler words
+  let prev = '';
+  while (prev !== p) {
+    prev = p;
+    p = p.replace(/\s+(?:ke\s+liye|ke\s+kiye|ka\s+bill\s+banao|ka\s+bill\s+bana|ka\s+bill|bill\s+banao|bill\s+bana|bill|invoice|bana\s+do|banao|bana|kar\s+do|de\s+do|generate\s+karo|ka|ki|ke|ko|me|mein|se|pe|par|at|@|for|rate|price|cost|hai|h|jiski|jiska|per\s+unit|unit\s+price|aur|and|है|ह)$/i, '').trim();
+  }
+  p = p.replace(/\s+/g, ' ').trim();
+  if (!p) return '';
+  if (/[a-zA-Z]/.test(p)) {
+    return p.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }
+  return p;
+}
+
+// Natural Language One-Shot Extractor for Invoice (Supports Single & Multi-Product Billing)
 export function parseOneShotInvoice(rawText = '') {
   let text = (rawText || '').trim();
   if (!text) {
@@ -351,27 +379,45 @@ export function parseOneShotInvoice(rawText = '') {
       product: '',
       quantity: 1,
       price: 0,
+      items: [],
       discount: 0,
       discountType: 'percent',
+      paymentMode: 'cash',
       hasFullDetails: false
     };
   }
 
-  // Normalize Devanagari digits to ASCII
+  // 1. Normalize Devanagari digits to ASCII & remove number commas (12,000 -> 12000)
   text = text.replace(/[०-९]/g, (d) => HINDI_DEVANAGARI_DIGITS[d] || d);
+  text = text.replace(/\b(\d+),(\d{3})\b/g, '$1$2');
 
-  let customerName = '';
-  let product = '';
-  let quantity = 1;
-  let price = 0;
+  // 2. Normalize speech mistranscriptions and Devanagari helpers
+  text = text.replace(/\bke\s+(?:kiye|lie|waste|vaaste|waaste)\b/gi, 'ke liye');
+  text = text.replace(/\s*(?:के\s+लिए|के\s+लिये|के\s+वास्ते)\s*/gi, ' ke liye ');
+  text = text.replace(/\s*(?:और|तथा|एवं)\s*/gi, ' aur ');
+  text = text.replace(/\s*&\s*/g, ' aur ');
+  text = text.replace(/\s*(?:का\s+बिल\s+बना(?:ओ|एं|दो)?|बिल\s+बना(?:ओ|एं|दो)?|बिल\s+काटो)\s*/gi, ' ka bill bana ');
+  text = text.replace(/\s*(?:जिसकी\s+(?:प्रति\s+इकाई\s+)?(?:कीमत|दर|भाव|लागत)|प्रति\s+इकाई\s+(?:कीमत|दर|भाव)|कीमत|दर|भाव)\s*/gi, ' jiski cost ');
+  text = text.replace(/\s*(?:है|ह)\s*$/gi, ' hai');
+
+  // 3. Payment Mode Extraction
+  let paymentMode = 'cash';
+  const normRaw = text.toLowerCase();
+  if (/upi|gpay|google\s*pay|phonepe|paytm|online|qr/.test(normRaw)) {
+    paymentMode = 'upi';
+  } else if (/card|debit|credit/.test(normRaw)) {
+    paymentMode = 'card';
+  } else if (/cheque|check/.test(normRaw)) {
+    paymentMode = 'cheque';
+  }
+
+  // 4. Discount Extraction (percentage or flat)
   let discount = 0;
   let discountType = 'percent';
-
-  // 1. Extract Discount (if any)
-  const discMatch = 
-    text.match(/(?:discount|off|chhut|chhoot)\s*[$₹€£]?\s*(\d+(?:\.\d+)?)\s*(%|percent|pratishat)?/i) ||
-    text.match(/(\d+(?:\.\d+)?)\s*(%|percent|pratishat)\s*(?:discount|off|chhut|chhoot)?/i) ||
-    text.match(/(\d+(?:\.\d+)?)\s*[$₹€£]?\s*(?:rupaye|rupees|rs|inr)?\s*(?:discount|off|chhut|chhoot)/i) ||
+  const discMatch =
+    text.match(/(?:discount|off|chhut|chhoot|छूट)\s*[$₹€£]?\s*(\d+(?:\.\d+)?)\s*(%|percent|pratishat|प्रतिशत)?/i) ||
+    text.match(/(\d+(?:\.\d+)?)\s*(%|percent|pratishat|प्रतिशत)\s*(?:discount|off|chhut|chhoot|छूट)?/i) ||
+    text.match(/(\d+(?:\.\d+)?)\s*[$₹€£]?\s*(?:rupaye|rupees|rs|inr|रुपये)?\s*(?:discount|off|chhut|chhoot|छूट)/i) ||
     text.match(/(?:flat\s+)?(\d+(?:\.\d+)?)\s*(%)/i);
 
   if (discMatch) {
@@ -382,10 +428,10 @@ export function parseOneShotInvoice(rawText = '') {
       indicator === '%' ||
       indicator === 'percent' ||
       indicator === 'pratishat' ||
+      indicator === 'प्रतिशत' ||
       matchedSegment.includes('%') ||
       matchedSegment.includes('percent') ||
-      matchedSegment.includes('pratishat') ||
-      (discount > 0 && discount <= 50 && !matchedSegment.includes('rs') && !matchedSegment.includes('rupaye') && !matchedSegment.includes('₹'))
+      (discount > 0 && discount <= 50 && !matchedSegment.includes('rs') && !matchedSegment.includes('rupaye') && !matchedSegment.includes('₹') && !matchedSegment.includes('रुपये'))
     ) {
       discountType = 'percent';
     } else {
@@ -394,162 +440,165 @@ export function parseOneShotInvoice(rawText = '') {
     text = text.replace(discMatch[0], ' ');
   }
 
-  // 2. Extract Price (Unit price, rate, per piece, at X, X rupaye)
-  const pricePatterns = [
-    // jiski unit price 1200 / unit price 1200 / rate 1200 / price 1200
-    /(?:jiski|jiska)?\s*(?:unit\s+price|per\s+piece|per\s+unit|rate|price|keemat|cost|lagat|bhav)\s*(?:is|hai|h|of|:)?\s*[$₹€£]?\s*(\d+(?:\.\d+)?)/i,
-    // 1200 rupaye / 1200 rs / 1200 inr / 1200 each
-    /(\d+(?:\.\d+)?)\s*(?:rupaye|rupees|rs|inr|₹|per\s+piece|each|ka\s+ek)/i,
-    // at 1200 / @ 1200
-    /(?:at|@)\s*[$₹€£]?\s*(\d+(?:\.\d+)?)/i,
-    // 1200 me / 1200 mein
-    /[$₹€£]?\s*(\d+(?:\.\d+)?)\s*(?:me|mein)\s*(?:bill|parcha|invoice)?/i
-  ];
-
-  let matchedPriceStr = '';
-  for (const pat of pricePatterns) {
-    const pMatch = text.match(pat);
-    if (pMatch && pMatch[1]) {
-      price = parseFloat(pMatch[1]);
-      matchedPriceStr = pMatch[0];
-      break;
-    }
-  }
-
-  // 3. Extract Customer Name
+  // 5. Customer Name Extraction
+  let customerName = '';
+  let matchedCustStr = '';
   const custPatterns = [
-    // "... for/to Rahul Sharma at/with/..." (positive lookahead so delimiter is not consumed)
-    /(?:bill\s+for|invoice\s+for|bill\s+to|invoice\s+to|for|to)\s+([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:ke\s+liye|unit\s+price|at|@|\d+|with|for|ka|ki|ke|product)|$)/i,
-    // "Rahul Sharma ke liye" or "Rahul Sharma ke naam pe/se"
-    /([A-Za-z\u0900-\u097F\s&.'-]+?)\s+(?:ke\s+liye|ke\s+naam\s+(?:pe|par|se)|ko\s+(?=\d+|becho|de\s+do|bech))/i,
-    // "5 sofa for Rahul Sharma at 1200"
-    /(?:for|to)\s+([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:unit\s+price|at|@|price|rate|\d+)|$)/i,
-    // "Rahul Sharma 5 sofa 1200 ka bill" -> start of text before number
+    // "Ankur ke liye" / "Rahul Sharma ke liye" / "Ankur ke naam pe"
+    /([A-Za-z\u0900-\u097F\s&.'-]+?)\s+(?:ke\s+liye|ke\s+naam\s*(?:pe|par|se|ka)?|ko\s+(?=\d+|becho|de\s+do|bech))\b/i,
+    // "bill for/to Rahul Sharma at..."
+    /(?:bill\s+for|invoice\s+for|bill\s+to|invoice\s+to|for|to|customer|client)\s+([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:via|by|ke\s+liye|unit\s+price|per\s+unit|cost|price|rate|at|@|\d+|with|for|ka|ki|ke|product)|$)/i,
+    // Name at start before quantity
     /^([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s+)/i
   ];
 
-  let matchedCustStr = '';
   for (const cPat of custPatterns) {
     const cMatch = text.match(cPat);
     if (cMatch && cMatch[1]) {
-      const candidate = cMatch[1].trim();
-      const cleanCandidate = candidate
-        .replace(/^(generate\s+bill\s+for|create\s+bill\s+for|bill\s+for|invoice\s+for|make\s+bill\s+for|generate\s+invoice\s+for|naya\s+bill|bill\s+banao|bill\s+generate\s+karo)\s+/i, '')
-        .replace(/^(please|kripya|ek)\s+/i, '')
-        .trim();
-
-      if (cleanCandidate && cleanCandidate.length > 1 && !['bill', 'invoice', 'stock', 'parchi'].includes(cleanCandidate.toLowerCase())) {
-        customerName = cleanCandidate;
+      let cand = cMatch[1].trim();
+      cand = cand.replace(/^(?:generate\s+bill\s+for|create\s+bill\s+for|bill\s+for|invoice\s+for|make\s+bill\s+for|generate\s+invoice\s+for|naya\s+bill\s+bana|naya\s+bill\s+banao|naya\s+bill|bill\s+bana|bill\s+banao|bill\s+generate\s+karo|customer|client|shri|mr|mrs|shriman|kripya|please)\s+/i, '');
+      // Strip payment words if leaked into customer name
+      cand = cand.replace(/\s+(?:via|by|through|with)?\s*(?:upi|gpay|google\s*pay|phonepe|paytm|card|cash|cheque|online|qr)$/i, '');
+      // Strip trailing postpositions
+      cand = cand.replace(/\s+(?:ke\s+liye|ke\s+naam\s*(?:pe|par|se|ka)?|ke\s+naam|ko|ka|ki|ke|for)$/i, '');
+      cand = cand.trim();
+      if (cand.length > 1 && !['bill', 'invoice', 'stock', 'parchi'].includes(cand.toLowerCase())) {
+        customerName = /[a-zA-Z]/.test(cand)
+          ? cand.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+          : cand;
         matchedCustStr = cMatch[0];
         break;
       }
     }
   }
 
-  // 4. Extract Quantity & Product
-  const qtyNumPattern = /(\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s*(?:x|units?|pieces?|pcs?|nag|piece)?\s+([A-Za-z\u0900-\u097F\s-]+)/i;
-  
   let remainingText = text;
-  if (matchedPriceStr) {
-    remainingText = remainingText.replace(matchedPriceStr, ' ');
-  }
   if (matchedCustStr) {
     remainingText = remainingText.replace(matchedCustStr, ' ');
   }
 
-  // Remove command prefixes/suffixes using word boundaries so words like 'chair' are untouched
-  const cleanRemaining = remainingText
-    .replace(/\b(?:ka\s+bill\s+generate\s+karo|ka\s+bill\s+banao|ka\s+bill\s+bana\s+do|bill\s+generate\s+karo|bill\s+banao|bill\s+banado|bill\s+bana\s+do|bana\s+do|banao|kar\s+do|de\s+do|invoice\s+banao|bill\s+kaato|generate\s+bill|create\s+bill|make\s+bill|ka\s+bill|ka\s+invoice|bill|invoice)\b/gi, ' ')
-    .replace(/\b(?:jiski\s+unit\s+price|jiska\s+rate|jiski\s+keemat|unit\s+price|per\s+piece|rate\s+hai|price\s+hai|hai|h|becho|bech\s+do|de\s+do|rupaye|rupees|rs|inr|each|ke\s+liye)\b/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  const qtyMatch = cleanRemaining.match(qtyNumPattern);
-  if (qtyMatch) {
-    quantity = extractNumber(qtyMatch[1], 1);
-    let rawProd = qtyMatch[2].trim();
-
-    rawProd = rawProd
-      .replace(/^(x|units?\s+of|pieces?\s+of|piece\s+of|nag)\s+/i, '')
-      .replace(/\s+(?:ke\s+liye|ka\s+bill|bana\s+do|banao|kar\s+do|de\s+do|generate\s+karo|ka|ki|ke|me|mein|at|@|for|rate|price|hai|jiski|jiska)$/i, '')
-      .trim();
-
-    // Strip customer name if it slipped inside product
-    if (customerName) {
-      const custRegex = new RegExp(`\\b(?:for\\s+)?${customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-      rawProd = rawProd.replace(custRegex, ' ').trim();
-    }
-
-    // Strip common filler words from product
-    rawProd = rawProd
-      .replace(/\b(?:bana\s+do|banao|kar\s+do|bill|invoice|jiski|jiska|unit\s+price|rate|hai|for)\b/gi, ' ')
-      .replace(/\s+\d+$/, '') // strip trailing price numbers
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    if (rawProd) {
-      product = rawProd
-        .split(' ')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-        .join(' ');
+  // 6. Trailing Collective Prices Check
+  // e.g. "Rahul ke liye 1 sofa, 2 chair, 1 almirah ka bill bana jiski cost 12000, 4000 & 15000 hai"
+  let trailingPrices = [];
+  const trailingPricePat = /(?:jiski|jiska|jinke|jinka|unki|unka|in|with)?\s*(?:per\s+unit\s+price|per\s+unit\s+cost|per\s+unit\s+rate|unit\s+price|unit\s+cost|per\s+piece\s+price|per\s+piece|rate|price|cost|keemat|lagat|bhav)\s*(?:is|hai|h|of|:)?\s*([0-9\s,&aurand]+)(?:hai|h|rs|rupaye|rupees|₹|है|ह|रुपये)?$/i;
+  const tpMatch = remainingText.match(trailingPricePat);
+  if (tpMatch && tpMatch[1]) {
+    const rawNumStr = tpMatch[1];
+    const extractedNums = rawNumStr.match(/\b\d+(?:\.\d+)?\b/g);
+    if (extractedNums && extractedNums.length > 0) {
+      trailingPrices = extractedNums.map((n) => parseFloat(n));
+      remainingText = remainingText.replace(tpMatch[0], ' ');
     }
   }
 
-  // Fallback for price if not matched earlier
-  if (price === 0) {
-    const trailingNumbers = cleanRemaining.match(/\b(\d{2,})\b/g);
-    if (trailingNumbers && trailingNumbers.length > 0) {
-      const lastNum = parseFloat(trailingNumbers[trailingNumbers.length - 1]);
-      if (lastNum !== quantity) {
-        price = lastNum;
+  // Clean bill action words and payment words from remaining
+  let cleanRemaining = remainingText
+    .replace(/\b(?:ka\s+bill\s+generate\s+karo|ka\s+bill\s+banao|ka\s+bill\s+bana\s+do|ka\s+bill\s+bana|bill\s+generate\s+karo|bill\s+banao|bill\s+banado|bill\s+bana\s+do|bill\s+bana|bana\s+do|banao|bana|kar\s+do|de\s+do|invoice\s+banao|invoice\s+bana|bill\s+काटो|generate\s+bill|create\s+bill|make\s+bill|ka\s+bill|ka\s+invoice|bill|invoice)\b/gi, ' ')
+    .replace(/\b(?:jiski|jiska|jinke|jinka|hai|h|becho|bech\s+do|de\s+do|rupaye|rupees|rs|inr|each|via\s+\w+|by\s+\w+)\b/gi, ' ')
+    .replace(/\b(?:cash|card|upi|cheque|check|online|qr|gpay|paytm|phonepe|रोकड़ा|नकद|चेक)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  let items = [];
+
+  // CASE A: Trailing collective prices found -> split items and map prices consecutively
+  if (trailingPrices.length > 0) {
+    let listStr = cleanRemaining.replace(/\s+(?:aur|and|तथा|एवं)\s+/gi, ', ').replace(/\s*&\s*/g, ', ');
+    listStr = listStr.replace(/\s+(?=(?:\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s+[A-Za-z\u0900-\u097F])/gi, ', ');
+    const parts = listStr.split(',').map((p) => p.trim()).filter(Boolean);
+
+    for (const part of parts) {
+      const match = part.match(/^(\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s*(?:x|units?|pieces?|pcs?|nag|piece)?\s+(.+)$/i);
+      if (match) {
+        const q = extractNumber(match[1], 1);
+        const prodName = cleanProductName(match[2], customerName);
+        if (prodName) {
+          items.push({ name: prodName, quantity: q, price: 0, discount: 0, discountType: 'percent' });
+        }
+      }
+    }
+
+    if (items.length > 0) {
+      if (trailingPrices.length === items.length) {
+        items.forEach((it, idx) => {
+          it.price = trailingPrices[idx];
+        });
+      } else if (trailingPrices.length === 1) {
+        items.forEach((it) => {
+          it.price = trailingPrices[0];
+        });
+      } else {
+        items.forEach((it, idx) => {
+          it.price = trailingPrices[idx] !== undefined ? trailingPrices[idx] : trailingPrices[trailingPrices.length - 1];
+        });
       }
     }
   }
 
-  // If customerName was not found yet, check if there is a name before product
+  // CASE B: Inline product-price pairs (e.g. "2 table 3000 aur 4 chair 500" or "3 saree 1500 aur 2 suit 2500")
+  if (items.length === 0) {
+    const segments = cleanRemaining.split(/[,&]|\s+aur\s+|\s+and\s+/i);
+    for (const seg of segments) {
+      const s = seg.trim();
+      if (!s) continue;
+      const matchInline =
+        s.match(/^(\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+?)\s+(?:at|@|rate|price|keemat|cost|bhav|me|mein|₹)\s*(\d+(?:\.\d+)?)/i) ||
+        s.match(/^(\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+?)\s*(\d+(?:\.\d+)?)\s*(?:at|@|rate|price|keemat|cost|bhav|rupaye|rupees|rs|inr|me|mein)?$/i);
+
+      if (matchInline) {
+        const q = extractNumber(matchInline[1], 1);
+        const prodName = cleanProductName(matchInline[2], customerName);
+        const pr = parseFloat(matchInline[3]) || 0;
+        if (prodName && pr > 0) {
+          items.push({ name: prodName, quantity: q, price: pr, discount: 0, discountType: 'percent' });
+        }
+      }
+    }
+  }
+
+  // CASE C: Fallback single product extraction
+  if (items.length === 0) {
+    const singleQtyMatch = cleanRemaining.match(/(\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+)/i);
+    let singlePrice = trailingPrices[0] || 0;
+    if (!singlePrice) {
+      const pMatch =
+        text.match(/(?:unit\s+price|price|rate|cost|keemat|at|@)\s*(?:is|hai|h|of|:)?\s*[$₹€£]?\s*(\d+(?:\.\d+)?)/i) ||
+        text.match(/(\d+(?:\.\d+)?)\s*(?:rupaye|rupees|rs|inr|₹)/i);
+      if (pMatch) singlePrice = parseFloat(pMatch[1]) || 0;
+    }
+    if (singleQtyMatch) {
+      const q = extractNumber(singleQtyMatch[1], 1);
+      const prodName = cleanProductName(singleQtyMatch[2], customerName);
+      if (prodName && singlePrice > 0) {
+        items.push({ name: prodName, quantity: q, price: singlePrice, discount: 0, discountType: 'percent' });
+      }
+    }
+  }
+
+  // If customerName was not found yet, check if there is a name prefix
   if (!customerName) {
     const forMatch = text.match(/(?:for|to|naam|customer)\s+([A-Za-z\s]+?)(?=\s+(?:unit\s+price|at|@|price|rate|\d+)|$)/i);
     if (forMatch) customerName = forMatch[1].trim();
   }
 
-  // Capitalize Customer Name properly
-  if (customerName) {
+  if (customerName && /[a-zA-Z]/.test(customerName)) {
     customerName = customerName
       .split(' ')
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
   }
 
-  let paymentMode = 'cash';
-  const normRaw = rawText.toLowerCase();
-  if (
-    normRaw.includes('upi') ||
-    normRaw.includes('gpay') ||
-    normRaw.includes('phonepe') ||
-    normRaw.includes('paytm') ||
-    normRaw.includes('online') ||
-    normRaw.includes('qr')
-  ) {
-    paymentMode = 'upi';
-  } else if (
-    normRaw.includes('card') ||
-    normRaw.includes('debit') ||
-    normRaw.includes('credit')
-  ) {
-    paymentMode = 'card';
-  } else if (normRaw.includes('cheque') || normRaw.includes('check')) {
-    paymentMode = 'cheque';
-  } else {
-    paymentMode = 'cash';
-  }
-
-  const hasFullDetails = Boolean(customerName && product && price > 0);
+  const primaryProduct = items.length > 0 ? items.map((i) => i.name).join(', ') : '';
+  const totalQuantity = items.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0);
+  const primaryPrice = items[0]?.price || 0;
+  const hasFullDetails = Boolean(customerName && items.length > 0 && items.every((i) => i.price > 0));
 
   return {
     customerName,
-    product,
-    quantity: Math.max(1, quantity),
-    price,
+    product: primaryProduct,
+    quantity: totalQuantity,
+    price: primaryPrice,
+    items,
     discount,
     discountType,
     paymentMode,
@@ -602,7 +651,7 @@ export function parseStockUpdateCommand(text = '', inventory = []) {
 // Multilingual Prompt Templates
 export const PROMPTS = {
   hi: {
-    welcome: "नमस्ते! मैं Billie हूँ, आपका वॉइस और टेक्स्ट असिस्टेंट। बिल बनाने के लिए 'bill banao' बोलें, या स्टॉक देखने/जोड़ने के लिए 'stock check karo' या 'stock add karo' बोलें।",
+    welcome: "नमस्ते! मैं Billie हूँ, आपका वॉइस और टेक्स्ट असिस्टेंट। बिल बनाने के लिए 'bill bana' बोलें, या स्टॉक देखने/जोड़ने के लिए 'stock check karo' या 'stock add karo' बोलें।",
     ask_customer_type: "नया ग्राहक है या पुराना ग्राहक? (नीचे विकल्प चुनें या 'नया' / 'पुराना' बोलें)",
     ask_existing_customer: "मौजूदा ग्राहक का नाम या मोबाइल नंबर बताएं या नीचे सूची से चुनें:",
     ask_customer_phone_gst: "क्या आप ग्राहक का मोबाइल नंबर या GST नंबर जोड़ना चाहते हैं? (यह वैकल्पिक है, आप 'Skip' भी कर सकते हैं)",
@@ -631,7 +680,7 @@ export const PROMPTS = {
     stock_report_single: (product, qty) => `"${product}" ka stock abhi ${qty} piece available hai. Stock badhane ke liye 'stock add karo' ya quantity bol sakte hain.`,
 
     hints: {
-      idle: "Bolein: 'bill banao', 'stock check karo', ya 'stock add karo'...",
+      idle: "Bolein: 'bill bana', 'stock check karo', ya 'stock add karo'...",
       customer_type: "'नया ग्राहक' या 'पुराना ग्राहक' चुनें...",
       existing_customer: "पुराने ग्राहक का नाम या मोबाइल नंबर बताएं...",
       customer_phone_gst: "मोबाइल नंबर या GST नंबर डालें या 'Skip' दबाएं...",

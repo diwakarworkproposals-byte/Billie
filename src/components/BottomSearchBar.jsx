@@ -135,8 +135,8 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
   };
 
   const defaultPlaceholder = isHindi
-    ? "Billie se bolein ya type karein 'bill banao'..."
-    : "Ask Billie or type 'generate invoice' / 'bill banao'...";
+    ? "Billie se bolein ya type karein 'bill bana'..."
+    : "Ask Billie or type 'generate invoice' / 'bill bana'...";
 
   return (
     <div className="bottom-search-wrapper">
