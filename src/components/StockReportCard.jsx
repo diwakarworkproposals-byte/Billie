@@ -108,8 +108,9 @@ export default function StockReportCard({ filteredProduct = '', onClose, onAddSt
             ) : (
               displayProducts.map((prod) => {
                 const isEditing = editingId === prod.id;
-                const isLow = prod.quantity <= (prod.lowStockThreshold || 5);
+                const isNegative = prod.quantity < 0;
                 const isOut = prod.quantity === 0;
+                const isLow = prod.quantity <= (prod.lowStockThreshold || 5);
 
                 return (
                   <tr key={prod.id} className={isLow ? 'low-stock-row' : ''}>
@@ -118,7 +119,7 @@ export default function StockReportCard({ filteredProduct = '', onClose, onAddSt
                         <span className="font-bold text-slate-900 dark:text-slate-100">{prod.name}</span>
                         {prod.costPrice > 0 && (
                           <span className="text-xs text-slate-400">
-                            {isHindi ? 'लागत: ' : 'Cost: '}{currency}{prod.costPrice}
+                            {isHindi ? 'औसत लागत: ' : 'Avg Cost: '}{currency}{Number(prod.costPrice).toFixed(2)}
                           </span>
                         )}
                       </div>
@@ -130,14 +131,21 @@ export default function StockReportCard({ filteredProduct = '', onClose, onAddSt
                         <div className="edit-qty-inline">
                           <input
                             type="number"
-                            min="0"
                             value={editQty}
                             onChange={(e) => setEditQty(e.target.value)}
                             className="inline-edit-input w-16 text-center"
                           />
                         </div>
                       ) : (
-                        <span className="stock-qty-number">{prod.quantity}</span>
+                        <span
+                          className="stock-qty-number"
+                          style={{
+                            color: isNegative ? '#dc2626' : undefined,
+                            fontWeight: isNegative ? 800 : undefined
+                          }}
+                        >
+                          {prod.quantity}
+                        </span>
                       )}
                     </td>
 
@@ -161,9 +169,13 @@ export default function StockReportCard({ filteredProduct = '', onClose, onAddSt
 
                     {/* Status Badge */}
                     <td className="text-center">
-                      {isOut ? (
+                      {isNegative ? (
+                        <span className="stock-badge out-of-stock" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #f87171' }}>
+                          {isHindi ? `कम स्टॉक (${prod.quantity})` : `Low Stock (${prod.quantity})`}
+                        </span>
+                      ) : isOut ? (
                         <span className="stock-badge out-of-stock">
-                          {isHindi ? 'स्टॉक खत्म' : 'Out of Stock'}
+                          {isHindi ? 'स्टॉक खत्म (0)' : 'Out of Stock (0)'}
                         </span>
                       ) : isLow ? (
                         <span className="stock-badge low-stock">

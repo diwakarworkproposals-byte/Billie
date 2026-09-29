@@ -74,9 +74,9 @@ export default function InventoryModal({ isOpen, onClose }) {
     }
     updateProduct(id, {
       name: editFields.name.trim() || 'Product',
-      quantity: Math.max(0, Number(editFields.quantity) || 0),
+      quantity: Number(editFields.quantity) || 0,
       price: Math.max(0, Number(editFields.price) || 0),
-      costPrice: cost,
+      costPrice: Number(cost.toFixed(2)),
       lowStockThreshold: Math.max(1, Number(editFields.lowStockThreshold) || 5)
     });
     setEditingId(null);
@@ -84,7 +84,7 @@ export default function InventoryModal({ isOpen, onClose }) {
 
   const handleQuickAdd = (id, currentQty, amount) => {
     updateProduct(id, {
-      quantity: Math.max(0, Number(currentQty) + amount)
+      quantity: (Number(currentQty) || 0) + amount
     });
   };
 
@@ -359,7 +359,7 @@ export default function InventoryModal({ isOpen, onClose }) {
                   <th>{isHindi ? 'प्रोडक्ट' : 'Product'}</th>
                   <th className="text-center">{isHindi ? 'उपलब्ध स्टॉक' : 'Stock Qty'}</th>
                   <th className="text-right">{isHindi ? 'सेलिंग प्राइस' : 'Selling Price'}</th>
-                  <th className="text-right">{isHindi ? 'लागत (Cost)' : 'Cost Price'}</th>
+                  <th className="text-right">{isHindi ? 'औसत लागत (Avg Cost)' : 'Avg Cost Price'}</th>
                   <th className="text-center">{isHindi ? 'स्थिति' : 'Status'}</th>
                   <th className="text-right">{isHindi ? 'कार्रवाई' : 'Actions'}</th>
                 </tr>
@@ -382,8 +382,9 @@ export default function InventoryModal({ isOpen, onClose }) {
                 ) : (
                   filteredProducts.map((prod) => {
                     const isEditing = editingId === prod.id;
-                    const isLow = prod.quantity <= (prod.lowStockThreshold || 5);
+                    const isNegative = prod.quantity < 0;
                     const isOut = prod.quantity === 0;
+                    const isLow = prod.quantity <= (prod.lowStockThreshold || 5);
 
                     return (
                       <tr key={prod.id} className={isLow ? 'low-stock-row' : ''}>
@@ -415,7 +416,6 @@ export default function InventoryModal({ isOpen, onClose }) {
                           {isEditing ? (
                             <input
                               type="number"
-                              min="0"
                               value={editFields.quantity}
                               onChange={(e) =>
                                 setEditFields({ ...editFields, quantity: e.target.value })
@@ -424,7 +424,15 @@ export default function InventoryModal({ isOpen, onClose }) {
                             />
                           ) : (
                             <div className="flex items-center justify-center gap-1.5">
-                              <span className="stock-qty-number">{prod.quantity}</span>
+                              <span
+                                className="stock-qty-number"
+                                style={{
+                                  color: isNegative ? '#dc2626' : undefined,
+                                  fontWeight: isNegative ? 800 : undefined
+                                }}
+                              >
+                                {prod.quantity}
+                              </span>
                               <span className="text-xs text-slate-400">pcs</span>
                             </div>
                           )}
@@ -472,17 +480,21 @@ export default function InventoryModal({ isOpen, onClose }) {
                               />
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-500">
-                              {prod.costPrice > 0 ? `${currency}${prod.costPrice}` : '—'}
+                            <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                              {prod.costPrice > 0 ? `${currency}${Number(prod.costPrice).toFixed(2)}` : '—'}
                             </span>
                           )}
                         </td>
 
                         {/* Status */}
                         <td className="text-center">
-                          {isOut ? (
+                          {isNegative ? (
+                            <span className="stock-badge out-of-stock" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #f87171' }}>
+                              {isHindi ? `कम स्टॉक (${prod.quantity})` : `Low Stock (${prod.quantity})`}
+                            </span>
+                          ) : isOut ? (
                             <span className="stock-badge out-of-stock">
-                              {isHindi ? 'स्टॉक खत्म' : 'Out of Stock'}
+                              {isHindi ? 'स्टॉक खत्म (0)' : 'Out of Stock (0)'}
                             </span>
                           ) : isLow ? (
                             <span className="stock-badge low-stock">

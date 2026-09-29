@@ -20,7 +20,8 @@ import {
   CheckCircle2,
   Search,
   X,
-  CreditCard
+  CreditCard,
+  AlertTriangle
 } from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
 import StockReportCard from './StockReportCard';
@@ -165,6 +166,12 @@ export default function InvoiceWizard({
   // Home page active reporting & accounting section
   const [activeReporting, setActiveReporting] = useState(null); // { mode: 'sales' | 'purchase' }
 
+  // Low stock warning modal state
+  const [lowStockModalData, setLowStockModalData] = useState(null);
+  const [stockAddQty, setStockAddQty] = useState('');
+  const [stockAddCost, setStockAddCost] = useState('');
+  const [stockAddError, setStockAddError] = useState('');
+
   const messagesEndRef = useRef(null);
 
   // Sync lang with settings
@@ -292,7 +299,7 @@ export default function InvoiceWizard({
   };
 
   // Complete and finalize the invoice
-  const finalizeInvoice = (
+  const executeFinalizeInvoice = (
     customerName,
     itemsList,
     discountVal = 0,
@@ -314,6 +321,18 @@ export default function InvoiceWizard({
     const custPhone = draftCustomerDetailsRef.current.phone || '';
     const custGst = draftCustomerDetailsRef.current.gstNumber || '';
     const custAddress = draftCustomerDetailsRef.current.address || '';
+
+    // Attach current weighted average costPrice to each invoice item for accurate net profit accounting
+    const enrichedItems = (totals.items || []).map((it) => {
+      const normName = (it.name || '').toLowerCase().trim();
+      const stockItem = inventory.find(
+        (inv) => inv.name && inv.name.toLowerCase().trim() === normName
+      );
+      return {
+        ...it,
+        costPrice: Number(it.costPrice || stockItem?.costPrice || 0)
+      };
+    });
 
     const completeInvoice = {
       id: `inv_${Date.now()}`,
@@ -343,7 +362,7 @@ export default function InvoiceWizard({
       total: totals.grandTotal,
       grandTotal: totals.grandTotal,
       currency: currency,
-      items: totals.items
+      items: enrichedItems
     };
 
     setFinalInvoice(completeInvoice);
@@ -377,6 +396,139 @@ export default function InvoiceWizard({
     } catch {
       // safe fallback
     }
+  };
+
+  // Pre-billing stock deficit check and warning modal interceptor
+  const finalizeInvoice = (
+    customerName,
+    itemsList,
+    discountVal = 0,
+    discountType = 'percent',
+    chosenLang = lang,
+    chosenPaymentMode = 'cash'
+  ) => {
+    // Check if any product has low stock or 0 stock
+    const deficits = [];
+    (itemsList || []).forEach((it) => {
+      if (!it || !it.name) return;
+      const normName = it.name.toLowerCase().trim();
+      const stockItem = inventory.find(
+        (inv) => inv.name && inv.name.toLowerCase().trim() === normName
+      );
+      const currentStock = stockItem ? Number(stockItem.quantity) || 0 : 0;
+      const billedQty = Number(it.quantity) || 1;
+      if (currentStock < billedQty) {
+        deficits.push({
+          name: it.name,
+          currentStock,
+          billedQty,
+          deficit: billedQty - currentStock,
+          stockItem,
+          billedPrice: Number(it.price) || (stockItem?.price || 0)
+        });
+      }
+    });
+
+    if (deficits.length > 0) {
+      // Stop hands-free voice loop so user can interact with modal
+      setIsVoiceSessionActive(false);
+      const firstDef = deficits[0];
+      setStockAddQty(String(firstDef.deficit > 0 ? firstDef.deficit : 1));
+      setStockAddCost(firstDef.stockItem?.costPrice ? String(firstDef.stockItem.costPrice) : '');
+      setStockAddError('');
+      setLowStockModalData({
+        customerName,
+        itemsList,
+        discountVal,
+        discountType,
+        chosenLang,
+        chosenPaymentMode,
+        deficits,
+        currentDeficitIdx: 0
+      });
+      return;
+    }
+
+    // No deficit: finalize directly
+    executeFinalizeInvoice(
+      customerName,
+      itemsList,
+      discountVal,
+      discountType,
+      chosenLang,
+      chosenPaymentMode
+    );
+  };
+
+  // Low Stock Modal Action 1: Proceed to bill anyway (stock goes negative)
+  const handleProceedLowStock = () => {
+    if (!lowStockModalData) return;
+    const { customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode } = lowStockModalData;
+    setLowStockModalData(null);
+    executeFinalizeInvoice(customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode);
+  };
+
+  // Low Stock Modal Action 2: Add stock right in the popup (with mandatory cost price) & proceed
+  const handleAddStockAndProceed = (e) => {
+    if (e) e.preventDefault();
+    if (!lowStockModalData) return;
+    const curIdx = lowStockModalData.currentDeficitIdx || 0;
+    const currentDef = lowStockModalData.deficits[curIdx];
+    if (!currentDef) return;
+
+    const qty = Number(stockAddQty);
+    const cost = Number(stockAddCost);
+
+    if (!qty || qty <= 0) {
+      setStockAddError(
+        lang === 'hi'
+          ? 'स्टॉक मात्रा (Quantity) कम से कम 1 होनी चाहिए!'
+          : 'Stock quantity must be at least 1!'
+      );
+      return;
+    }
+
+    if (isNaN(cost) || cost <= 0) {
+      setStockAddError(
+        lang === 'hi'
+          ? 'खरीद लागत मूल्य (Purchase Cost) दर्ज करना अनिवार्य है!'
+          : 'Purchase cost price is mandatory!'
+      );
+      return;
+    }
+
+    // Update stock with mandatory purchase cost (AppContext will compute weighted average)
+    addOrUpdateStock(currentDef.name, qty, currentDef.billedPrice, cost);
+
+    // If there are more deficit items in the bill, move to the next item
+    if (curIdx < lowStockModalData.deficits.length - 1) {
+      const nextIdx = curIdx + 1;
+      const nextDef = lowStockModalData.deficits[nextIdx];
+      setStockAddQty(String(nextDef.deficit > 0 ? nextDef.deficit : 1));
+      setStockAddCost(nextDef.stockItem?.costPrice ? String(nextDef.stockItem.costPrice) : '');
+      setStockAddError('');
+      setLowStockModalData((prev) => ({
+        ...prev,
+        currentDeficitIdx: nextIdx
+      }));
+    } else {
+      // All deficits resolved, finalize invoice
+      const { customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode } = lowStockModalData;
+      setLowStockModalData(null);
+      executeFinalizeInvoice(customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode);
+    }
+  };
+
+  // Low Stock Modal Action 3: Cancel billing
+  const handleCancelLowStockBill = () => {
+    setLowStockModalData(null);
+    resetWizard();
+    replyBillie(
+      lang === 'hi'
+        ? 'बिल रद्द कर दिया गया है। स्टॉक जोड़ने के बाद दोबारा बिल बना सकते हैं।'
+        : 'Bill cancelled. You can generate the bill again after updating stock.',
+      lang
+    );
   };
 
   const handleUserMessage = (userText) => {
@@ -1805,6 +1957,170 @@ export default function InvoiceWizard({
         {/* Finalized Invoice Card with PDF Download */}
         {finalInvoice && (
           <InvoiceCard invoice={finalInvoice} onReset={resetWizard} isDraft={false} />
+        )}
+
+        {/* Low Stock Warning Pre-billing Modal */}
+        {lowStockModalData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-amber-200 dark:border-amber-800/50 flex flex-col gap-5">
+              {/* Modal Header */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 shadow-inner">
+                    <AlertTriangle size={26} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                      {lang === 'hi' ? 'कम स्टॉक चेतावनी (Low Stock Alert)' : 'Low Stock Warning'}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {lang === 'hi'
+                        ? 'बिल किए जा रहे आइटम का स्टॉक अपर्याप्त या उपलब्ध नहीं है।'
+                        : 'The requested quantity exceeds available inventory.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelLowStockBill}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title={lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Current Item Deficit Info Card */}
+              {(() => {
+                const curIdx = lowStockModalData.currentDeficitIdx || 0;
+                const def = lowStockModalData.deficits[curIdx] || lowStockModalData.deficits[0];
+                if (!def) return null;
+
+                return (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 rounded-2xl p-4 border border-amber-200/80 dark:border-amber-800/40 space-y-3">
+                    <div className="flex items-center justify-between border-b border-amber-200/60 dark:border-amber-800/30 pb-2">
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-base">
+                        📦 {def.name}
+                      </span>
+                      {lowStockModalData.deficits.length > 1 && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                          {curIdx + 1} / {lowStockModalData.deficits.length}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-xl border border-amber-100 dark:border-slate-700">
+                        <div className="text-slate-500 dark:text-slate-400 text-[11px] mb-0.5">
+                          {lang === 'hi' ? 'वर्तमान स्टॉक' : 'Current Stock'}
+                        </div>
+                        <div className={`font-bold text-sm ${def.currentStock <= 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>
+                          {def.currentStock} pcs
+                        </div>
+                      </div>
+                      <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-xl border border-amber-100 dark:border-slate-700">
+                        <div className="text-slate-500 dark:text-slate-400 text-[11px] mb-0.5">
+                          {lang === 'hi' ? 'बिल मात्रा' : 'Bill Qty'}
+                        </div>
+                        <div className="font-bold text-sm text-blue-600 dark:text-blue-400">
+                          {def.billedQty} pcs
+                        </div>
+                      </div>
+                      <div className="bg-red-50 dark:bg-red-950/40 p-2.5 rounded-xl border border-red-200 dark:border-red-800">
+                        <div className="text-red-600 dark:text-red-400 text-[11px] mb-0.5 font-medium">
+                          {lang === 'hi' ? 'कमी (Deficit)' : 'Shortage'}
+                        </div>
+                        <div className="font-bold text-sm text-red-600 dark:text-red-400">
+                          -{def.deficit} pcs
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Option 2: Add Stock Section in Popup */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  <PlusCircle size={18} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>{lang === 'hi' ? 'स्टॉक जोड़ें (Add Stock)' : 'Add Stock Immediately'}</span>
+                </div>
+
+                {stockAddError && (
+                  <div className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-2 rounded-lg border border-red-200 dark:border-red-800">
+                    {stockAddError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'hi' ? 'मात्रा (Quantity)' : 'Quantity to Add'} *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={stockAddQty}
+                      onChange={(e) => setStockAddQty(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="e.g. 5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      {lang === 'hi' ? 'खरीद लागत (Unit Cost)' : 'Purchase Cost (Unit)'} *
+                      <span className="text-red-500 font-bold ml-0.5">({lang === 'hi' ? 'अनिवार्य' : 'Required'})</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      value={stockAddCost}
+                      onChange={(e) => setStockAddCost(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="₹ 550"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddStockAndProceed}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                >
+                  <PlusCircle size={16} />
+                  <span>
+                    {lang === 'hi'
+                      ? 'स्टॉक जोड़ें और बिल बनाएं (Add Stock & Proceed)'
+                      : 'Add Stock & Proceed to Bill'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Action Buttons: Low stock proceed & Cancel */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleProceedLowStock}
+                  className="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition text-center cursor-pointer"
+                  title={lang === 'hi' ? 'स्टॉक नेगेटिव में दर्ज होगा' : 'Stock will become negative'}
+                >
+                  <CornerDownLeft size={16} />
+                  <span>{lang === 'hi' ? 'Low Stock Proceed to Bill' : 'Proceed with Low Stock'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCancelLowStockBill}
+                  className="py-2.5 px-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition text-center cursor-pointer"
+                >
+                  <X size={16} />
+                  <span>{lang === 'hi' ? 'बिल रद्द करें (Cancel)' : 'Cancel Bill'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         <div ref={messagesEndRef} />

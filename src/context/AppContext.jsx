@@ -801,34 +801,57 @@ export function AppProvider({ children }) {
 
   // Inventory actions
   const addOrUpdateStock = (name, quantityToAdd = 1, price = 0, costPrice = 0) => {
-    const normName = name.trim();
+    const normName = (name || '').trim();
+    if (!normName) return null;
+
+    const qtyToAdd = Number(quantityToAdd) || 0;
+    const newCost = Number(costPrice) || 0;
+    const newPrice = Number(price) || 0;
     let updatedProduct = null;
 
     setInventory((prev) => {
       const existingIndex = prev.findIndex(
-        (item) => item.name.toLowerCase() === normName.toLowerCase()
+        (item) => item.name && item.name.toLowerCase().trim() === normName.toLowerCase()
       );
 
       if (existingIndex >= 0) {
         const updated = [...prev];
         const existing = updated[existingIndex];
-        const newQty = Math.max(0, (Number(existing.quantity) || 0) + Number(quantityToAdd));
+        const prevQty = Number(existing.quantity) || 0;
+        const prevCost = Number(existing.costPrice) || 0;
+        const newQty = prevQty + qtyToAdd;
+
+        // Calculate Weighted Average Cost Price
+        let avgCost = prevCost;
+        if (newCost > 0) {
+          if (prevQty > 0 && prevCost > 0) {
+            // E.g., 10 chairs @ 600 + 5 chairs @ 550 => (6000 + 2750) / 15 = 583.33
+            const totalCostVal = (prevQty * prevCost) + (qtyToAdd * newCost);
+            const totalUnits = prevQty + qtyToAdd;
+            avgCost = totalUnits > 0 ? Number((totalCostVal / totalUnits).toFixed(2)) : newCost;
+          } else {
+            // If previous stock was 0 or negative (deficit), incoming stock defines new unit cost
+            avgCost = Number(newCost.toFixed(2));
+          }
+        }
+
         updatedProduct = {
           ...existing,
           quantity: newQty,
-          price: price > 0 ? price : existing.price,
-          costPrice: costPrice > 0 ? costPrice : existing.costPrice,
+          price: newPrice > 0 ? newPrice : existing.price,
+          costPrice: avgCost,
           updatedAt: new Date().toLocaleDateString()
         };
         updated[existingIndex] = updatedProduct;
         return updated;
       } else {
+        const finalCost = newCost > 0 ? Number(newCost.toFixed(2)) : 0;
         updatedProduct = {
-          id: `prod_${Date.now()}`,
+          id: `prod_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
           name: normName,
-          quantity: Math.max(0, Number(quantityToAdd)),
-          price: Number(price) || 0,
-          costPrice: Number(costPrice) || 0,
+          quantity: qtyToAdd,
+          price: newPrice,
+          costPrice: finalCost,
           lowStockThreshold: 5,
           updatedAt: new Date().toLocaleDateString()
         };
@@ -855,21 +878,40 @@ export function AppProvider({ children }) {
 
   const reduceStockForInvoice = (billedItems = []) => {
     setInventory((prev) => {
-      return prev.map((stockItem) => {
-        const billed = billedItems.find(
-          (b) => b.name && b.name.toLowerCase().trim() === stockItem.name.toLowerCase().trim()
+      const updated = [...prev];
+
+      billedItems.forEach((b) => {
+        if (!b || !b.name) return;
+        const normName = b.name.toLowerCase().trim();
+        const billedQty = Number(b.quantity) || 1;
+        const existingIndex = updated.findIndex(
+          (s) => s.name && s.name.toLowerCase().trim() === normName
         );
-        if (billed) {
-          const billedQty = Number(billed.quantity) || 1;
-          const remaining = Math.max(0, stockItem.quantity - billedQty);
-          return {
-            ...stockItem,
-            quantity: remaining,
+
+        if (existingIndex >= 0) {
+          const item = updated[existingIndex];
+          // Can become negative if billedQty > item.quantity (e.g. 0 - 5 = -5)
+          const newQty = (Number(item.quantity) || 0) - billedQty;
+          updated[existingIndex] = {
+            ...item,
+            quantity: newQty,
             updatedAt: new Date().toLocaleDateString()
           };
+        } else {
+          // If item is not in inventory at all, create it with negative quantity!
+          updated.unshift({
+            id: `prod_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            name: b.name.trim(),
+            quantity: -billedQty,
+            price: Number(b.price) || 0,
+            costPrice: 0,
+            lowStockThreshold: 5,
+            updatedAt: new Date().toLocaleDateString()
+          });
         }
-        return stockItem;
       });
+
+      return updated;
     });
   };
 

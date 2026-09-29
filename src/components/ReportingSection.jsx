@@ -193,17 +193,17 @@ export default function ReportingSection({
       if (inv.items && Array.isArray(inv.items)) {
         inv.items.forEach((it) => {
           const normName = (it.name || '').toLowerCase().trim();
-          const knownCost = productCostMap[normName];
-          const unitCost = knownCost !== undefined && knownCost > 0 ? knownCost : (Number(it.price) || 0) * 0.65;
+          const knownCost = it.costPrice > 0 ? it.costPrice : productCostMap[normName];
+          const unitCost = knownCost !== undefined && knownCost > 0 ? knownCost : 0;
           const qty = Number(it.quantity) || 1;
           invCost += qty * unitCost;
         });
       } else {
-        invCost = (Number(inv.total) || 0) * 0.65;
+        invCost = 0;
       }
 
       const invRevenue = Number(inv.total) || 0;
-      const invProfit = Math.max(0, invRevenue - invCost);
+      const invProfit = invRevenue - invCost;
       const invMargin = invRevenue > 0 ? (invProfit / invRevenue) * 100 : 0;
 
       return {
@@ -686,8 +686,8 @@ export default function ReportingSection({
                       ? (isHindi ? 'आज का शुद्ध मुनाफ़ा (Daily Profit)' : "Today's Net Profit")
                       : (isHindi ? 'शुद्ध मुनाफ़ा (Net Profit)' : 'Net Profit Earned')}
                   </span>
-                  <div className="m3-kpi-big-number text-emerald-600 dark:text-emerald-400">
-                    +{currency}{salesKPIs.totalProfit.toLocaleString()}
+                  <div className="m3-kpi-big-number" style={{ color: salesKPIs.totalProfit >= 0 ? '#16a34a' : '#dc2626' }}>
+                    {salesKPIs.totalProfit >= 0 ? '+' : '-'}{currency}{Math.abs(salesKPIs.totalProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <span className="m3-kpi-subtext text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
                     <ArrowUpRight size={13} />
@@ -845,8 +845,11 @@ export default function ReportingSection({
                           </div>
                           <div className="ledger-amt-col">
                             <span className="label">{isHindi ? 'शुद्ध मुनाफ़ा' : 'Net Profit'}</span>
-                            <span className="val font-bold text-emerald-600 dark:text-emerald-400">
-                              +{currency}{Number(inv.netProfit || 0).toLocaleString()}
+                            <span
+                              className="val font-bold"
+                              style={{ color: (inv.netProfit || 0) >= 0 ? '#16a34a' : '#dc2626' }}
+                            >
+                              {(inv.netProfit || 0) >= 0 ? '+' : '-'}{currency}{Math.abs(Number(inv.netProfit || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
                           <div className="ledger-amt-col balance" style={{ background: '#eff6ff', borderColor: '#dbeafe' }}>
