@@ -382,6 +382,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('billie_settings', JSON.stringify(settings));
     document.documentElement.setAttribute('data-theme', settings.theme);
+    document.documentElement.classList.toggle('dark', settings.theme === 'dark');
   }, [settings]);
 
   useEffect(() => {

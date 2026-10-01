@@ -8,196 +8,184 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
     format: 'a4'
   });
 
-  const currency = invoice.currency || settings.currency || '$';
-  const primaryColor = [26, 115, 232]; // #1A73E8 Material Blue
-  const darkTextColor = [30, 41, 59]; // #1E293B
-  const mutedTextColor = [100, 116, 139]; // #64748B
-  const lightBg = [248, 250, 252]; // #F8FAFC
+  const currency = invoice.currency || settings.currency || '₹';
+  const currencySymbol = (currency === '₹' || currency === 'Rs') ? 'Rs.' : currency;
 
-  // 1. Top Decorative Banner Accent
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 8, 'F');
+  // Designer Color Palette matching reference image
+  const darkSidebarBg = [30, 36, 44]; // Deep charcoal #1E242C
+  const terracottaColor = [217, 119, 54]; // Warm terracotta / burnt orange #D97736
+  const darkTextColor = [30, 41, 59]; // Slate 800 #1E293B
+  const mutedTextColor = [100, 116, 139]; // Slate 500 #64748B
+  const lightGreyBg = [244, 246, 248]; // Soft light background #F4F6F8
+  const whiteColor = [255, 255, 255];
 
-  // 2. Header: Brand / Business Name & Invoice Label
-  const startY = 22;
+  const sidebarWidth = 66; // mm
+  const sidebarHeight = 225; // mm (curved at bottom)
+  const pageWidth = 210;
+  const pageHeight = 297;
+
+  // 1. Overall page soft background
+  doc.setFillColor(...lightGreyBg);
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+  // 2. LEFT SIDEBAR (Dark Charcoal with curved bottom-left & bottom-right)
+  doc.setFillColor(...darkSidebarBg);
+  doc.roundedRect(0, 0, sidebarWidth, sidebarHeight, 0, 18, 'F');
+
+  // Sidebar: Brand / Logo Badge
+  const brandTitle = (businessInfo.businessName || 'BILLIE STORE').toUpperCase();
+  doc.setFillColor(...terracottaColor);
+  doc.circle(18, 22, 6, 'F');
+  doc.setTextColor(...whiteColor);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(24);
-  doc.setTextColor(...primaryColor);
-  
-  const companyTitle = businessInfo.businessName || 'Billie Billing';
-  doc.text(companyTitle, 14, startY);
+  doc.setFontSize(11);
+  doc.text('B', 16.5, 25.5);
 
-  doc.setFontSize(10);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...whiteColor);
+  const brandLines = doc.splitTextToSize(brandTitle, 38);
+  doc.text(brandLines, 28, 22);
+
+  // Sidebar: "Invoice To:"
+  let sideY = 48;
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...mutedTextColor);
-  
-  let currentY = startY + 6;
-  if (businessInfo.ownerName) {
-    doc.text(`Proprietor: ${businessInfo.ownerName}`, 14, currentY);
-    currentY += 5;
-  }
-  if (businessInfo.address) {
-    doc.text(businessInfo.address, 14, currentY);
-    currentY += 5;
-  }
-  if (businessInfo.email || businessInfo.phone) {
-    const contact = [businessInfo.email, businessInfo.phone].filter(Boolean).join(' | ');
-    doc.text(contact, 14, currentY);
-    currentY += 5;
-  }
-  if (businessInfo.taxId) {
-    doc.text(`Tax ID / VAT: ${businessInfo.taxId}`, 14, currentY);
-    currentY += 5;
-  }
+  doc.setTextColor(160, 174, 192); // Muted silver
+  doc.text('Invoice To:', 14, sideY);
 
-  // Right Side: INVOICE title and metadata
+  sideY += 7;
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(26);
-  doc.setTextColor(...darkTextColor);
-  doc.text('INVOICE', 196, startY, { align: 'right' });
+  doc.setTextColor(...whiteColor);
+  const custName = invoice.customerName || 'Valued Customer';
+  const custLines = doc.splitTextToSize(custName, 42);
+  doc.text(custLines, 14, sideY);
+  sideY += (custLines.length * 6) + 2;
 
-  doc.setFontSize(10);
+  // Sidebar: Customer Contact Details
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...mutedTextColor);
-  doc.text(`Invoice No:`, 150, startY + 8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...darkTextColor);
-  doc.text(invoice.invoiceNumber || 'INV-001', 196, startY + 8, { align: 'right' });
+  doc.setTextColor(203, 213, 225); // Light slate text
 
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...mutedTextColor);
-  doc.text(`Date:`, 150, startY + 14);
-  doc.setTextColor(...darkTextColor);
-  doc.text(invoice.date || new Date().toLocaleDateString(), 196, startY + 14, { align: 'right' });
-
-  doc.setTextColor(...mutedTextColor);
-  doc.text(`Due Date:`, 150, startY + 20);
-  doc.setTextColor(...darkTextColor);
-  doc.text(invoice.dueDate || 'Upon Receipt', 196, startY + 20, { align: 'right' });
-
-  doc.setTextColor(...mutedTextColor);
-  doc.text(`Payment Mode:`, 150, startY + 26);
-  doc.setTextColor(...darkTextColor);
-  const payModeText = (invoice.paymentMode || invoice.paymentMethod || 'Cash').toUpperCase();
-  doc.text(payModeText, 196, startY + 26, { align: 'right' });
-
-  // 3. Bill To Box
-  const hasExtraDetails = invoice.customerCompany || invoice.customerGst || invoice.customerAddress;
-  const billToHeight = hasExtraDetails ? 32 : 24;
-  const billToY = Math.max(currentY + 6, startY + 33);
-  doc.setFillColor(...lightBg);
-  doc.roundedRect(14, billToY, 182, billToHeight, 3, 3, 'F');
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, billToY, 182, billToHeight, 3, 3, 'S');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...primaryColor);
-  doc.text('BILLED TO:', 20, billToY + 6);
-
-  doc.setFontSize(12);
-  doc.setTextColor(...darkTextColor);
-  let nameText = invoice.customerName || 'Valued Customer';
-  if (invoice.customerCompany && invoice.customerName !== invoice.customerCompany) {
-    nameText += ` (${invoice.customerCompany})`;
+  if (invoice.customerPhone) {
+    doc.text(`P : ${invoice.customerPhone}`, 14, sideY);
+    sideY += 5;
   }
-  doc.text(nameText, 20, billToY + 12.5);
-
-  let custLineY = billToY + 18;
-  const metaParts = [];
-  if (invoice.customerPhone) metaParts.push(`Phone: ${invoice.customerPhone}`);
-  if (invoice.customerGst) metaParts.push(`GSTIN: ${invoice.customerGst}`);
-  if (invoice.customerEmail) metaParts.push(invoice.customerEmail);
-
-  if (metaParts.length > 0) {
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mutedTextColor);
-    doc.text(metaParts.join('  |  '), 20, custLineY);
-    custLineY += 5;
+  if (invoice.customerEmail) {
+    const emailTrunc = doc.splitTextToSize(`M : ${invoice.customerEmail}`, 44);
+    doc.text(emailTrunc, 14, sideY);
+    sideY += (emailTrunc.length * 4.5);
   }
-
   if (invoice.customerAddress) {
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mutedTextColor);
-    doc.text(`Address: ${invoice.customerAddress}`, 20, custLineY);
+    const addrTrunc = doc.splitTextToSize(`A : ${invoice.customerAddress}`, 44);
+    doc.text(addrTrunc, 14, sideY);
+    sideY += (addrTrunc.length * 4.5);
+  }
+  if (invoice.customerGst) {
+    doc.text(`GST : ${invoice.customerGst}`, 14, sideY);
+    sideY += 5;
   }
 
-  // 4. Items Table
-  const tableStartY = billToY + billToHeight + 6;
-  const items = invoice.items && invoice.items.length > 0 
-    ? invoice.items 
-    : [{
-        name: invoice.product || 'Standard Product / Service',
-        quantity: invoice.quantity || 1,
-        price: invoice.price || 0,
-        discount: invoice.discount || 0
-      }];
+  // Sidebar: Terracotta Divider Line
+  sideY += 4;
+  doc.setDrawColor(...terracottaColor);
+  doc.setLineWidth(1);
+  doc.line(14, sideY, 36, sideY);
 
-  const tableRows = items.map((item, index) => {
-    const qty = Number(item.quantity) || 1;
-    const price = Number(item.price) || 0;
-    const lineSubtotal = qty * price;
-    const discount = Number(item.discount) || (invoice.discountType === 'percent' ? Number(invoice.discount) || 0 : 0);
-    const discType = item.discountType || invoice.discountType || 'percent';
-    const lineDiscount = discount > 0 
-      ? (discType === 'percent' ? (lineSubtotal * Math.min(100, discount)) / 100 : Math.min(lineSubtotal, discount))
-      : 0;
-    const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
+  // Sidebar: Payment Method Section
+  sideY += 12;
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...whiteColor);
+  doc.text('Payment Method:', 14, sideY);
 
-    return [
-      index + 1,
-      item.name || 'Item',
-      qty.toString(),
-      `${currency} ${price.toFixed(2)}`,
-      discount > 0 ? (discType === 'percent' ? `${discount}%` : `${currency} ${discount.toFixed(2)}`) : '-',
-      `${currency} ${lineTotal.toFixed(2)}`
-    ];
-  });
+  sideY += 7;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
 
-  autoTable(doc, {
-    startY: tableStartY,
-    head: [['#', 'Item & Description', 'Qty', 'Unit Price', 'Discount', 'Amount']],
-    body: tableRows,
-    theme: 'grid',
-    headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      halign: 'left',
-      fontSize: 10,
-      cellPadding: 4
-    },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 12 },
-      1: { halign: 'left' },
-      2: { halign: 'center', cellWidth: 18 },
-      3: { halign: 'right', cellWidth: 32 },
-      4: { halign: 'right', cellWidth: 26 },
-      5: { halign: 'right', cellWidth: 35 }
-    },
-    alternateRowStyles: {
-      fillColor: [248, 250, 252]
-    },
-    styles: {
-      textColor: darkTextColor,
-      fontSize: 9,
-      cellPadding: 4,
-      lineColor: [226, 232, 240],
-      lineWidth: 0.1
-    },
-    margin: { left: 14, right: 14 }
-  });
+  const accountNo = businessInfo.taxId ? `012 ${businessInfo.taxId.slice(-4)} 6789` : '012 345 6789';
+  const accountHolder = businessInfo.businessName || businessInfo.name || 'Billie Store';
+  const bankInfo = businessInfo.bankDetails || 'HDFC Bank (UPI Enabled)';
+  const payMode = (invoice.paymentMode || invoice.paymentMethod || 'Cash').toUpperCase();
 
-  // 5. Summary / Calculation Block
-  const finalY = doc.lastAutoTable.finalY + 8;
-  const summaryX = 120;
-  const valueX = 196;
+  doc.setTextColor(160, 174, 192);
+  doc.text('• Account No :', 14, sideY);
+  doc.setTextColor(...whiteColor);
+  doc.text(accountNo, 36, sideY);
 
-  const subtotal = invoice.subtotal !== undefined 
-    ? Number(invoice.subtotal) 
-    : items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.price)), 0);
+  sideY += 5;
+  doc.setTextColor(160, 174, 192);
+  doc.text('• Name :', 14, sideY);
+  doc.setTextColor(...whiteColor);
+  const nameTrunc = doc.splitTextToSize(accountHolder, 32);
+  doc.text(nameTrunc, 27, sideY);
+
+  sideY += (nameTrunc.length * 4) + 1;
+  doc.setTextColor(160, 174, 192);
+  doc.text('• Bank Details :', 14, sideY);
+  sideY += 4;
+  doc.setTextColor(...whiteColor);
+  const bankTrunc = doc.splitTextToSize(bankInfo, 44);
+  doc.text(bankTrunc, 17, sideY);
+
+  sideY += (bankTrunc.length * 4) + 2;
+  doc.setTextColor(160, 174, 192);
+  doc.text('• Pay Mode :', 14, sideY);
+  doc.setTextColor(...terracottaColor);
+  doc.setFont('helvetica', 'bold');
+  doc.text(payMode, 34, sideY);
+
+  // Sidebar: Decorative 2x6 dot grid
+  const dotStartY = 195;
+  doc.setFillColor(...terracottaColor);
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 6; c++) {
+      doc.circle(16 + (c * 6), dotStartY + (r * 5), 0.7, 'F');
+    }
+  }
+
+  // ========================================================
+  // 3. RIGHT MAIN CONTENT AREA
+  // ========================================================
+  const rightStartX = 78;
+
+  // Top Right Decorative Arc (Terracotta / Orange)
+  doc.setFillColor(...terracottaColor);
+  doc.circle(210, 0, 32, 'F');
+  doc.setFillColor(...lightGreyBg);
+  doc.circle(210, 0, 18, 'F');
+
+  // Decorative Cross (Orange ✕)
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...terracottaColor);
+  doc.text('✕', 194, 34);
+
+  // Decorative Dot Matrix 3x3
+  doc.setFillColor(180, 190, 200);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      doc.circle(188 + (c * 4), 48 + (r * 4), 0.7, 'F');
+    }
+  }
+
+  // Giant "INVOICE" Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(32);
+  doc.setTextColor(...darkTextColor);
+  doc.text('INVOICE', rightStartX, 28);
+
+  // Metadata Line (Invoice No & Date)
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...mutedTextColor);
+  doc.text(`Invoice No: ${invoice.invoiceNumber || 'INV-001'}  •  Date: ${invoice.date || new Date().toLocaleDateString()}`, rightStartX, 35);
+
+  // Prominent Total Due Callout Box
+  const subtotal = invoice.subtotal !== undefined
+    ? Number(invoice.subtotal)
+    : (invoice.items || []).reduce((sum, item) => sum + (Number(item.quantity) * Number(item.price)), 0);
 
   let discountVal = 0;
   if (invoice.discountAmount !== undefined && Number(invoice.discountAmount) > 0) {
@@ -218,74 +206,207 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
     grandTotal = Math.max(0, subtotal - discountVal + taxVal);
   }
 
-  doc.setFontSize(9);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...mutedTextColor);
+  doc.text('Total Due :', rightStartX, 48);
+
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...darkTextColor);
+  doc.text(`INR : ${currencySymbol} ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, rightStartX, 56);
+
+  // ========================================================
+  // 4. ITEMS TABLE (Terracotta Pill Header)
+  // ========================================================
+  const tableStartY = 66;
+  const items = invoice.items && invoice.items.length > 0
+    ? invoice.items
+    : [{
+        name: invoice.product || 'Standard Item / Service',
+        quantity: invoice.quantity || 1,
+        price: invoice.price || 0,
+        discount: invoice.discount || 0
+      }];
+
+  const tableRows = items.map((item, index) => {
+    const qty = Number(item.quantity) || 1;
+    const price = Number(item.price) || 0;
+    const lineSubtotal = qty * price;
+    const discount = Number(item.discount) || (invoice.discountType === 'percent' ? Number(invoice.discount) || 0 : 0);
+    const discType = item.discountType || invoice.discountType || 'percent';
+    const lineDiscount = discount > 0
+      ? (discType === 'percent' ? (lineSubtotal * Math.min(100, discount)) / 100 : Math.min(lineSubtotal, discount))
+      : 0;
+    const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
+
+    const rowNum = String(index + 1).padStart(2, '0');
+    let descText = item.name || 'Product item';
+    if (qty > 1 || price > 0) {
+      descText += `\n${qty} unit(s) @ ${currencySymbol} ${price.toFixed(2)}`;
+    }
+    if (discount > 0) {
+      descText += ` (${discType === 'percent' ? `${discount}% OFF` : `-${currencySymbol}${discount} OFF`})`;
+    }
+
+    return [
+      rowNum,
+      descText,
+      `${currencySymbol} ${lineTotal.toFixed(2)}`
+    ];
+  });
+
+  autoTable(doc, {
+    startY: tableStartY,
+    head: [['Qut', 'Product & Services', 'Amount']],
+    body: tableRows,
+    theme: 'plain',
+    headStyles: {
+      fillColor: terracottaColor,
+      textColor: whiteColor,
+      fontStyle: 'bold',
+      fontSize: 9.5,
+      cellPadding: { top: 4, bottom: 4, left: 4, right: 4 }
+    },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 14, fontStyle: 'bold', textColor: mutedTextColor },
+      1: { halign: 'left', cellWidth: 78 },
+      2: { halign: 'right', cellWidth: 30, fontStyle: 'bold', textColor: darkTextColor }
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 4,
+      textColor: darkTextColor,
+      lineColor: [226, 232, 240],
+      lineWidth: 0.1
+    },
+    alternateRowStyles: {
+      fillColor: [255, 255, 255]
+    },
+    margin: { left: rightStartX, right: 14 }
+  });
+
+  // ========================================================
+  // 5. SUMMARY BLOCK & TERRACOTTA GRAND TOTAL PILL
+  // ========================================================
+  let finalY = doc.lastAutoTable.finalY + 6;
+  const summaryLblX = 140;
+  const summaryValX = 196;
+
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...mutedTextColor);
 
-  let currentSumY = finalY;
-
-  // Subtotal line
-  doc.text('Subtotal:', summaryX, currentSumY);
+  // Subtotal
+  doc.text('Subtotal :', summaryLblX, finalY, { align: 'right' });
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...darkTextColor);
-  doc.text(`${currency} ${subtotal.toFixed(2)}`, valueX, currentSumY, { align: 'right' });
-  currentSumY += 6;
+  doc.text(`${currencySymbol} ${subtotal.toFixed(2)}`, summaryValX, finalY, { align: 'right' });
+  finalY += 5;
 
-  // Discount line
+  // Discount (if any)
   if (discountVal > 0) {
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mutedTextColor);
+    doc.setTextColor(220, 38, 38);
     const discLabel = invoice.discountType === 'percent' && Number(invoice.discount) > 0
-      ? `Discount (${invoice.discount}%):`
-      : 'Discount:';
-    doc.text(discLabel, summaryX, currentSumY);
-    doc.setTextColor(220, 38, 38); // Red
+      ? `Discount [${invoice.discount}%] :`
+      : 'Discount :';
+    doc.text(discLabel, summaryLblX, finalY, { align: 'right' });
     doc.setFont('helvetica', 'bold');
-    doc.text(`-${currency} ${discountVal.toFixed(2)}`, valueX, currentSumY, { align: 'right' });
-    currentSumY += 6;
+    doc.text(`-${currencySymbol} ${discountVal.toFixed(2)}`, summaryValX, finalY, { align: 'right' });
+    finalY += 5;
   }
 
-  // Tax line
+  // Tax (if any)
   if (taxVal > 0 || invoice.taxRate) {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...mutedTextColor);
-    doc.text(`Tax (${invoice.taxRate || 0}%):`, summaryX, currentSumY);
-    doc.setTextColor(...darkTextColor);
+    doc.text(`Tax [${invoice.taxRate || 0}%] :`, summaryLblX, finalY, { align: 'right' });
     doc.setFont('helvetica', 'bold');
-    doc.text(`${currency} ${taxVal.toFixed(2)}`, valueX, currentSumY, { align: 'right' });
-    currentSumY += 6;
+    doc.setTextColor(...darkTextColor);
+    doc.text(`+${currencySymbol} ${taxVal.toFixed(2)}`, summaryValX, finalY, { align: 'right' });
+    finalY += 5;
   }
 
-  // Divider
-  doc.setDrawColor(203, 213, 225);
-  doc.line(summaryX, currentSumY - 1, valueX, currentSumY - 1);
-  currentSumY += 3;
+  finalY += 2;
 
-  // Grand Total Highlight Box
-  doc.setFillColor(238, 242, 255); // Soft indigo-blue fill
-  doc.roundedRect(summaryX - 4, currentSumY - 2, (valueX - summaryX) + 8, 12, 2, 2, 'F');
+  // Grand Total Terracotta Pill Banner
+  const pillWidth = 74;
+  const pillHeight = 10;
+  doc.setFillColor(...terracottaColor);
+  doc.roundedRect(summaryValX - pillWidth, finalY, pillWidth, pillHeight, 3, 3, 'F');
 
-  doc.setFontSize(12);
+  doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('TOTAL:', summaryX, currentSumY + 6);
-  doc.text(`${currency} ${grandTotal.toFixed(2)}`, valueX, currentSumY + 6, { align: 'right' });
+  doc.setTextColor(...whiteColor);
+  doc.text('Grand Total :', summaryValX - pillWidth + 5, finalY + 6.8);
+  doc.text(`${currencySymbol} ${grandTotal.toFixed(2)}`, summaryValX - 4, finalY + 6.8, { align: 'right' });
 
-  // 6. Notes & Footer
-  const pageHeight = doc.internal.pageSize.height;
-  const footerY = pageHeight - 20;
+  // ========================================================
+  // 6. DECORATIVE ELEMENTS & TERMS / SIGNATURE FOOTER
+  // ========================================================
+  finalY += pillHeight + 12;
 
-  doc.setDrawColor(226, 232, 240);
-  doc.line(14, footerY - 6, 196, footerY - 6);
+  // Decorative Horizontal Triple Bar + Cross
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.6);
+  doc.line(rightStartX, finalY, rightStartX + 20, finalY);
+  doc.line(rightStartX, finalY + 2, rightStartX + 20, finalY + 2);
+  doc.line(rightStartX, finalY + 4, rightStartX + 20, finalY + 4);
 
-  doc.setFontSize(8);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...terracottaColor);
+  doc.text('✕', rightStartX + 28, finalY + 3);
+
+  finalY += 12;
+
+  // Terms & Conditions Block
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...darkTextColor);
+  doc.text('Term & Condition:', rightStartX, finalY);
+
+  finalY += 5;
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...mutedTextColor);
-  doc.text('Terms & Conditions: Payment is due within standard agreed terms. Thank you for your business!', 14, footerY);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('Created with Billie - Offline Voice & Text PWA', 196, footerY, { align: 'right' });
+  const termsText = 'Payment is due upon receipt. Goods once sold are covered under standard merchant warranty terms. This is a computer-generated tax invoice verified by Billie.';
+  const termsLines = doc.splitTextToSize(termsText, 66);
+  doc.text(termsLines, rightStartX, finalY);
+
+  // Decorative Dot Grid under terms
+  const termsDotsY = finalY + (termsLines.length * 4) + 2;
+  doc.setFillColor(180, 190, 200);
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 3; c++) {
+      doc.circle(rightStartX + (c * 4), termsDotsY + (r * 4), 0.6, 'F');
+    }
+  }
+
+  // Authorized Signature Block (Right Aligned at bottom)
+  const sigX = 158;
+  const sigY = finalY - 4;
+
+  // Draw artistic signature curve in jsPDF
+  doc.setDrawColor(...darkTextColor);
+  doc.setLineWidth(0.8);
+  // Signature stroke
+  doc.line(sigX - 8, sigY + 8, sigX - 2, sigY + 2);
+  doc.line(sigX - 2, sigY + 2, sigX + 6, sigY + 9);
+  doc.line(sigX + 6, sigY + 9, sigX + 14, sigY + 3);
+  doc.line(sigX + 14, sigY + 3, sigX + 22, sigY + 7);
+  doc.line(sigX - 10, sigY + 6, sigX + 30, sigY + 6);
+
+  // Signature Underline
+  doc.setDrawColor(148, 163, 184);
+  doc.setLineWidth(0.5);
+  doc.line(sigX - 12, sigY + 12, sigX + 32, sigY + 12);
+
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...mutedTextColor);
+  doc.text('Authorized Signatory', sigX + 10, sigY + 16, { align: 'center' });
 
   // Save / Return
   const fileName = `Billie-Invoice-${invoice.invoiceNumber || 'INV'}.pdf`;

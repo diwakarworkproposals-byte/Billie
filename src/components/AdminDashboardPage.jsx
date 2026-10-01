@@ -293,7 +293,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
   });
 
   return (
-    <div className="admin-page-viewport animate-fade-in">
+    <div className="admin-page-viewport animate-fade-in bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100">
       {/* 1. TOP STANDALONE ADMIN HEADER (100% RESPONSIVE) */}
       <header className="admin-standalone-header">
         <div className="admin-nav-left">
@@ -349,7 +349,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
       </header>
 
       {/* 2. MAIN ADMIN PAGE BODY */}
-      <div className="admin-page-scrollable-container custom-scrollbar">
+      <div className="admin-page-scrollable-container custom-scrollbar bg-slate-50 dark:bg-[#0b0f19]">
         {/* CASE A: If user is not authenticated as Diwakar, show dedicated full-page Login Gate */}
         {!isAuthorizedAdmin ? (
           <div className="admin-fullpage-gate-wrapper">
@@ -1624,14 +1624,14 @@ export default function AdminDashboardPage({ onBackToStore }) {
                   </div>
 
                   <div style={{ padding: '16px 20px' }}>
-                    <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                    <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 p-3 rounded-xl mb-4 text-slate-800 dark:text-slate-200">
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                        <span style={{ color: '#64748b' }}>{isHindi ? 'वर्तमान प्लान:' : 'Current Plan:'}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{isHindi ? 'वर्तमान प्लान:' : 'Current Plan:'}</span>
                         <span style={{ fontWeight: 700 }}>{extendingUser.subscription?.planName || extendingUser.subscription?.planId}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                        <span style={{ color: '#64748b' }}>{isHindi ? 'वर्तमान एक्सपायरी:' : 'Current Expiry:'}</span>
-                        <span style={{ fontWeight: 700, color: '#2563eb' }}>
+                        <span className="text-slate-500 dark:text-slate-400">{isHindi ? 'वर्तमान एक्सपायरी:' : 'Current Expiry:'}</span>
+                        <span style={{ fontWeight: 700, color: '#3b82f6' }}>
                           {new Date(extendingUser.subscription?.expiryDate || Date.now()).toLocaleDateString()}
                         </span>
                       </div>
@@ -1665,8 +1665,8 @@ export default function AdminDashboardPage({ onBackToStore }) {
                       ))}
                     </div>
 
-                    <div style={{ margin: '18px 0', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
+                    <div className="border-t border-slate-200 dark:border-slate-700/80 pt-3.5 my-4">
+                      <label className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 block mb-1.5">
                         {isHindi ? 'या विशिष्ट एक्सपायरी तारीख चुनें' : 'Or Pick a Specific Expiry Date'}
                       </label>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -1769,7 +1769,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                       })}
                     </div>
 
-                    <div style={{ background: '#eff6ff', padding: '10px 14px', borderRadius: '10px', marginTop: '12px', fontSize: '0.8rem', color: '#1e40af' }}>
+                    <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 p-3 rounded-xl mt-3 text-xs text-blue-800 dark:text-blue-300">
                       💡 {isHindi
                         ? 'प्लान बदलने पर यूजर की वैधता चुने हुए पैकेज के अनुसार तुरंत अपडेट हो जाएगी और अकाउंट एक्टिवेट हो जाएगा।'
                         : 'Changing the plan will immediately update the user subscription validity and activate their account.'}

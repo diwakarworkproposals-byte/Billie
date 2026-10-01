@@ -1969,78 +1969,82 @@ export default function InvoiceWizard({
           <InvoiceCard invoice={finalInvoice} onReset={resetWizard} isDraft={false} />
         )}
 
-        {/* Low Stock Warning Pre-billing Modal */}
+        {/* Low Stock Warning Pre-billing Modal (Material 3 Enhanced) */}
         {lowStockModalData && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-amber-200 dark:border-amber-800/50 flex flex-col gap-5">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md animate-fade-in">
+            <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl rounded-[28px] border border-amber-300/70 dark:border-amber-500/30 shadow-[0_20px_60px_-15px_rgba(217,119,54,0.3)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] p-6 sm:p-7 overflow-hidden flex flex-col gap-5 animate-scale-up">
+              {/* Top Ambient Glow Strip */}
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400" />
+
               {/* Modal Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 shadow-inner">
-                    <AlertTriangle size={26} />
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 shadow-inner border border-amber-200 dark:border-amber-800/60">
+                    <AlertTriangle size={24} className="animate-pulse" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                    <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-tight">
                       {lang === 'hi' ? 'कम स्टॉक चेतावनी (Low Stock Alert)' : 'Low Stock Warning'}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {lang === 'hi'
-                        ? 'बिल किए जा रहे आइटम का स्टॉक अपर्याप्त या उपलब्ध नहीं है।'
-                        : 'The requested quantity exceeds available inventory.'}
+                        ? 'इस उत्पाद का स्टॉक अपर्याप्त है। कृपया स्टॉक जोड़ें या कम स्टॉक पर बिलिंग जारी रखें।'
+                        : 'Requested quantity exceeds stock. Refill inventory or proceed with negative stock.'}
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleCancelLowStockBill}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex-shrink-0"
                   title={lang === 'hi' ? 'रद्द करें' : 'Cancel'}
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Current Item Deficit Info Card */}
+              {/* Current Item Deficit Info Card (Material 3 Style) */}
               {(() => {
                 const curIdx = lowStockModalData.currentDeficitIdx || 0;
                 const def = lowStockModalData.deficits[curIdx] || lowStockModalData.deficits[0];
                 if (!def) return null;
 
                 return (
-                  <div className="bg-amber-50 dark:bg-amber-950/30 rounded-2xl p-4 border border-amber-200/80 dark:border-amber-800/40 space-y-3">
-                    <div className="flex items-center justify-between border-b border-amber-200/60 dark:border-amber-800/30 pb-2">
-                      <span className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                        📦 {def.name}
+                  <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/40 dark:via-amber-900/20 dark:to-transparent rounded-2xl p-4 border border-amber-200/80 dark:border-amber-700/40 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-amber-200/60 dark:border-amber-800/40 pb-2.5">
+                      <span className="font-extrabold text-slate-900 dark:text-slate-100 text-base flex items-center gap-2">
+                        <span className="text-xl">📦</span>
+                        <span>{def.name}</span>
                       </span>
                       {lowStockModalData.deficits.length > 1 && (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200 shadow-xs">
                           {curIdx + 1} / {lowStockModalData.deficits.length}
                         </span>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-xl border border-amber-100 dark:border-slate-700">
-                        <div className="text-slate-500 dark:text-slate-400 text-[11px] mb-0.5">
+                    <div className="grid grid-cols-3 gap-2.5 text-center text-xs">
+                      <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
+                        <div className="text-slate-500 dark:text-slate-400 text-[11px] font-semibold mb-0.5">
                           {lang === 'hi' ? 'वर्तमान स्टॉक' : 'Current Stock'}
                         </div>
-                        <div className={`font-bold text-sm ${def.currentStock <= 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>
+                        <div className={`font-black text-sm sm:text-base ${def.currentStock <= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'}`}>
                           {def.currentStock} pcs
                         </div>
                       </div>
-                      <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-xl border border-amber-100 dark:border-slate-700">
-                        <div className="text-slate-500 dark:text-slate-400 text-[11px] mb-0.5">
+                      <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
+                        <div className="text-slate-500 dark:text-slate-400 text-[11px] font-semibold mb-0.5">
                           {lang === 'hi' ? 'बिल मात्रा' : 'Bill Qty'}
                         </div>
-                        <div className="font-bold text-sm text-blue-600 dark:text-blue-400">
+                        <div className="font-black text-sm sm:text-base text-blue-600 dark:text-blue-400">
                           {def.billedQty} pcs
                         </div>
                       </div>
-                      <div className="bg-red-50 dark:bg-red-950/40 p-2.5 rounded-xl border border-red-200 dark:border-red-800">
-                        <div className="text-red-600 dark:text-red-400 text-[11px] mb-0.5 font-medium">
+                      <div className="bg-rose-50/90 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-200 dark:border-rose-800 shadow-xs">
+                        <div className="text-rose-700 dark:text-rose-300 text-[11px] font-bold mb-0.5">
                           {lang === 'hi' ? 'कमी (Deficit)' : 'Shortage'}
                         </div>
-                        <div className="font-bold text-sm text-red-600 dark:text-red-400">
+                        <div className="font-black text-sm sm:text-base text-rose-600 dark:text-rose-400">
                           -{def.deficit} pcs
                         </div>
                       </div>
@@ -2049,57 +2053,95 @@ export default function InvoiceWizard({
                 );
               })()}
 
-              {/* Option 2: Add Stock Section in Popup */}
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  <PlusCircle size={18} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>{lang === 'hi' ? 'स्टॉक जोड़ें (Add Stock)' : 'Add Stock Immediately'}</span>
+              {/* Option 2: Add Stock Section in Popup (Material 3 Elevated Card) */}
+              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 sm:p-4.5 border border-slate-200 dark:border-slate-700/80 flex flex-col gap-3.5 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200">
+                    <Sparkles size={16} className="text-emerald-500" />
+                    <span>{lang === 'hi' ? 'तुरंत नया स्टॉक जोड़ें (Instant Stock Refill)' : 'Add Stock Immediately'}</span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    {lang === 'hi' ? 'औसत लागत गणना' : 'Weighted Avg Cost'}
+                  </span>
                 </div>
 
                 {stockAddError && (
-                  <div className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-2 rounded-lg border border-red-200 dark:border-red-800">
-                    {stockAddError}
+                  <div className="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 p-2.5 rounded-xl border border-rose-200 dark:border-rose-800 animate-slide-up flex items-center gap-1.5">
+                    <AlertTriangle size={14} className="flex-shrink-0" />
+                    <span>{stockAddError}</span>
                   </div>
                 )}
 
+                {/* Quick Add Preset Stepper Chips */}
+                {(() => {
+                  const curIdx = lowStockModalData.currentDeficitIdx || 0;
+                  const def = lowStockModalData.deficits[curIdx] || lowStockModalData.deficits[0];
+                  const deficitQty = def?.deficit > 0 ? def.deficit : 1;
+
+                  return (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mr-1">
+                        {lang === 'hi' ? 'त्वरित मात्रा:' : 'Quick Qty:'}
+                      </span>
+                      {[deficitQty, 10, 25, 50].map((presetVal, pIdx) => (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => setStockAddQty(String(presetVal))}
+                          className={`px-2.5 py-1 text-xs rounded-lg font-bold border transition cursor-pointer ${
+                            Number(stockAddQty) === presetVal
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                              : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:border-emerald-500'
+                          }`}
+                        >
+                          +{presetVal}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
-                      {lang === 'hi' ? 'मात्रा (Quantity)' : 'Quantity to Add'} *
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      {lang === 'hi' ? 'जोड़ने की मात्रा (Quantity)' : 'Quantity to Add'} *
                     </label>
                     <input
                       type="number"
                       min="1"
                       value={stockAddQty}
                       onChange={(e) => setStockAddQty(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="e.g. 5"
+                      className="w-full px-3.5 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                      placeholder="e.g. 10"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
-                      {lang === 'hi' ? 'खरीद लागत (Unit Cost)' : 'Purchase Cost (Unit)'} *
-                      <span className="text-red-500 font-bold ml-0.5">({lang === 'hi' ? 'अनिवार्य' : 'Required'})</span>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      {lang === 'hi' ? 'प्रति यूनिट खरीद लागत' : 'Purchase Cost / Unit'} *
+                      <span className="text-rose-500 font-black ml-1">({lang === 'hi' ? 'अनिवार्य' : 'Required'})</span>
                     </label>
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="any"
-                      value={stockAddCost}
-                      onChange={(e) => setStockAddCost(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="₹ 550"
-                      required
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="any"
+                        value={stockAddCost}
+                        onChange={(e) => setStockAddCost(e.target.value)}
+                        className="w-full pl-7 pr-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                        placeholder="550"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleAddStockAndProceed}
-                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition-all cursor-pointer mt-1"
                 >
-                  <PlusCircle size={16} />
+                  <PlusCircle size={18} />
                   <span>
                     {lang === 'hi'
                       ? 'स्टॉक जोड़ें और बिल बनाएं (Add Stock & Proceed)'
@@ -2109,11 +2151,11 @@ export default function InvoiceWizard({
               </div>
 
               {/* Action Buttons: Low stock proceed & Cancel */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-2 gap-3 pt-0.5">
                 <button
                   type="button"
                   onClick={handleProceedLowStock}
-                  className="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition text-center cursor-pointer"
+                  className="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition text-center cursor-pointer"
                   title={lang === 'hi' ? 'स्टॉक नेगेटिव में दर्ज होगा' : 'Stock will become negative'}
                 >
                   <CornerDownLeft size={16} />
@@ -2123,7 +2165,7 @@ export default function InvoiceWizard({
                 <button
                   type="button"
                   onClick={handleCancelLowStockBill}
-                  className="py-2.5 px-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition text-center cursor-pointer"
+                  className="py-2.5 px-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition text-center cursor-pointer"
                 >
                   <X size={16} />
                   <span>{lang === 'hi' ? 'बिल रद्द करें (Cancel)' : 'Cancel Bill'}</span>
