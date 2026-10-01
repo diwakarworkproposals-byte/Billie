@@ -1971,22 +1971,22 @@ export default function InvoiceWizard({
 
         {/* Low Stock Warning Pre-billing Modal (Material 3 Enhanced) */}
         {lowStockModalData && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md animate-fade-in">
-            <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#111827]/95 backdrop-blur-2xl rounded-[28px] border border-amber-300/70 dark:border-amber-500/30 shadow-[0_20px_60px_-15px_rgba(217,119,54,0.3)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] p-6 sm:p-7 overflow-hidden flex flex-col gap-5 animate-scale-up">
+          <div className="low-stock-modal-backdrop">
+            <div className="low-stock-modal-card">
               {/* Top Ambient Glow Strip */}
-              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400" />
+              <div className="low-stock-ambient-glow" />
 
               {/* Modal Header */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 shadow-inner border border-amber-200 dark:border-amber-800/60">
-                    <AlertTriangle size={24} className="animate-pulse" />
+              <div className="low-stock-header">
+                <div className="low-stock-header-main">
+                  <div className="low-stock-icon-badge">
+                    <AlertTriangle size={24} />
                   </div>
                   <div>
-                    <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-tight">
+                    <h3 className="low-stock-title">
                       {lang === 'hi' ? 'कम स्टॉक चेतावनी (Low Stock Alert)' : 'Low Stock Warning'}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="low-stock-subtitle">
                       {lang === 'hi'
                         ? 'इस उत्पाद का स्टॉक अपर्याप्त है। कृपया स्टॉक जोड़ें या कम स्टॉक पर बिलिंग जारी रखें।'
                         : 'Requested quantity exceeds stock. Refill inventory or proceed with negative stock.'}
@@ -1996,10 +1996,10 @@ export default function InvoiceWizard({
                 <button
                   type="button"
                   onClick={handleCancelLowStockBill}
-                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex-shrink-0"
+                  className="low-stock-close-btn"
                   title={lang === 'hi' ? 'रद्द करें' : 'Cancel'}
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
 
@@ -2010,41 +2010,41 @@ export default function InvoiceWizard({
                 if (!def) return null;
 
                 return (
-                  <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/40 dark:via-amber-900/20 dark:to-transparent rounded-2xl p-4 border border-amber-200/80 dark:border-amber-700/40 space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between border-b border-amber-200/60 dark:border-amber-800/40 pb-2.5">
-                      <span className="font-extrabold text-slate-900 dark:text-slate-100 text-base flex items-center gap-2">
-                        <span className="text-xl">📦</span>
+                  <div className="low-stock-info-card">
+                    <div className="low-stock-product-row">
+                      <span className="low-stock-product-name">
+                        <span>📦</span>
                         <span>{def.name}</span>
                       </span>
                       {lowStockModalData.deficits.length > 1 && (
-                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200 shadow-xs">
+                        <span className="low-stock-index-pill">
                           {curIdx + 1} / {lowStockModalData.deficits.length}
                         </span>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2.5 text-center text-xs">
-                      <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
-                        <div className="text-slate-500 dark:text-slate-400 text-[11px] font-semibold mb-0.5">
+                    <div className="low-stock-metrics-grid">
+                      <div className="low-stock-metric-box">
+                        <div className="low-stock-metric-label">
                           {lang === 'hi' ? 'वर्तमान स्टॉक' : 'Current Stock'}
                         </div>
-                        <div className={`font-black text-sm sm:text-base ${def.currentStock <= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'}`}>
+                        <div className={`low-stock-metric-value ${def.currentStock <= 0 ? 'zero-danger' : ''}`}>
                           {def.currentStock} pcs
                         </div>
                       </div>
-                      <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-xs">
-                        <div className="text-slate-500 dark:text-slate-400 text-[11px] font-semibold mb-0.5">
+                      <div className="low-stock-metric-box">
+                        <div className="low-stock-metric-label">
                           {lang === 'hi' ? 'बिल मात्रा' : 'Bill Qty'}
                         </div>
-                        <div className="font-black text-sm sm:text-base text-blue-600 dark:text-blue-400">
+                        <div className="low-stock-metric-value billed-blue">
                           {def.billedQty} pcs
                         </div>
                       </div>
-                      <div className="bg-rose-50/90 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-200 dark:border-rose-800 shadow-xs">
-                        <div className="text-rose-700 dark:text-rose-300 text-[11px] font-bold mb-0.5">
+                      <div className="low-stock-metric-box danger">
+                        <div className="low-stock-metric-label">
                           {lang === 'hi' ? 'कमी (Deficit)' : 'Shortage'}
                         </div>
-                        <div className="font-black text-sm sm:text-base text-rose-600 dark:text-rose-400">
+                        <div className="low-stock-metric-value deficit-danger">
                           -{def.deficit} pcs
                         </div>
                       </div>
@@ -2054,20 +2054,20 @@ export default function InvoiceWizard({
               })()}
 
               {/* Option 2: Add Stock Section in Popup (Material 3 Elevated Card) */}
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 sm:p-4.5 border border-slate-200 dark:border-slate-700/80 flex flex-col gap-3.5 shadow-inner">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200">
-                    <Sparkles size={16} className="text-emerald-500" />
+              <div className="low-stock-refill-card">
+                <div className="low-stock-refill-title-row">
+                  <div className="low-stock-refill-heading">
+                    <Sparkles size={16} color="#10b981" />
                     <span>{lang === 'hi' ? 'तुरंत नया स्टॉक जोड़ें (Instant Stock Refill)' : 'Add Stock Immediately'}</span>
                   </div>
-                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <span className="low-stock-badge-tag">
                     {lang === 'hi' ? 'औसत लागत गणना' : 'Weighted Avg Cost'}
                   </span>
                 </div>
 
                 {stockAddError && (
-                  <div className="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 p-2.5 rounded-xl border border-rose-200 dark:border-rose-800 animate-slide-up flex items-center gap-1.5">
-                    <AlertTriangle size={14} className="flex-shrink-0" />
+                  <div className="low-stock-error-box">
+                    <AlertTriangle size={15} />
                     <span>{stockAddError}</span>
                   </div>
                 )}
@@ -2079,8 +2079,8 @@ export default function InvoiceWizard({
                   const deficitQty = def?.deficit > 0 ? def.deficit : 1;
 
                   return (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mr-1">
+                    <div className="low-stock-chips-row">
+                      <span className="low-stock-chip-label">
                         {lang === 'hi' ? 'त्वरित मात्रा:' : 'Quick Qty:'}
                       </span>
                       {[deficitQty, 10, 25, 50].map((presetVal, pIdx) => (
@@ -2088,11 +2088,7 @@ export default function InvoiceWizard({
                           key={pIdx}
                           type="button"
                           onClick={() => setStockAddQty(String(presetVal))}
-                          className={`px-2.5 py-1 text-xs rounded-lg font-bold border transition cursor-pointer ${
-                            Number(stockAddQty) === presetVal
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                              : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:border-emerald-500'
-                          }`}
+                          className={`low-stock-chip-btn ${Number(stockAddQty) === presetVal ? 'active' : ''}`}
                         >
                           +{presetVal}
                         </button>
@@ -2101,9 +2097,9 @@ export default function InvoiceWizard({
                   );
                 })()}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <div className="low-stock-form-grid">
+                  <div className="low-stock-field-group">
+                    <label className="low-stock-field-label">
                       {lang === 'hi' ? 'जोड़ने की मात्रा (Quantity)' : 'Quantity to Add'} *
                     </label>
                     <input
@@ -2111,24 +2107,24 @@ export default function InvoiceWizard({
                       min="1"
                       value={stockAddQty}
                       onChange={(e) => setStockAddQty(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                      className="low-stock-text-input"
                       placeholder="e.g. 10"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <div className="low-stock-field-group">
+                    <label className="low-stock-field-label">
                       {lang === 'hi' ? 'प्रति यूनिट खरीद लागत' : 'Purchase Cost / Unit'} *
-                      <span className="text-rose-500 font-black ml-1">({lang === 'hi' ? 'अनिवार्य' : 'Required'})</span>
+                      <span className="low-stock-required-tag">({lang === 'hi' ? 'अनिवार्य' : 'Required'})</span>
                     </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                    <div className="low-stock-input-wrapper">
+                      <span className="low-stock-currency-symbol">₹</span>
                       <input
                         type="number"
                         min="0.01"
                         step="any"
                         value={stockAddCost}
                         onChange={(e) => setStockAddCost(e.target.value)}
-                        className="w-full pl-7 pr-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                        className="low-stock-text-input has-currency"
                         placeholder="550"
                         required
                       />
@@ -2139,7 +2135,7 @@ export default function InvoiceWizard({
                 <button
                   type="button"
                   onClick={handleAddStockAndProceed}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition-all cursor-pointer mt-1"
+                  className="low-stock-btn-add"
                 >
                   <PlusCircle size={18} />
                   <span>
@@ -2151,11 +2147,11 @@ export default function InvoiceWizard({
               </div>
 
               {/* Action Buttons: Low stock proceed & Cancel */}
-              <div className="grid grid-cols-2 gap-3 pt-0.5">
+              <div className="low-stock-secondary-actions">
                 <button
                   type="button"
                   onClick={handleProceedLowStock}
-                  className="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition text-center cursor-pointer"
+                  className="low-stock-btn-proceed"
                   title={lang === 'hi' ? 'स्टॉक नेगेटिव में दर्ज होगा' : 'Stock will become negative'}
                 >
                   <CornerDownLeft size={16} />
@@ -2165,7 +2161,7 @@ export default function InvoiceWizard({
                 <button
                   type="button"
                   onClick={handleCancelLowStockBill}
-                  className="py-2.5 px-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition text-center cursor-pointer"
+                  className="low-stock-btn-cancel"
                 >
                   <X size={16} />
                   <span>{lang === 'hi' ? 'बिल रद्द करें (Cancel)' : 'Cancel Bill'}</span>
