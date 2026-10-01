@@ -561,20 +561,30 @@ export default function InvoiceWizard({
       return;
     }
 
-    // Check admin portal trigger (voice or text)
+    // Check admin portal trigger (voice or text - Admin role required)
     if (
       ['admin', 'admin portal', 'admin dashboard', 'open admin', 'admin panel', 'एडमिन', 'एडमिन पोर्टल', 'एडमिन डैशबोर्ड', 'subscription', 'manage subscription'].some(
         (k) => norm === k || norm.includes(k)
       )
     ) {
-      if (onOpenAdmin) onOpenAdmin();
-      replyBillie(
-        activeLang === 'hi'
-          ? 'एडमिन डैशबोर्ड खोल दिया गया है। यहाँ से आप नए यूजर क्रेडेंशियल्स (आईडी, पासवर्ड) बना सकते हैं और ₹999/माह या ₹4,999/6 माह सब्सक्रिप्शन मैनेज कर सकते हैं।'
-          : 'Opening Admin Dashboard. You can provision users, create ID/passwords, and manage ₹999/mo or ₹4,999/6mo subscriptions here.',
-        activeLang,
-        () => setIsVoiceSessionActive(false)
-      );
+      if (user?.role === 'admin' && onOpenAdmin) {
+        onOpenAdmin();
+        replyBillie(
+          activeLang === 'hi'
+            ? 'सुपर एडमिन डैशबोर्ड खोल दिया गया है।'
+            : 'Opening Super Admin Dashboard.',
+          activeLang,
+          () => setIsVoiceSessionActive(false)
+        );
+      } else {
+        replyBillie(
+          activeLang === 'hi'
+            ? 'केवल अधिकृत सुपर एडमिन ही एडमिन पोर्टल एक्सेस कर सकते हैं।'
+            : 'Only authorized super administrators can access the Admin Portal.',
+          activeLang,
+          () => setIsVoiceSessionActive(false)
+        );
+      }
       return;
     }
 
@@ -1377,7 +1387,7 @@ export default function InvoiceWizard({
               </button>
             )}
 
-            {onOpenAdmin && (
+            {user?.role === 'admin' && onOpenAdmin && (
               <button
                 type="button"
                 onClick={onOpenAdmin}

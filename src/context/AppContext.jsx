@@ -3,6 +3,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const AppContext = createContext(null);
 
 export const SUBSCRIPTION_PLANS = {
+  free: {
+    id: 'free',
+    name: 'Free Trial (14 Days)',
+    nameHi: 'निःशुल्क ट्रायल (14 दिन)',
+    basePrice: 0,
+    gstRate: 0,
+    gstAmount: 0,
+    totalPrice: 0,
+    durationDays: 14,
+    tag: 'Free Trial',
+    billingCycle: '14 Days Free'
+  },
   monthly: {
     id: 'monthly',
     name: 'Monthly Pro Plan',
@@ -26,6 +38,18 @@ export const SUBSCRIPTION_PLANS = {
     durationDays: 180,
     tag: 'Best Value (Save ~₹1,074)',
     billingCycle: 'Per 6 Months'
+  },
+  annual: {
+    id: 'annual',
+    name: '1-Year Annual Pro',
+    nameHi: '1 वर्ष वार्षिक प्रो प्लान',
+    basePrice: 8999,
+    gstRate: 18,
+    gstAmount: 1619.82,
+    totalPrice: 10618.82,
+    durationDays: 365,
+    tag: 'Maximum Savings (Save ~₹3,500)',
+    billingCycle: 'Per Year'
   }
 };
 
@@ -33,88 +57,29 @@ export const DEFAULT_ADMIN = {
   id: 'admin_diwakar',
   name: 'Diwakar',
   username: 'Diwakar',
-  email: 'Diwakar',
+  email: 'diwakar@billie.app',
   password: 'Diwakar@123',
   role: 'admin',
   businessName: 'Billie Admin HQ',
   phone: '+91 99999 00000',
   address: 'New Delhi, India',
-  taxId: '07DIWAKAR1234A1Z0'
+  taxId: '07DIWAKAR1234A1Z0',
+  subscription: {
+    planId: 'six_months',
+    planName: 'Super Admin Master Access',
+    basePrice: 0,
+    gstRate: 0,
+    gstAmount: 0,
+    totalPaid: 0,
+    status: 'active',
+    startDate: new Date().toISOString(),
+    expiryDate: new Date(Date.now() + 86400000 * 3650).toISOString()
+  },
+  createdAt: new Date().toLocaleDateString()
 };
 
-const INITIAL_USERS = [
-  {
-    id: 'usr_101',
-    name: 'Rajesh Sharma',
-    email: 'rajesh@store.com',
-    password: 'user123',
-    role: 'user',
-    businessName: 'Rajesh Garments & Retail',
-    phone: '+91 98112 23344',
-    address: 'Shop 14, Karol Bagh, New Delhi',
-    taxId: '07AAAAA0000A1Z5',
-    subscription: {
-      planId: 'monthly',
-      planName: 'Monthly Pro (₹999 + 18% GST)',
-      basePrice: 999,
-      gstRate: 18,
-      gstAmount: 179.82,
-      totalPaid: 1178.82,
-      status: 'active', // 'active' | 'expired' | 'suspended'
-      startDate: new Date(Date.now() - 86400000 * 10).toISOString(),
-      expiryDate: new Date(Date.now() + 86400000 * 20).toISOString()
-    },
-    createdAt: new Date(Date.now() - 86400000 * 10).toLocaleDateString()
-  },
-  {
-    id: 'usr_102',
-    name: 'Pooja Verma',
-    email: 'pooja@boutique.in',
-    password: 'user123',
-    role: 'user',
-    businessName: 'Pooja Fashion Boutique',
-    phone: '+91 98991 12233',
-    address: 'Plot 22, Sector 18, Noida',
-    taxId: '09BBBBB1111B2Z6',
-    subscription: {
-      planId: 'six_months',
-      planName: '6-Months Super Saver (₹4,999 + 18% GST)',
-      basePrice: 4999,
-      gstRate: 18,
-      gstAmount: 899.82,
-      totalPaid: 5898.82,
-      status: 'active',
-      startDate: new Date(Date.now() - 86400000 * 45).toISOString(),
-      expiryDate: new Date(Date.now() + 86400000 * 135).toISOString()
-    },
-    createdAt: new Date(Date.now() - 86400000 * 45).toLocaleDateString()
-  },
-  {
-    id: 'usr_103',
-    name: 'Vikas Kumar',
-    email: 'vikas@hardware.com',
-    password: 'user123',
-    role: 'user',
-    businessName: 'Vikas Electricals & Hardware',
-    phone: '+91 97110 55667',
-    address: 'Main Market, Jaipur, Rajasthan',
-    taxId: '08CCCCC2222C3Z7',
-    subscription: {
-      planId: 'monthly',
-      planName: 'Monthly Pro (₹999 + 18% GST)',
-      basePrice: 999,
-      gstRate: 18,
-      gstAmount: 179.82,
-      totalPaid: 1178.82,
-      status: 'expired', // Expired account to demonstrate subscription control
-      startDate: new Date(Date.now() - 86400000 * 40).toISOString(),
-      expiryDate: new Date(Date.now() - 86400000 * 10).toISOString()
-    },
-    createdAt: new Date(Date.now() - 86400000 * 40).toLocaleDateString()
-  }
-];
-
-const DEFAULT_USER = INITIAL_USERS[0];
+// Only keep Super Admin in initial users database (all demo accounts deleted)
+const INITIAL_USERS = [DEFAULT_ADMIN];
 
 const DEFAULT_SETTINGS = {
   currency: '₹',
@@ -255,23 +220,68 @@ const DEFAULT_INVOICES = [];
 const DEFAULT_CUSTOMERS = [];
 
 export function AppProvider({ children }) {
-  // 1. Registered Users Database (Managed by Admin)
+  // 1. Registered Users Database (Managed by Admin & Signups - demo accounts purged)
   const [users, setUsers] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_users_db');
-      return saved ? JSON.parse(saved) : INITIAL_USERS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Remove all old demo accounts
+          const cleanUsers = parsed.filter(
+            (u) =>
+              u &&
+              !['usr_101', 'usr_102', 'usr_103'].includes(u.id) &&
+              !['rajesh@store.com', 'pooja@boutique.in', 'vikas@hardware.com'].includes(
+                (u.email || '').toLowerCase()
+              )
+          );
+          // Ensure Super Admin is always present
+          const hasAdmin = cleanUsers.some(
+            (u) =>
+              u.role === 'admin' ||
+              (u.email || '').toLowerCase() === 'diwakar' ||
+              (u.email || '').toLowerCase() === 'diwakar@billie.app'
+          );
+          if (!hasAdmin) {
+            cleanUsers.unshift(DEFAULT_ADMIN);
+          }
+          localStorage.setItem('billie_users_db', JSON.stringify(cleanUsers));
+          return cleanUsers;
+        }
+      }
+      localStorage.setItem('billie_users_db', JSON.stringify(INITIAL_USERS));
+      return INITIAL_USERS;
     } catch {
       return INITIAL_USERS;
     }
   });
 
-  // 2. Active Logged-in User State
+  // 2. Active Logged-in User State (Requires Login/Signup before page loads)
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_user');
-      return saved ? JSON.parse(saved) : { ...DEFAULT_USER, isLoggedIn: true };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // If parsed is a demo user, purge session
+        if (
+          parsed &&
+          (parsed.id === 'usr_101' ||
+            parsed.id === 'usr_102' ||
+            parsed.id === 'usr_103' ||
+            (parsed.email || '').toLowerCase() === 'rajesh@store.com' ||
+            parsed.name === 'Rajesh Sharma')
+        ) {
+          localStorage.removeItem('billie_user');
+          return { isLoggedIn: false, role: 'guest', name: '', email: '' };
+        }
+        if (parsed && parsed.isLoggedIn) {
+          return parsed;
+        }
+      }
+      return { isLoggedIn: false, role: 'guest', name: '', email: '' };
     } catch {
-      return { ...DEFAULT_USER, isLoggedIn: true };
+      return { isLoggedIn: false, role: 'guest', name: '', email: '' };
     }
   });
 
@@ -362,7 +372,11 @@ export function AppProvider({ children }) {
   }, [users]);
 
   useEffect(() => {
-    localStorage.setItem('billie_user', JSON.stringify(user));
+    if (user && user.isLoggedIn) {
+      localStorage.setItem('billie_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('billie_user');
+    }
   }, [user]);
 
   useEffect(() => {
@@ -438,46 +452,47 @@ export function AppProvider({ children }) {
   };
 
   // -------------------------------------------------------------
-  // CREDENTIAL AUTHENTICATION & LOGIN (Requirement 1 & 2)
+  // REAL-TIME CREDENTIAL AUTHENTICATION & LOGIN (Requirement 1 & 2)
   // -------------------------------------------------------------
   const authenticate = (emailOrId, password) => {
     const cleanId = (emailOrId || '').trim().toLowerCase();
     const cleanPass = (password || '').trim();
 
     if (!cleanId || !cleanPass) {
-      return { success: false, error: 'Email/ID aur Password dono likhna zaroori hai.' };
+      return { success: false, error: 'Email / Username और Password दोनों लिखना अनिवार्य है।' };
     }
 
-    // A. Master Admin Check - Only particular credentials: User Name: Diwakar | Password: Diwakar@123
+    // A. Master Super Admin Check
     if (
-      (cleanId === 'diwakar' || cleanId === 'diwakar@billie.io') &&
-      password.trim() === 'Diwakar@123'
+      (cleanId === 'diwakar' ||
+        cleanId === 'diwakar@billie.app' ||
+        cleanId === 'diwakar@billie.io' ||
+        cleanId === 'diwakar admin') &&
+      cleanPass === 'Diwakar@123'
     ) {
       const adminSession = {
         isLoggedIn: true,
         role: 'admin',
         id: DEFAULT_ADMIN.id,
-        name: 'Diwakar',
+        name: DEFAULT_ADMIN.name,
         username: 'Diwakar',
-        email: 'Diwakar',
+        email: DEFAULT_ADMIN.email,
         businessName: DEFAULT_ADMIN.businessName,
         phone: DEFAULT_ADMIN.phone,
         address: DEFAULT_ADMIN.address,
         taxId: DEFAULT_ADMIN.taxId,
-        subscription: {
-          status: 'active',
-          planName: 'Super Admin Master Access',
-          expiryDate: new Date(Date.now() + 86400000 * 3650).toISOString()
-        }
+        subscription: DEFAULT_ADMIN.subscription
       };
       setUser(adminSession);
+      localStorage.setItem('billie_user', JSON.stringify(adminSession));
       return { success: true, isAdmin: true, user: adminSession };
     }
 
-    // B. User Credentials Verification from registered users list
+    // B. Check registered users list (by email, username, phone, or id)
     const found = users.find(
       (u) =>
-        u.email.toLowerCase() === cleanId ||
+        (u.email && u.email.toLowerCase() === cleanId) ||
+        (u.username && u.username.toLowerCase() === cleanId) ||
         (u.id && u.id.toLowerCase() === cleanId) ||
         (u.phone && u.phone.replace(/[\s+-]/g, '') === cleanId.replace(/[\s+-]/g, ''))
     );
@@ -485,33 +500,34 @@ export function AppProvider({ children }) {
     if (!found) {
       return {
         success: false,
-        error: 'Ye User ID / Email registered nahi hai. Kripya Admin se ID aur Password create karwayen.'
+        error: 'यह यूज़र आईडी / ईमेल पंजीकृत नहीं है। कृपया "साइन अप" करके नया खाता बनाएं।'
       };
     }
 
     if (found.password !== cleanPass) {
       return {
         success: false,
-        error: 'Password galat hai! Kripya sahi password enter karein ya Admin se reset karwayen.'
+        error: 'पासवर्ड गलत है! कृपया सही पासवर्ड दर्ज करें।'
       };
     }
 
-    // C. Subscription Expiration / Suspension check (Requirement 3 & 4)
+    const isAdmin = found.role === 'admin';
     const isSuspended = found.subscription?.status === 'suspended';
     const isExpired =
-      found.subscription?.status === 'expired' ||
-      new Date(found.subscription?.expiryDate) < new Date();
+      !isAdmin &&
+      (found.subscription?.status === 'expired' ||
+        (found.subscription?.expiryDate && new Date(found.subscription.expiryDate) < new Date()));
 
     const loggedUser = {
       isLoggedIn: true,
-      role: 'user',
+      role: found.role || 'user',
       id: found.id,
       name: found.name,
       email: found.email,
-      businessName: found.businessName,
-      phone: found.phone,
-      address: found.address,
-      taxId: found.taxId,
+      businessName: found.businessName || '',
+      phone: found.phone || '',
+      address: found.address || '',
+      taxId: found.taxId || '',
       subscription: {
         ...found.subscription,
         status: isSuspended ? 'suspended' : isExpired ? 'expired' : 'active'
@@ -519,21 +535,112 @@ export function AppProvider({ children }) {
     };
 
     setUser(loggedUser);
+    localStorage.setItem('billie_user', JSON.stringify(loggedUser));
 
     return {
       success: true,
-      isAdmin: false,
+      isAdmin,
       isExpired,
       isSuspended,
       user: loggedUser
     };
   };
 
+  // -------------------------------------------------------------
+  // REAL-TIME USER SIGNUP / REGISTRATION (Requirement 2)
+  // -------------------------------------------------------------
+  const registerUser = ({
+    name,
+    email,
+    password,
+    businessName = '',
+    phone = '',
+    address = '',
+    taxId = '',
+    planId = 'free' // 'free' (14 days) | 'monthly' | 'six_months' | 'annual'
+  }) => {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPass = (password || '').trim();
+    const cleanName = (name || '').trim();
+
+    if (!cleanName) {
+      return { success: false, error: 'कृपया अपना नाम दर्ज करें।' };
+    }
+    if (!cleanEmail) {
+      return { success: false, error: 'कृपया ईमेल आईडी दर्ज करें।' };
+    }
+    if (!cleanPass || cleanPass.length < 4) {
+      return { success: false, error: 'पासवर्ड कम से कम 4 अक्षरों का होना चाहिए।' };
+    }
+
+    // Check if email already registered
+    if (
+      cleanEmail === 'diwakar' ||
+      cleanEmail === 'diwakar@billie.app' ||
+      users.some((u) => (u.email || '').toLowerCase() === cleanEmail)
+    ) {
+      return { success: false, error: 'इस ईमेल से खाता पहले से मौजूद है! कृपया सीधे लॉग इन करें।' };
+    }
+
+    const plan = SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.free;
+    const now = new Date();
+    const expiry = new Date(now.getTime() + plan.durationDays * 86400000);
+
+    const newUser = {
+      id: `usr_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      name: cleanName,
+      email: cleanEmail,
+      password: cleanPass,
+      role: 'user',
+      businessName: businessName.trim() || `${cleanName}'s Business`,
+      phone: phone.trim(),
+      address: address.trim(),
+      taxId: taxId.trim(),
+      subscription: {
+        planId: plan.id,
+        planName: plan.name,
+        basePrice: plan.basePrice,
+        gstRate: plan.gstRate,
+        gstAmount: plan.gstAmount,
+        totalPaid: plan.totalPrice,
+        status: 'active',
+        startDate: now.toISOString(),
+        expiryDate: expiry.toISOString()
+      },
+      createdAt: now.toLocaleDateString()
+    };
+
+    setUsers((prev) => {
+      const updated = [newUser, ...prev];
+      localStorage.setItem('billie_users_db', JSON.stringify(updated));
+      return updated;
+    });
+
+    // Real-time automatic login upon successful signup
+    const loggedUser = {
+      isLoggedIn: true,
+      role: 'user',
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      businessName: newUser.businessName,
+      phone: newUser.phone,
+      address: newUser.address,
+      taxId: newUser.taxId,
+      subscription: newUser.subscription
+    };
+    setUser(loggedUser);
+    localStorage.setItem('billie_user', JSON.stringify(loggedUser));
+
+    return { success: true, user: loggedUser };
+  };
+
   const logout = () => {
+    localStorage.removeItem('billie_user');
     setUser({
       isLoggedIn: false,
       role: 'guest',
-      name: 'Guest User',
+      name: '',
       email: '',
       businessName: '',
       phone: '',
@@ -676,6 +783,73 @@ export function AppProvider({ children }) {
           }));
         }
         return updated;
+      })
+    );
+  };
+
+  // Extend User Subscription Validity (by days or exact Date ISO string)
+  const extendUserValidity = (userId, daysOrDate) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+
+        const currentExpiry = new Date(u.subscription?.expiryDate || Date.now());
+        const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
+        let newExpiryDate;
+
+        if (typeof daysOrDate === 'number') {
+          newExpiryDate = new Date(baseDate.getTime() + daysOrDate * 86400000);
+        } else {
+          newExpiryDate = new Date(daysOrDate);
+        }
+
+        const updatedSub = {
+          ...u.subscription,
+          status: 'active',
+          expiryDate: newExpiryDate.toISOString(),
+          lastExtendedAt: new Date().toISOString()
+        };
+
+        const updatedUser = { ...u, subscription: updatedSub };
+        if (user.id === userId) {
+          setUser((curr) => ({ ...curr, subscription: updatedSub }));
+        }
+        return updatedUser;
+      })
+    );
+  };
+
+  // Change or Add Plan for User
+  const changeUserPlan = (userId, planId, customDays = null) => {
+    const plan = SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.monthly;
+
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+
+        const currentExpiry = new Date(u.subscription?.expiryDate || Date.now());
+        const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
+        const days = customDays || plan.durationDays;
+        const newExpiry = new Date(baseDate.getTime() + days * 86400000);
+
+        const updatedSub = {
+          ...u.subscription,
+          planId: plan.id,
+          planName: plan.name,
+          basePrice: plan.basePrice,
+          gstRate: plan.gstRate,
+          gstAmount: plan.gstAmount,
+          totalPaid: (Number(u.subscription?.totalPaid) || 0) + plan.totalPrice,
+          status: 'active',
+          expiryDate: newExpiry.toISOString(),
+          lastRenewedAt: new Date().toLocaleDateString()
+        };
+
+        const updatedUser = { ...u, subscription: updatedSub };
+        if (user.id === userId) {
+          setUser((curr) => ({ ...curr, subscription: updatedSub }));
+        }
+        return updatedUser;
       })
     );
   };
@@ -1044,12 +1218,15 @@ export function AppProvider({ children }) {
         setIsVoiceSessionActive,
         installPWA,
         authenticate,
+        registerUser,
         logout,
         updateProfile,
         addUser,
         updateUser,
         deleteUser,
         renewSubscription,
+        extendUserValidity,
+        changeUserPlan,
         toggleUserStatus,
         updateSettings,
         setLanguage,

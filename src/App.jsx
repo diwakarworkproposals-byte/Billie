@@ -9,7 +9,8 @@ import InventoryModal from './components/InventoryModal';
 import ReportingSection from './components/ReportingSection';
 import AdminDashboardPage from './components/AdminDashboardPage';
 import CustomersModal from './components/CustomersModal';
-import { AlertTriangle } from 'lucide-react';
+import AuthPage from './components/AuthPage';
+import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
 function BillieApp() {
   const { user, settings, setIsVoiceSessionActive } = useApp();
@@ -61,8 +62,47 @@ function BillieApp() {
     setSubmittedQuery(query);
   };
 
-  // FULL PAGE VIEW 1: SUPER ADMIN DASHBOARD PAGE
+  // FULL PAGE VIEW 0: AUTHENTICATION / LOGIN / SIGNUP PAGE (Before actual app loads)
+  if (!user || !user.isLoggedIn) {
+    return (
+      <AuthPage
+        onLoginSuccess={(loggedInUser) => {
+          if (loggedInUser?.role === 'admin' && (window.location.hash === '#/admin' || window.location.hash === '#admin')) {
+            setCurrentView('admin');
+          } else {
+            setCurrentView('app');
+          }
+        }}
+      />
+    );
+  }
+
+  // FULL PAGE VIEW 1: SUPER ADMIN DASHBOARD PAGE (RESTRICTED TO ADMIN ONLY)
   if (currentView === 'admin') {
+    if (user.role !== 'admin') {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50 dark:bg-slate-900 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4 shadow-sm">
+            <ShieldAlert size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+            {isHindi ? 'अनधिकृत एक्सेस (Unauthorized Access)' : 'Admin Access Restricted'}
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
+            {isHindi
+              ? 'केवल अधिकृत सुपर एडमिन (Diwakar) ही इस पैनल को एक्सेस कर सकते हैं।'
+              : 'Only authorized administrators can access the admin management portal.'}
+          </p>
+          <button
+            type="button"
+            onClick={backToStore}
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-xl shadow-md transition cursor-pointer"
+          >
+            {isHindi ? 'दुकान / बिलिंग पर वापस जाएं' : 'Back to Store'}
+          </button>
+        </div>
+      );
+    }
     return <AdminDashboardPage onBackToStore={backToStore} />;
   }
 
@@ -73,7 +113,7 @@ function BillieApp() {
       <Header
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenAdmin={openAdminPage}
+        onOpenAdmin={user.role === 'admin' ? openAdminPage : null}
         onOpenReporting={() => {
           if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
           setIsReportingOpen(true);
@@ -91,17 +131,19 @@ function BillieApp() {
             <AlertTriangle size={16} className="text-amber-600 flex-shrink-0" />
             <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
               {isHindi
-                ? 'चेतावनी: आपका Billie सब्सक्रिप्शन समाप्त हो गया है! कृपया जारी रखने के लिए एडमिन से रिन्यू करवाएं (₹999/माह या ₹4,999/6 माह + 18% GST)।'
-                : 'Notice: Your Billie subscription has expired! Please renew to keep all pro features (₹999/mo or ₹4,999/6mo + 18% GST).'}
+                ? 'सूचना: आपका Billie सब्सक्रिप्शन समाप्त हो गया है! कृपया जारी रखने के लिए एडमिन से संपर्क करके प्लान रिन्यू करवाएं।'
+                : 'Notice: Your Billie subscription has expired! Please contact your administrator to renew your plan.'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={openAdminPage}
-            className="sub-renew-strip-btn"
-          >
-            {isHindi ? 'एडमिन पोर्टल' : 'Admin Portal'}
-          </button>
+          {user.role === 'admin' && (
+            <button
+              type="button"
+              onClick={openAdminPage}
+              className="sub-renew-strip-btn"
+            >
+              {isHindi ? 'एडमिन पोर्टल' : 'Admin Portal'}
+            </button>
+          )}
         </div>
       )}
 
@@ -112,7 +154,7 @@ function BillieApp() {
           onPromptHintChange={setPromptHint}
           onResetExternalQuery={() => setSubmittedQuery('')}
           onOpenInventory={() => setIsInventoryOpen(true)}
-          onOpenAdmin={openAdminPage}
+          onOpenAdmin={user.role === 'admin' ? openAdminPage : null}
           onOpenReporting={() => {
             if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
             setIsReportingOpen(true);

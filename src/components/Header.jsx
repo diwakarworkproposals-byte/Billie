@@ -40,17 +40,19 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
           </button>
         )}
 
-        {/* Admin Portal Button */}
-        <button
-          type="button"
-          onClick={onOpenAdmin}
-          className={`header-admin-btn m3-ripple ${user.role === 'admin' ? 'active-admin' : ''}`}
-          title={isHindi ? 'एडमिन पोर्टल: यूजर और सब्सक्रिप्शन' : 'Admin Portal: Users & Subscriptions'}
-        >
-          <ShieldCheck size={16} className="text-amber-500" />
-          <span className="header-btn-text">{isHindi ? 'एडमिन' : 'Admin'}</span>
-          {user.role === 'admin' && <span className="admin-dot-indicator" />}
-        </button>
+        {/* Admin Portal Button - Strictly visible ONLY to Super Admin */}
+        {user?.role === 'admin' && onOpenAdmin && (
+          <button
+            type="button"
+            onClick={onOpenAdmin}
+            className="header-admin-btn active-admin m3-ripple"
+            title={isHindi ? 'एडमिन पोर्टल: यूजर और सब्सक्रिप्शन' : 'Admin Portal: Users & Subscriptions'}
+          >
+            <ShieldCheck size={16} className="text-amber-500" />
+            <span className="header-btn-text">{isHindi ? 'एडमिन' : 'Admin'}</span>
+            <span className="admin-dot-indicator" />
+          </button>
+        )}
 
         {/* Settings Button */}
         <button

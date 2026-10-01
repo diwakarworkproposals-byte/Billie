@@ -584,19 +584,19 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                 )}
               </div>
 
-              {/* Switch to Admin Portal link if not currently logged in as admin */}
-              {user.role !== 'admin' && (
+              {/* Admin Portal link - Strictly visible ONLY to Super Admin */}
+              {user.role === 'admin' && onOpenAdmin && (
                 <div className="text-center mt-4">
                   <button
                     type="button"
                     onClick={() => {
-                      logout();
-                      setLoginEmail('Diwakar');
-                      setLoginPass('Diwakar@123');
+                      onClose();
+                      onOpenAdmin();
                     }}
-                    className="text-xs text-slate-500 hover:text-blue-600 font-semibold"
+                    className="m3-button-tonal text-xs py-2 px-4 inline-flex items-center justify-center gap-2 mx-auto cursor-pointer"
                   >
-                    🔑 {isHindi ? 'एडमिन लॉगिन करें (Diwakar)' : 'Switch to Admin Login (Diwakar)'}
+                    <ShieldCheck size={16} className="text-amber-500" />
+                    <span>{isHindi ? 'सुपर एडमिन पोर्टल खोलें' : 'Open Super Admin Portal'}</span>
                   </button>
                 </div>
               )}

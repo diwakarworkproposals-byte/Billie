@@ -30,7 +30,10 @@ import {
   UserPlus,
   X,
   LayoutGrid,
-  Table as TableIcon
+  Table as TableIcon,
+  Gift,
+  Zap,
+  Plus
 } from 'lucide-react';
 
 export default function AdminDashboardPage({ onBackToStore }) {
@@ -43,9 +46,17 @@ export default function AdminDashboardPage({ onBackToStore }) {
     updateUser,
     deleteUser,
     renewSubscription,
+    extendUserValidity,
+    changeUserPlan,
     toggleUserStatus,
     settings
   } = useApp();
+
+  const [userCategoryTab, setUserCategoryTab] = useState('all'); // 'all' | 'free' | 'paid' | 'expired'
+  const [extendingUser, setExtendingUser] = useState(null);
+  const [customExtendDate, setCustomExtendDate] = useState('');
+  const [changingPlanUser, setChangingPlanUser] = useState(null);
+  const [selectedPlanId, setSelectedPlanId] = useState('monthly');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'expired' | 'suspended'
@@ -220,6 +231,39 @@ export default function AdminDashboardPage({ onBackToStore }) {
     setEditingUser(null);
   };
 
+  // Helper categorization functions for All, Free, Paid, Expired users
+  const isUserExpired = (u) => {
+    if (u.role === 'admin') return false;
+    return (
+      u.subscription?.status === 'expired' ||
+      (u.subscription?.expiryDate && new Date(u.subscription.expiryDate) < new Date())
+    );
+  };
+
+  const isUserFree = (u) => {
+    if (u.role === 'admin') return false;
+    return (
+      u.subscription?.planId === 'free' ||
+      Number(u.subscription?.basePrice || 0) === 0
+    );
+  };
+
+  const isUserPaid = (u) => {
+    if (u.role === 'admin') return false;
+    return (
+      !isUserFree(u) &&
+      !isUserExpired(u) &&
+      u.subscription?.status !== 'suspended'
+    );
+  };
+
+  // Metrics for report
+  const allCount = users.length;
+  const freeCount = users.filter(isUserFree).length;
+  const paidCount = users.filter(isUserPaid).length;
+  const expiredCount = users.filter(isUserExpired).length;
+  const totalGrossRevenue = users.reduce((sum, u) => sum + (Number(u.subscription?.totalPaid) || 0), 0);
+
   // Filtered Users List
   const filteredUsers = users.filter((u) => {
     const q = searchQuery.toLowerCase().trim();
@@ -229,27 +273,24 @@ export default function AdminDashboardPage({ onBackToStore }) {
       (u.businessName && u.businessName.toLowerCase().includes(q)) ||
       (u.phone && u.phone.includes(q));
 
-    const isExpired =
-      u.subscription?.status === 'expired' ||
-      new Date(u.subscription?.expiryDate) < new Date();
+    // Category filter: all | free | paid | expired
+    let matchesCategory = true;
+    if (userCategoryTab === 'free') {
+      matchesCategory = isUserFree(u);
+    } else if (userCategoryTab === 'paid') {
+      matchesCategory = isUserPaid(u);
+    } else if (userCategoryTab === 'expired') {
+      matchesCategory = isUserExpired(u);
+    }
+
+    const isExpired = isUserExpired(u);
     const effectiveStatus = u.subscription?.status === 'suspended' ? 'suspended' : isExpired ? 'expired' : 'active';
 
     const matchesStatus = statusFilter === 'all' || effectiveStatus === statusFilter;
     const matchesPlan = planFilter === 'all' || u.subscription?.planId === planFilter;
 
-    return matchesSearch && matchesStatus && matchesPlan;
+    return matchesSearch && matchesCategory && matchesStatus && matchesPlan;
   });
-
-  // Metrics
-  const totalUsersCount = users.length;
-  const activeSubsCount = users.filter((u) => {
-    const isExp =
-      u.subscription?.status === 'expired' ||
-      new Date(u.subscription?.expiryDate) < new Date();
-    return u.subscription?.status !== 'suspended' && !isExp;
-  }).length;
-  const expiredSubsCount = totalUsersCount - activeSubsCount;
-  const totalGrossRevenue = users.reduce((sum, u) => sum + (Number(u.subscription?.totalPaid) || 0), 0);
 
   return (
     <div className="admin-page-viewport animate-fade-in">
@@ -389,33 +430,59 @@ export default function AdminDashboardPage({ onBackToStore }) {
           <div className="admin-page-main-layout">
             {/* Top Stat Metrics Grid */}
             <div className="admin-metrics-row">
-              <div className="admin-metric-card">
+              <div
+                className={`admin-metric-card clickable ${userCategoryTab === 'all' ? 'active-border' : ''}`}
+                onClick={() => setUserCategoryTab('all')}
+                title={isHindi ? 'सभी यूजर्स देखें' : 'View All Users'}
+              >
                 <div className="metric-icon-box users">
                   <Users size={22} />
                 </div>
                 <div className="metric-text-box">
                   <span className="metric-label">{isHindi ? 'कुल यूजर्स' : 'Total Users'}</span>
-                  <span className="metric-number">{totalUsersCount}</span>
+                  <span className="metric-number">{allCount}</span>
                 </div>
               </div>
 
-              <div className="admin-metric-card">
+              <div
+                className={`admin-metric-card clickable ${userCategoryTab === 'free' ? 'active-border' : ''}`}
+                onClick={() => setUserCategoryTab('free')}
+                title={isHindi ? 'फ्री ट्रायल यूजर्स देखें' : 'View Free Users'}
+              >
+                <div className="metric-icon-box" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb' }}>
+                  <Gift size={22} />
+                </div>
+                <div className="metric-text-box">
+                  <span className="metric-label">{isHindi ? 'फ्री यूजर्स' : 'Free Users'}</span>
+                  <span className="metric-number text-blue">{freeCount}</span>
+                </div>
+              </div>
+
+              <div
+                className={`admin-metric-card clickable ${userCategoryTab === 'paid' ? 'active-border' : ''}`}
+                onClick={() => setUserCategoryTab('paid')}
+                title={isHindi ? 'पेड यूजर्स देखें' : 'View Paid Users'}
+              >
                 <div className="metric-icon-box active">
                   <CheckCircle size={22} />
                 </div>
                 <div className="metric-text-box">
-                  <span className="metric-label">{isHindi ? 'सक्रिय प्लान' : 'Active'}</span>
-                  <span className="metric-number text-emerald">{activeSubsCount}</span>
+                  <span className="metric-label">{isHindi ? 'पेड यूजर्स' : 'Paid Users'}</span>
+                  <span className="metric-number text-emerald">{paidCount}</span>
                 </div>
               </div>
 
-              <div className="admin-metric-card">
+              <div
+                className={`admin-metric-card clickable ${userCategoryTab === 'expired' ? 'active-border' : ''}`}
+                onClick={() => setUserCategoryTab('expired')}
+                title={isHindi ? 'समाप्त वैधता यूजर्स देखें' : 'View Expired Users'}
+              >
                 <div className="metric-icon-box expired">
                   <AlertTriangle size={22} />
                 </div>
                 <div className="metric-text-box">
-                  <span className="metric-label">{isHindi ? 'समाप्त' : 'Expired'}</span>
-                  <span className="metric-number text-rose">{expiredSubsCount}</span>
+                  <span className="metric-label">{isHindi ? 'समाप्त यूजर्स' : 'Expired Users'}</span>
+                  <span className="metric-number text-rose">{expiredCount}</span>
                 </div>
               </div>
 
@@ -485,6 +552,46 @@ export default function AdminDashboardPage({ onBackToStore }) {
 
             {/* 3. PROMINENT & EXPANDED USER LIST MANAGEMENT SECTION */}
             <section className="admin-large-user-list-section">
+              {/* Category Reports Tab Pills Bar (Requirement 4) */}
+              <div className="admin-report-tabs-bar">
+                <button
+                  type="button"
+                  onClick={() => setUserCategoryTab('all')}
+                  className={`admin-report-tab-pill ${userCategoryTab === 'all' ? 'active' : ''}`}
+                >
+                  <Users size={14} />
+                  <span>{isHindi ? 'सभी यूजर्स' : 'All Users'}</span>
+                  <span className="admin-tab-count-badge">{allCount}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserCategoryTab('free')}
+                  className={`admin-report-tab-pill ${userCategoryTab === 'free' ? 'active' : ''}`}
+                >
+                  <Gift size={14} />
+                  <span>{isHindi ? 'फ्री ट्रायल यूजर्स' : 'Free Users'}</span>
+                  <span className="admin-tab-count-badge">{freeCount}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserCategoryTab('paid')}
+                  className={`admin-report-tab-pill ${userCategoryTab === 'paid' ? 'active' : ''}`}
+                >
+                  <Zap size={14} />
+                  <span>{isHindi ? 'पेड यूजर्स' : 'Paid Users'}</span>
+                  <span className="admin-tab-count-badge">{paidCount}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserCategoryTab('expired')}
+                  className={`admin-report-tab-pill ${userCategoryTab === 'expired' ? 'active' : ''}`}
+                >
+                  <AlertTriangle size={14} />
+                  <span>{isHindi ? 'समाप्त वैधता' : 'Expired Users'}</span>
+                  <span className="admin-tab-count-badge">{expiredCount}</span>
+                </button>
+              </div>
+
               {/* Section Header & Search / Add Action Bar */}
               <div className="user-list-header-bar">
                 <div className="user-list-heading-group">
@@ -498,7 +605,7 @@ export default function AdminDashboardPage({ onBackToStore }) {
                     <p className="user-list-subtitle">
                       {isHindi
                         ? `कुल ${users.length} यूजर्स पंजीकृत हैं। यहाँ से क्रेडेंशियल्स देखें/कॉपी करें और प्लान मैनेज करें।`
-                        : `Manage all ${users.length} registered users. View/copy credentials and renew subscriptions.`}
+                        : `Manage all ${users.length} registered users. View/copy credentials, extend validity and assign plans.`}
                     </p>
                   </div>
                 </div>
@@ -543,8 +650,10 @@ export default function AdminDashboardPage({ onBackToStore }) {
                       className="admin-select-filter"
                     >
                       <option value="all">{isHindi ? 'सभी प्लान्स (All Plans)' : 'All Plans'}</option>
+                      <option value="free">{isHindi ? 'फ्री ट्रायल (14 Days)' : 'Free Trial'}</option>
                       <option value="monthly">Monthly ({currency}999+GST)</option>
                       <option value="six_months">6-Months ({currency}4,999+GST)</option>
+                      <option value="annual">Annual ({currency}8,999+GST)</option>
                     </select>
 
                     {/* View Switcher (Cards vs Table on wide screens) */}
@@ -695,11 +804,17 @@ export default function AdminDashboardPage({ onBackToStore }) {
                         onChange={(e) => setNewPlanId(e.target.value)}
                         className="m3-text-field"
                       >
+                        <option value="free">
+                          {isHindi ? '14-दिन फ्री ट्रायल — ₹0 • 14 Days' : '14-Days Free Trial — ₹0 • 14 Days'}
+                        </option>
                         <option value="monthly">
                           Monthly Plan — {currency}999 + 18% GST ({currency}1,178.82) • 30 Days
                         </option>
                         <option value="six_months">
                           6-Months Super Saver — {currency}4,999 + 18% GST ({currency}5,898.82) • 180 Days
+                        </option>
+                        <option value="annual">
+                          Annual Pro — {currency}8,999 + 18% GST ({currency}10,618.82) • 365 Days
                         </option>
                       </select>
                     </div>
@@ -914,6 +1029,34 @@ export default function AdminDashboardPage({ onBackToStore }) {
                               <div className="actions-left-group">
                                 <button
                                   type="button"
+                                  onClick={() => {
+                                    setExtendingUser(u);
+                                    setCustomExtendDate('');
+                                  }}
+                                  className="m3-btn-sub-renew"
+                                  style={{ background: '#f0fdf4', borderColor: '#86efac', color: '#166534', fontWeight: 700 }}
+                                  title={isHindi ? 'वैधता बढ़ाएं' : 'Extend Subscription Validity'}
+                                >
+                                  <Clock size={12} />
+                                  <span>{isHindi ? 'वैधता' : 'Extend'}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setChangingPlanUser(u);
+                                    setSelectedPlanId(u.subscription?.planId || 'monthly');
+                                  }}
+                                  className="m3-btn-sub-renew"
+                                  style={{ background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8', fontWeight: 700 }}
+                                  title={isHindi ? 'प्लान बदलें / जोड़ें' : 'Change or Assign Plan'}
+                                >
+                                  <Zap size={12} />
+                                  <span>{isHindi ? 'प्लान' : 'Plan'}</span>
+                                </button>
+
+                                <button
+                                  type="button"
                                   onClick={() => renewSubscription(u.id, 'monthly')}
                                   className="m3-btn-sub-renew"
                                   title={`Renew +1 Month (${currency}999 + 18% GST)`}
@@ -1121,6 +1264,34 @@ export default function AdminDashboardPage({ onBackToStore }) {
 
                                 <td className="text-right">
                                   <div className="actions-cluster-spacious">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setExtendingUser(u);
+                                        setCustomExtendDate('');
+                                      }}
+                                      className="action-renew-btn"
+                                      style={{ background: '#f0fdf4', borderColor: '#86efac', color: '#166534', fontWeight: 700 }}
+                                      title={isHindi ? 'वैधता बढ़ाएं' : 'Extend Subscription Validity'}
+                                    >
+                                      <Clock size={12} />
+                                      <span>{isHindi ? 'वैधता' : 'Extend'}</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setChangingPlanUser(u);
+                                        setSelectedPlanId(u.subscription?.planId || 'monthly');
+                                      }}
+                                      className="action-renew-btn"
+                                      style={{ background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8', fontWeight: 700 }}
+                                      title={isHindi ? 'प्लान बदलें / जोड़ें' : 'Change or Assign Plan'}
+                                    >
+                                      <Zap size={12} />
+                                      <span>{isHindi ? 'प्लान' : 'Plan'}</span>
+                                    </button>
+
                                     <button
                                       type="button"
                                       onClick={() => renewSubscription(u.id, 'monthly')}
@@ -1351,8 +1522,10 @@ export default function AdminDashboardPage({ onBackToStore }) {
                             }
                             className="m3-enhanced-input text-field-only"
                           >
+                            <option value="free">14-Days Free Trial (₹0)</option>
                             <option value="monthly">Monthly ({currency}999+GST)</option>
                             <option value="six_months">6-Months ({currency}4,999+GST)</option>
+                            <option value="annual">Annual Pro ({currency}8,999+GST)</option>
                           </select>
                         </div>
 
@@ -1415,6 +1588,214 @@ export default function AdminDashboardPage({ onBackToStore }) {
                       </button>
                     </div>
                   </form>
+                </div>
+              </div>
+            )}
+
+            {/* 5. QUICK EXTEND VALIDITY MODAL DIALOG (Requirement 4) */}
+            {extendingUser && (
+              <div className="subdialog-backdrop animate-fade-in" onClick={() => setExtendingUser(null)}>
+                <div
+                  className="m3-modal-sheet-dialog animate-scale-up"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ maxWidth: '480px' }}
+                >
+                  <div className="m3-dialog-header-enhanced">
+                    <div className="m3-dialog-header-left">
+                      <div className="m3-dialog-icon-pill" style={{ background: '#10b981' }}>
+                        <Clock size={20} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="m3-dialog-title">
+                          {isHindi ? 'सब्सक्रिप्शन वैधता बढ़ाएं' : 'Extend Validity'}
+                        </h3>
+                        <p className="m3-dialog-subtitle">
+                          {extendingUser.name} ({extendingUser.email})
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExtendingUser(null)}
+                      className="dialog-close-btn"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <div style={{ padding: '16px 20px' }}>
+                    <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                        <span style={{ color: '#64748b' }}>{isHindi ? 'वर्तमान प्लान:' : 'Current Plan:'}</span>
+                        <span style={{ fontWeight: 700 }}>{extendingUser.subscription?.planName || extendingUser.subscription?.planId}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#64748b' }}>{isHindi ? 'वर्तमान एक्सपायरी:' : 'Current Expiry:'}</span>
+                        <span style={{ fontWeight: 700, color: '#2563eb' }}>
+                          {new Date(extendingUser.subscription?.expiryDate || Date.now()).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
+                      {isHindi ? '⚡ त्वरित वैधता जोड़ें (Quick Extension)' : '⚡ Quick Days Extension'}
+                    </label>
+
+                    <div className="admin-modal-quick-grid">
+                      {[
+                        { label: '+7 Days', days: 7 },
+                        { label: '+14 Days', days: 14 },
+                        { label: '+30 Days (1 Mo)', days: 30 },
+                        { label: '+90 Days (3 Mo)', days: 90 },
+                        { label: '+180 Days (6 Mo)', days: 180 },
+                        { label: '+365 Days (1 Yr)', days: 365 }
+                      ].map((item) => (
+                        <button
+                          key={item.days}
+                          type="button"
+                          className="admin-quick-extend-btn"
+                          onClick={() => {
+                            extendUserValidity(extendingUser.id, item.days);
+                            setExtendingUser(null);
+                          }}
+                        >
+                          <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#16a34a' }}>{item.label}</span>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{isHindi ? 'वैधता जोड़ें' : 'Add Days'}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div style={{ margin: '18px 0', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
+                        {isHindi ? 'या विशिष्ट एक्सपायरी तारीख चुनें' : 'Or Pick a Specific Expiry Date'}
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="date"
+                          value={customExtendDate}
+                          onChange={(e) => setCustomExtendDate(e.target.value)}
+                          className="m3-enhanced-input text-field-only"
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          disabled={!customExtendDate}
+                          onClick={() => {
+                            if (customExtendDate) {
+                              extendUserValidity(extendingUser.id, customExtendDate);
+                              setExtendingUser(null);
+                            }
+                          }}
+                          className="m3-button-filled"
+                          style={{ opacity: customExtendDate ? 1 : 0.6 }}
+                        >
+                          {isHindi ? 'तारीख सेट करें' : 'Set Date'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="m3-dialog-actions-row">
+                    <button
+                      type="button"
+                      onClick={() => setExtendingUser(null)}
+                      className="m3-btn-secondary"
+                    >
+                      {isHindi ? 'बंद करें' : 'Close'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 6. CHANGE / ADD PLAN MODAL DIALOG (Requirement 4) */}
+            {changingPlanUser && (
+              <div className="subdialog-backdrop animate-fade-in" onClick={() => setChangingPlanUser(null)}>
+                <div
+                  className="m3-modal-sheet-dialog animate-scale-up"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ maxWidth: '540px' }}
+                >
+                  <div className="m3-dialog-header-enhanced">
+                    <div className="m3-dialog-header-left">
+                      <div className="m3-dialog-icon-pill" style={{ background: '#2563eb' }}>
+                        <Zap size={20} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="m3-dialog-title">
+                          {isHindi ? 'प्लान असाइन / बदलें' : 'Assign or Change Plan'}
+                        </h3>
+                        <p className="m3-dialog-subtitle">
+                          {changingPlanUser.name} ({changingPlanUser.email})
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setChangingPlanUser(null)}
+                      className="dialog-close-btn"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <div style={{ padding: '16px 20px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
+                      {isHindi ? 'नया प्लान चुनें:' : 'Select Plan to Assign:'}
+                    </label>
+
+                    <div className="admin-plan-picker-grid">
+                      {Object.values(SUBSCRIPTION_PLANS).map((p) => {
+                        const isSelected = selectedPlanId === p.id;
+                        return (
+                          <div
+                            key={p.id}
+                            className={`admin-plan-option-card ${isSelected ? 'selected' : ''}`}
+                            onClick={() => setSelectedPlanId(p.id)}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{p.name}</span>
+                              {isSelected && <Check size={16} className="text-blue-600" />}
+                            </div>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#2563eb' }}>
+                              {p.basePrice === 0 ? '₹0 Free' : `₹${p.basePrice}`}
+                              {p.gstAmount > 0 && <span style={{ fontSize: '0.72rem', color: '#64748b' }}> + 18% GST</span>}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                              ⏱️ {p.durationDays} {isHindi ? 'दिन की वैधता' : 'Days Validity'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ background: '#eff6ff', padding: '10px 14px', borderRadius: '10px', marginTop: '12px', fontSize: '0.8rem', color: '#1e40af' }}>
+                      💡 {isHindi
+                        ? 'प्लान बदलने पर यूजर की वैधता चुने हुए पैकेज के अनुसार तुरंत अपडेट हो जाएगी और अकाउंट एक्टिवेट हो जाएगा।'
+                        : 'Changing the plan will immediately update the user subscription validity and activate their account.'}
+                    </div>
+                  </div>
+
+                  <div className="m3-dialog-actions-row">
+                    <button
+                      type="button"
+                      onClick={() => setChangingPlanUser(null)}
+                      className="m3-btn-secondary"
+                    >
+                      {isHindi ? 'रद्द करें' : 'Cancel'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        changeUserPlan(changingPlanUser.id, selectedPlanId);
+                        setChangingPlanUser(null);
+                      }}
+                      className="m3-btn-primary blue"
+                    >
+                      <Check size={16} />
+                      <span>{isHindi ? 'प्लान लागू करें' : 'Apply & Activate Plan'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
