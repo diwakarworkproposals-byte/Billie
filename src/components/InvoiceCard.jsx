@@ -1,8 +1,9 @@
-import React from 'react';
-import { Download, Printer, Share2, CheckCircle2, Sparkles, Building, Phone, Mail, MapPin, CreditCard, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, Printer, Share2, CheckCircle2, Sparkles, Building, Phone, Mail, MapPin, CreditCard, ShieldCheck, MessageCircle, Bluetooth } from 'lucide-react';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
 import { useApp } from '../context/AppContext';
-import { shareInvoiceNative } from '../utils/mobileNative';
+import { shareInvoiceNative, shareToWhatsAppDirectly, formatInvoiceForWhatsApp } from '../utils/mobileNative';
+import { printThermalReceipt, connectBluetoothPrinter, getPrinterStatus } from '../utils/thermalPrinter';
 
 export default function InvoiceCard({
   invoice,
@@ -12,6 +13,7 @@ export default function InvoiceCard({
   isDraft = false
 }) {
   const { user, settings, addInvoice } = useApp();
+  const [printingStatus, setPrintingStatus] = useState(null);
   const currency = invoice.currency || settings.currency || '₹';
   const isHindi = settings.language === 'hi';
 
@@ -40,6 +42,41 @@ export default function InvoiceCard({
         : `Hello ${customer}, your invoice (${invoiceNum}) of total ${total} is ready.`,
       dialogTitle: isHindi ? 'बिल शेयर करें' : 'Share Invoice'
     });
+  };
+
+  const handleWhatsAppShare = () => {
+    if (invoice.id) {
+      addInvoice(invoice);
+    }
+    const formattedText = formatInvoiceForWhatsApp(invoice, user);
+    shareToWhatsAppDirectly({
+      phone: invoice.customer?.phone || '',
+      text: formattedText
+    });
+  };
+
+  const handleThermalPrint = async (width = 58) => {
+    if (invoice.id) {
+      addInvoice(invoice);
+    }
+    try {
+      setPrintingStatus('Printing...');
+      await printThermalReceipt(invoice, user, width);
+      setPrintingStatus(null);
+    } catch (err) {
+      console.error('Thermal print error:', err);
+      setPrintingStatus(null);
+      alert(err.message || 'Thermal printing failed');
+    }
+  };
+
+  const handleConnectBluetooth = async () => {
+    try {
+      const dev = await connectBluetoothPrinter();
+      alert(`Connected to ${dev.name}! You can now print receipts.`);
+    } catch (err) {
+      alert(`Bluetooth connection: ${err.message}`);
+    }
   };
 
   const items = invoice.items && invoice.items.length > 0 ? invoice.items : [
@@ -369,9 +406,30 @@ export default function InvoiceCard({
 
         <button
           type="button"
+          onClick={handleWhatsAppShare}
+          className="m3-button-filled m3-ripple"
+          style={{ background: '#22c55e', color: '#ffffff', border: 'none' }}
+          title="Send directly to WhatsApp"
+        >
+          <MessageCircle size={17} />
+          <span>{isHindi ? 'व्हाट्सएप भेजें' : 'WhatsApp'}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleThermalPrint(58)}
+          className="m3-button-tonal m3-ripple"
+          title="Print 58mm/80mm Thermal Receipt (Bluetooth or POS)"
+        >
+          <Bluetooth size={16} />
+          <span>{printingStatus || (isHindi ? 'थर्मल रसीद' : 'Thermal Print')}</span>
+        </button>
+
+        <button
+          type="button"
           onClick={handleShare}
           className="m3-button-tonal m3-ripple"
-          title="Share via WhatsApp, Email, etc."
+          title="Share via System Share Sheet"
         >
           <Share2 size={17} />
           <span>{isHindi ? 'शेयर करें' : 'Share'}</span>

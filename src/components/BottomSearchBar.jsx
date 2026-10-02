@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, Sparkles, X, Volume2, Globe } from 'lucide-react';
+import { Mic, MicOff, Send, Sparkles, X, Volume2, Globe, Camera } from 'lucide-react';
 import { useSpeechRecognition, stopSpeaking } from '../utils/speechRecognition';
 import { useApp } from '../context/AppContext';
+import BarcodeScannerModal from './BarcodeScannerModal';
 
 export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }) {
   const {
     settings,
     setLanguage,
     isVoiceSessionActive,
-    setIsVoiceSessionActive
+    setIsVoiceSessionActive,
+    inventory = []
   } = useApp();
 
   const [inputText, setInputText] = useState('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const inputRef = useRef(null);
 
   const isHindi = settings.language === 'hi';
@@ -134,6 +137,23 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
     setLanguage(nextLang);
   };
 
+  const handleBarcodeScan = (scannedCode) => {
+    if (!scannedCode) return;
+    const cleanCode = String(scannedCode).trim();
+    // Look up product in inventory by barcode or name
+    const found = inventory.find(
+      (item) =>
+        (item.barcode && String(item.barcode).toLowerCase() === cleanCode.toLowerCase()) ||
+        (item.name && item.name.toLowerCase() === cleanCode.toLowerCase())
+    );
+
+    if (found) {
+      onQuerySubmit(isHindi ? `1 ${found.name} ka bill bana` : `1 ${found.name} bill`);
+    } else {
+      onQuerySubmit(isHindi ? `${cleanCode} ka 1 bill bana` : `${cleanCode} 1 bill`);
+    }
+  };
+
   const defaultPlaceholder = isHindi
     ? "Billie se bolein ya type karein 'bill bana'..."
     : "Ask Billie or type 'generate invoice' / 'bill bana'...";
@@ -247,6 +267,17 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           )}
         </button>
 
+        {/* Camera Barcode / QR Code Scanner Button */}
+        <button
+          type="button"
+          onClick={() => setIsScannerOpen(true)}
+          className="bottom-bar-scan-btn m3-ripple"
+          title={isHindi ? 'बारकोड या क्यूआर स्कैन करें' : 'Scan Barcode or QR Code'}
+          aria-label="Barcode Scanner"
+        >
+          <Camera size={20} />
+        </button>
+
         {/* Send / Execute Button */}
         <button
           type="submit"
@@ -258,6 +289,14 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
           <Send size={18} />
         </button>
       </form>
+
+      {/* Barcode / QR Scanner Viewfinder Modal */}
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={handleBarcodeScan}
+        title={isHindi ? 'बारकोड / क्यूआर स्कैनर' : 'Scan Product Barcode / QR'}
+      />
     </div>
   );
 }

@@ -12,8 +12,10 @@ import {
   Check,
   RotateCcw,
   Sparkles,
-  TrendingDown
+  TrendingDown,
+  Camera
 } from 'lucide-react';
+import BarcodeScannerModal from './BarcodeScannerModal';
 
 export default function InventoryModal({ isOpen, onClose }) {
   const {
@@ -31,10 +33,12 @@ export default function InventoryModal({ isOpen, onClose }) {
 
   // New product form fields
   const [newName, setNewName] = useState('');
+  const [newBarcode, setNewBarcode] = useState('');
   const [newQty, setNewQty] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newCostPrice, setNewCostPrice] = useState('');
   const [newLowStockThreshold, setNewLowStockThreshold] = useState('5');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Inline editing row state
   const [editingId, setEditingId] = useState(null);
@@ -120,11 +124,13 @@ export default function InventoryModal({ isOpen, onClose }) {
       newName.trim(),
       Number(newQty) || 0,
       Number(newPrice) || 0,
-      cost
+      cost,
+      newBarcode.trim()
     );
 
     // Reset form
     setNewName('');
+    setNewBarcode('');
     setNewQty('');
     setNewPrice('');
     setNewCostPrice('');
@@ -298,10 +304,10 @@ export default function InventoryModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              <div className="form-grid-2 mt-2">
+              <div className="form-grid-3 mt-2">
                 <div className="form-group">
                   <label className="form-label" style={{ color: '#b91c1c', fontWeight: 700 }}>
-                    {isHindi ? 'खरीद लागत मूल्य (Cost Price) * (अनिवार्य)' : 'Cost Price / Unit * (Mandatory)'}
+                    {isHindi ? 'खरीद लागत मूल्य * (अनिवार्य)' : 'Cost Price / Unit * (Mandatory)'}
                   </label>
                   <input
                     type="number"
@@ -317,6 +323,29 @@ export default function InventoryModal({ isOpen, onClose }) {
                     className="m3-text-field"
                     style={{ borderColor: !newCostPrice ? '#fca5a5' : undefined }}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">{isHindi ? 'बारकोड / SKU' : 'Barcode / SKU'}</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input
+                      type="text"
+                      placeholder={isHindi ? 'स्कैन या कोड' : 'Scan or enter code'}
+                      value={newBarcode}
+                      onChange={(e) => setNewBarcode(e.target.value)}
+                      className="m3-text-field"
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsScannerOpen(true)}
+                      className="m3-button-tonal"
+                      style={{ padding: '0 10px', display: 'flex', alignItems: 'center' }}
+                      title={isHindi ? 'कैमरा से बारकोड स्कैन करें' : 'Scan Barcode with Camera'}
+                    >
+                      <Camera size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -593,6 +622,14 @@ export default function InventoryModal({ isOpen, onClose }) {
           </button>
         </div>
       </div>
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(code) => setNewBarcode(code)}
+        title={isHindi ? 'प्रोडक्ट बारकोड स्कैन करें' : 'Scan Product Barcode'}
+      />
     </div>
   );
 }

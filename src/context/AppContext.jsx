@@ -975,7 +975,7 @@ export function AppProvider({ children }) {
   };
 
   // Inventory actions
-  const addOrUpdateStock = (name, quantityToAdd = 1, price = 0, costPrice = 0) => {
+  const addOrUpdateStock = (name, quantityToAdd = 1, price = 0, costPrice = 0, barcode = '') => {
     const normName = (name || '').trim();
     if (!normName) return null;
 
@@ -1015,6 +1015,7 @@ export function AppProvider({ children }) {
           quantity: newQty,
           price: newPrice > 0 ? newPrice : existing.price,
           costPrice: avgCost,
+          barcode: barcode || existing.barcode || '',
           updatedAt: new Date().toLocaleDateString()
         };
         updated[existingIndex] = updatedProduct;
@@ -1027,6 +1028,7 @@ export function AppProvider({ children }) {
           quantity: qtyToAdd,
           price: newPrice,
           costPrice: finalCost,
+          barcode: barcode || '',
           lowStockThreshold: 5,
           updatedAt: new Date().toLocaleDateString()
         };

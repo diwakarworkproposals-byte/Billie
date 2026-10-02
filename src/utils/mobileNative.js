@@ -75,3 +75,57 @@ export const shareInvoiceNative = async ({ title, text, url, dialogTitle }) => {
 
   return false;
 };
+
+export const shareToWhatsAppDirectly = ({ phone, text }) => {
+  const cleanPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+  let targetPhone = cleanPhone;
+  if (targetPhone.length === 10) {
+    targetPhone = `91${targetPhone}`;
+  }
+
+  const encodedText = encodeURIComponent(text);
+  const url = targetPhone 
+    ? `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodedText}`
+    : `https://api.whatsapp.com/send?text=${encodedText}`;
+
+  window.open(url, '_blank');
+};
+
+export const formatInvoiceForWhatsApp = (invoice, store) => {
+  const storeName = store?.storeName || store?.name || 'Billie Store';
+  const customer = invoice.customer?.name || 'Customer';
+  const invNumber = invoice.invoiceNumber || invoice.id || 'INV';
+  const date = new Date().toLocaleDateString('en-IN');
+  const currency = invoice.currency || '₹';
+
+  const items = invoice.items && invoice.items.length > 0 ? invoice.items : [
+    { name: invoice.product || 'Item', quantity: invoice.quantity || 1, price: invoice.price || 0, lineTotal: invoice.total || 0 }
+  ];
+
+  let msg = `🧾 *INVOICE: #${invNumber}*\n`;
+  msg += `🏬 *${storeName}*\n`;
+  msg += `📅 Date: ${date}\n`;
+  msg += `👤 Customer: ${customer}\n`;
+  msg += `----------------------------\n`;
+  
+  items.forEach((it, idx) => {
+    const q = it.quantity || 1;
+    const p = it.price || 0;
+    const t = it.lineTotal || (q * p);
+    msg += `${idx + 1}. *${it.name}* (x${q}) : ${currency}${t}\n`;
+  });
+
+  msg += `----------------------------\n`;
+  msg += `💰 *Subtotal*: ${currency}${invoice.subtotal || invoice.total}\n`;
+  if (invoice.discount) msg += `🏷️ *Discount*: -${currency}${invoice.discount}\n`;
+  if (invoice.tax) msg += `📊 *Tax/GST*: +${currency}${invoice.tax}\n`;
+  msg += `✅ *TOTAL DUE*: *${currency}${invoice.total}*\n`;
+
+  if (store?.upiId) {
+    msg += `💳 *UPI ID*: \`${store.upiId}\`\n`;
+  }
+  msg += `\n_Thank you for your business!_ 🙏`;
+
+  return msg;
+};
+

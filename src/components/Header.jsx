@@ -1,10 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, User, Sparkles, ShieldCheck, Users } from 'lucide-react';
+import { Settings, User, Sparkles, ShieldCheck, Users, Wifi, WifiOff, Bell, BellRing } from 'lucide-react';
+import { isAppOnline, getPendingSyncCount, initOfflineSync } from '../utils/offlineSync';
+import { requestNotificationPermission } from '../utils/notificationService';
 
 export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onOpenReporting, onOpenCustomers }) {
   const { user, settings, setIsVoiceSessionActive } = useApp();
   const isHindi = settings.language === 'hi';
+  const [online, setOnline] = useState(isAppOnline());
+  const [pendingCount, setPendingCount] = useState(getPendingSyncCount());
+  const [notifEnabled, setNotifEnabled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifEnabled(Notification.permission === 'granted');
+    }
+
+    const handleSyncStatus = (e) => {
+      if (e.detail) {
+        setOnline(e.detail.isOnline);
+        setPendingCount(e.detail.pendingCount);
+      }
+    };
+
+    window.addEventListener('billie-sync-status', handleSyncStatus);
+    initOfflineSync(() => {
+      setOnline(true);
+      setPendingCount(getPendingSyncCount());
+    });
+
+    return () => {
+      window.removeEventListener('billie-sync-status', handleSyncStatus);
+    };
+  }, []);
+
+  const handleToggleNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    setNotifEnabled(granted);
+    if (granted) {
+      alert(isHindi ? 'सूचनाएं (Notifications) चालू कर दी गई हैं!' : 'Notifications enabled successfully!');
+    }
+  };
 
   return (
     <header className="billie-header">
@@ -24,6 +60,27 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
       </div>
 
       <div className="header-right">
+        {/* Offline Sync Status Indicator */}
+        <div
+          className={`network-status-pill ${online ? 'online' : 'offline'}`}
+          title={online ? 'Online - All data synced' : `${pendingCount} actions queued for offline sync`}
+        >
+          {online ? <Wifi size={13} /> : <WifiOff size={13} className="animate-pulse" />}
+          <span className="network-status-text">
+            {online ? 'Online' : (isHindi ? `ऑफलाइन (${pendingCount})` : `Offline (${pendingCount})`)}
+          </span>
+        </div>
+
+        {/* Notifications Bell */}
+        <button
+          type="button"
+          onClick={handleToggleNotifications}
+          className={`icon-button m3-ripple ${notifEnabled ? 'notif-active' : ''}`}
+          title={notifEnabled ? (isHindi ? 'सूचनाएं चालू हैं' : 'Notifications Active') : (isHindi ? 'सूचनाएं चालू करें' : 'Enable Notifications')}
+          aria-label="Toggle Notifications"
+        >
+          {notifEnabled ? <BellRing size={18} className="text-amber-500" /> : <Bell size={18} />}
+        </button>
         {/* Customers Tab Button */}
         {onOpenCustomers && (
           <button

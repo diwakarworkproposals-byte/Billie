@@ -43,6 +43,8 @@ import {
   extractNumber,
   PROMPTS
 } from '../utils/invoiceParser';
+import { triggerLowStockNotification, triggerInvoiceCreatedNotification } from '../utils/notificationService';
+import { isAppOnline, queueOfflineAction } from '../utils/offlineSync';
 import { speakText } from '../utils/speechRecognition';
 
 // Conversation step enums
@@ -369,6 +371,18 @@ export default function InvoiceWizard({
     addInvoice(completeInvoice);
     setStep(STEPS.COMPLETED);
 
+    // Trigger Native Notification for Invoice Created
+    triggerInvoiceCreatedNotification(
+      completeInvoice.invoiceNumber || invoiceNum,
+      completeInvoice.total,
+      completeInvoice.customerName
+    );
+
+    // Queue for offline sync if offline
+    if (!isAppOnline()) {
+      queueOfflineAction('create_invoice', completeInvoice);
+    }
+
     const p = PROMPTS[chosenLang] || PROMPTS.hi;
     const discLabel = totals.discountType === 'percent' && totals.discount > 0 ? `${totals.discount}%` : '';
     const msg = p.invoice_ready(
@@ -436,6 +450,10 @@ export default function InvoiceWizard({
       setStockAddQty(String(firstDef.deficit > 0 ? firstDef.deficit : 1));
       setStockAddCost(firstDef.stockItem?.costPrice ? String(firstDef.stockItem.costPrice) : '');
       setStockAddError('');
+
+      // Send Native Low Stock Push Notification
+      triggerLowStockNotification(firstDef.name, firstDef.currentStock);
+
       setLowStockModalData({
         customerName,
         itemsList,
