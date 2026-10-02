@@ -1,4 +1,4 @@
-const CACHE_NAME = 'billie-cache-v13';
+const CACHE_NAME = 'billie-cache-v14';
 
 // Install: Cache critical static assets relative to current scope
 self.addEventListener('install', (event) => {
