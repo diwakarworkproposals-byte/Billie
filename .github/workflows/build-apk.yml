@@ -51,7 +51,16 @@ jobs:
       - name: Build Android Debug APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../gradle_output.log
+        continue-on-error: true
+
+      - name: Check APK and Log Error If Failed
+        run: |
+          if [ ! -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            echo "::error::Gradle build failed! Last 200 lines of gradle_output.log:"
+            tail -n 200 gradle_output.log
+            exit 1
+          fi
 
       - name: Rename APK for Easy Download
         run: |
