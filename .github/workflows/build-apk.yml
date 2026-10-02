@@ -5,6 +5,9 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -39,9 +42,36 @@ jobs:
           cd android
           ./gradlew assembleDebug --no-daemon
 
+      - name: Rename APK for Easy Download
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk Billie-POS.apk
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Billie-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: Billie-POS.apk
           if-no-files-found: error
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest-apk
+          name: "Billie Android App (Direct APK)"
+          body: |
+            ## 📱 Billie POS & Billing App - Android APK
+
+            Latest build features:
+            - 🔢 6-Digit PIN Authentication (Mobile & ID login)
+            - 🖨️ Bluetooth Thermal Receipt Printer (58mm/80mm)
+            - 📷 Camera Barcode / QR Code Scanner
+            - 📲 1-Tap Direct WhatsApp Share
+            - 🔔 Offline Sync & Native Storage
+
+            **Direct Download:** Click on `Billie-POS.apk` below to download and install directly on your Android phone.
+          files: Billie-POS.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
