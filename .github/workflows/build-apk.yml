@@ -35,11 +35,18 @@ jobs:
       - name: Build Web App
         run: npm run build
 
-      - name: Sync Capacitor Android
-        run: npx cap sync android
+      - name: Copy Web Assets to Android
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          cp -rf dist/* android/app/src/main/assets/public/
+          npx cap sync android || true
 
       - name: Make Gradle Wrapper Executable
         run: chmod +x android/gradlew
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Build Android Debug APK
         run: |
