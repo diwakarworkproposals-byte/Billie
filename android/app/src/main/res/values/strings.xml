@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Billie</string>
+    <string name="title_activity_main">Billie</string>
+    <string name="package_name">com.billie.pos</string>
+    <string name="custom_url_scheme">com.billie.pos</string>
+</resources>

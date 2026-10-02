@@ -2,6 +2,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
+import { initNativeApp } from './utils/mobileNative.js';
+
+// Initialize Capacitor native mobile features (Splash screen, status bar, hardware back button)
+initNativeApp();
 
 // Register Service Worker for Progressive Web App offline capabilities
 if ('serviceWorker' in navigator) {

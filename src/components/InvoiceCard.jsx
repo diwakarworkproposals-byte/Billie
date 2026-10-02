@@ -1,7 +1,8 @@
 import React from 'react';
-import { Download, Printer, CheckCircle2, Sparkles, Building, Phone, Mail, MapPin, CreditCard, ShieldCheck } from 'lucide-react';
+import { Download, Printer, Share2, CheckCircle2, Sparkles, Building, Phone, Mail, MapPin, CreditCard, ShieldCheck } from 'lucide-react';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
 import { useApp } from '../context/AppContext';
+import { shareInvoiceNative } from '../utils/mobileNative';
 
 export default function InvoiceCard({
   invoice,
@@ -23,6 +24,22 @@ export default function InvoiceCard({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleShare = async () => {
+    if (invoice.id) {
+      addInvoice(invoice);
+    }
+    const customer = invoice.customer?.name || (isHindi ? 'ग्राहक' : 'Customer');
+    const total = `${currency}${invoice.total}`;
+    const invoiceNum = invoice.invoiceNumber || invoice.id || 'INV';
+    await shareInvoiceNative({
+      title: `Invoice ${invoiceNum} - Billie`,
+      text: isHindi
+        ? `नमस्ते ${customer}, आपका बिल (${invoiceNum}) कुल राशि ${total} तैयार है।`
+        : `Hello ${customer}, your invoice (${invoiceNum}) of total ${total} is ready.`,
+      dialogTitle: isHindi ? 'बिल शेयर करें' : 'Share Invoice'
+    });
   };
 
   const items = invoice.items && invoice.items.length > 0 ? invoice.items : [
@@ -348,6 +365,16 @@ export default function InvoiceCard({
         >
           <Printer size={17} />
           <span>{isHindi ? 'प्रिंट करें' : 'Print Invoice'}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleShare}
+          className="m3-button-tonal m3-ripple"
+          title="Share via WhatsApp, Email, etc."
+        >
+          <Share2 size={17} />
+          <span>{isHindi ? 'शेयर करें' : 'Share'}</span>
         </button>
 
         <button
