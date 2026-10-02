@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp, SUBSCRIPTION_PLANS } from '../context/AppContext';
+import SixDigitPinInput from './SixDigitPinInput';
 import {
   X,
   User,
@@ -18,6 +19,7 @@ import {
   Package,
   ShieldCheck,
   Key,
+  KeyRound,
   AlertTriangle,
   CreditCard,
   Calendar,
@@ -31,6 +33,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
     authenticate,
     logout,
     updateProfile,
+    updatePin,
     isInstallable,
     isInstalled,
     installPWA,
@@ -64,10 +67,19 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
   }, [user]);
 
   // Login form state
+  const [loginMethod, setLoginMethod] = useState('pin'); // 'pin' | 'password'
   const [loginEmail, setLoginEmail] = useState('');
+  const [loginPin, setLoginPin] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [authError, setAuthError] = useState('');
   const [authWarning, setAuthWarning] = useState('');
+
+  // 6-Digit PIN Update State for logged-in user
+  const [showPinEdit, setShowPinEdit] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmNewPin, setConfirmNewPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinSuccess, setPinSuccess] = useState('');
 
   if (!isOpen) return null;
 
@@ -77,12 +89,47 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
     alert(isHindi ? '✓ प्रोफाइल डिटेल्स सेव हो गई हैं!' : '✓ Profile details saved!');
   };
 
+  const handleUpdatePin = (e) => {
+    if (e) e.preventDefault();
+    setPinError('');
+    setPinSuccess('');
+
+    if (!newPin || newPin.length !== 6) {
+      setPinError(isHindi ? 'कृपया पूरा 6-अंकों का पिन दर्ज करें।' : 'Please enter full 6-digit PIN.');
+      return;
+    }
+
+    if (newPin !== confirmNewPin) {
+      setPinError(isHindi ? 'दोनों 6-Digit PIN मेल नहीं खाते! कृपया जांचें।' : 'Both 6-digit PINs do not match! Please check.');
+      return;
+    }
+
+    const res = updatePin ? updatePin(newPin) : { success: false, error: 'Function not found' };
+    if (!res.success) {
+      setPinError(res.error || (isHindi ? 'पिन अपडेट नहीं हो सका।' : 'Could not update PIN.'));
+    } else {
+      setPinSuccess(isHindi ? '✓ 6-Digit PIN सफलतापूर्वक अपडेट हो गया!' : '✓ 6-Digit PIN updated successfully!');
+      setTimeout(() => {
+        setNewPin('');
+        setConfirmNewPin('');
+        setShowPinEdit(false);
+        setPinSuccess('');
+      }, 1500);
+    }
+  };
+
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     setAuthError('');
     setAuthWarning('');
 
-    const res = authenticate(loginEmail, loginPass);
+    const secret = loginMethod === 'pin' ? loginPin : loginPass;
+    if (loginMethod === 'pin' && (!loginPin || loginPin.length !== 6)) {
+      setAuthError(isHindi ? 'कृपया पूरा 6-अंकों का पिन दर्ज करें।' : 'Please enter 6-digit PIN.');
+      return;
+    }
+
+    const res = authenticate(loginEmail, secret);
     if (!res.success) {
       setAuthError(res.error);
       return;
@@ -103,12 +150,18 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
     }
   };
 
-  const handleQuickDemoLogin = (email, pass) => {
+  const handleQuickDemoLogin = (email, passOrPin) => {
     setLoginEmail(email);
-    setLoginPass(pass);
+    if (passOrPin.length === 6 && /^\d+$/.test(passOrPin)) {
+      setLoginMethod('pin');
+      setLoginPin(passOrPin);
+    } else {
+      setLoginMethod('password');
+      setLoginPass(passOrPin);
+    }
     setAuthError('');
     setAuthWarning('');
-    const res = authenticate(email, pass);
+    const res = authenticate(email, passOrPin);
     if (res.success && res.isAdmin) {
       onClose();
       if (onOpenAdmin) onOpenAdmin();
@@ -172,9 +225,9 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                 {isHindi ? 'Billie में साइन इन करें' : 'Sign In to Billie'}
               </h3>
               <p className="login-description">
-                {isHindi
-                  ? 'एडमिन द्वारा बनाई गई लॉगिन आईडी (Email) और पासवर्ड से लॉगिन करें।'
-                  : 'Enter your User ID / Email and Password created by the administrator.'}
+                {loginMethod === 'pin'
+                  ? (isHindi ? 'अपने मोबाइल नंबर / यूजरनेम और 6-Digit PIN से लॉगिन करें।' : 'Login with your Mobile Number or Username and 6-Digit PIN.')
+                  : (isHindi ? 'अपने मोबाइल / यूजरनेम और पासवर्ड से लॉगिन करें।' : 'Enter your credentials and password to login.')}
               </p>
 
               {authError && (
@@ -193,88 +246,95 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
 
               <form onSubmit={handleLoginSubmit} className="material-form">
                 <div className="form-group">
-                  <label className="form-label">{isHindi ? 'लॉगिन आईडी / ईमेल' : 'Login ID / Email Address'}</label>
+                  <label className="form-label">{isHindi ? 'मोबाइल नंबर / यूजरनेम' : 'Mobile Number / Username'}</label>
                   <div className="input-with-icon">
-                    <Mail size={18} className="input-icon" />
+                    <Phone size={18} className="input-icon" />
                     <input
                       type="text"
                       required
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="e.g. rajesh@store.com or Diwakar"
+                      placeholder={isHindi ? 'उदा. 9876543210 या Diwakar' : 'e.g. 9876543210 or Diwakar'}
                       className="m3-text-field"
                     />
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">{isHindi ? 'पासवर्ड' : 'Password'}</label>
-                  <div className="input-with-icon">
-                    <Key size={18} className="input-icon" />
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={loginPass}
-                      onChange={(e) => setLoginPass(e.target.value)}
-                      className="m3-text-field"
+                {loginMethod === 'pin' ? (
+                  <div className="form-group">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="form-label m-0">{isHindi ? '6-अंकों का सुरक्षा पिन (6-Digit PIN)' : '6-Digit Security PIN'}</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoginMethod('password');
+                          setAuthError('');
+                        }}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-0 cursor-pointer"
+                      >
+                        {isHindi ? 'पासवर्ड उपयोग करें' : 'Use Password'}
+                      </button>
+                    </div>
+                    <SixDigitPinInput
+                      value={loginPin}
+                      onChange={setLoginPin}
+                      masked={true}
+                      error={!!authError}
+                      autoFocus={true}
                     />
                   </div>
-                </div>
+                ) : (
+                  <div className="form-group">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="form-label m-0">{isHindi ? 'पासवर्ड' : 'Password'}</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoginMethod('pin');
+                          setAuthError('');
+                        }}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-0 cursor-pointer"
+                      >
+                        {isHindi ? '6-Digit PIN उपयोग करें' : 'Use 6-Digit PIN'}
+                      </button>
+                    </div>
+                    <div className="input-with-icon">
+                      <Key size={18} className="input-icon" />
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                        value={loginPass}
+                        onChange={(e) => setLoginPass(e.target.value)}
+                        className="m3-text-field"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="submit"
                   className="m3-button-filled w-full m3-ripple mt-2"
                 >
                   <LogIn size={18} />
-                  <span>{isHindi ? 'प्रमाणित करें और साइन इन करें' : 'Authenticate & Sign In'}</span>
+                  <span>{loginMethod === 'pin' ? (isHindi ? 'पिन से साइन इन करें' : 'Sign In with PIN') : (isHindi ? 'साइन इन करें' : 'Sign In')}</span>
                 </button>
               </form>
 
-              {/* 1-Tap Quick Credentials Demo Pills */}
+              {/* 1-Tap Quick Credentials Demo Pill */}
               <div className="demo-accounts-box mt-4">
                 <span className="demo-accounts-title">
-                  {isHindi ? '⚡ टेस्ट अकाउंट्स (1-क्लिक ऑटो लॉगिन):' : '⚡ Quick Test Credentials (1-Tap):'}
+                  {isHindi ? '⚡ सुपर एडमिन एक्सेस:' : '⚡ Super Admin Access:'}
                 </span>
                 <div className="demo-pills-grid">
                   <button
                     type="button"
-                    onClick={() => handleQuickDemoLogin('Diwakar', 'Diwakar@123')}
-                    className="demo-account-pill admin"
-                    title="Super Admin Dashboard (User Name: Diwakar / Pass: Diwakar@123)"
+                    onClick={() => handleQuickDemoLogin('Diwakar', '123456')}
+                    className="demo-account-pill admin w-full justify-center"
+                    title="Super Admin Dashboard (Diwakar / PIN: 123456)"
                   >
                     <ShieldCheck size={14} />
-                    <span>👑 Admin (Diwakar / Diwakar@123)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoLogin('rajesh@store.com', 'user123')}
-                    className="demo-account-pill"
-                    title="Active Monthly Plan User (₹999 + GST)"
-                  >
-                    <User size={14} />
-                    <span>👤 Rajesh (Monthly Plan)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoLogin('pooja@boutique.in', 'user123')}
-                    className="demo-account-pill featured"
-                    title="Active 6-Months Plan User (₹4,999 + GST)"
-                  >
-                    <Sparkles size={14} />
-                    <span>💎 Pooja (6-Months Plan)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoLogin('vikas@hardware.com', 'user123')}
-                    className="demo-account-pill expired"
-                    title="Expired Subscription User"
-                  >
-                    <AlertTriangle size={14} />
-                    <span>⚠️ Vikas (Expired Subscription)</span>
+                    <span>👑 Super Admin (Diwakar / PIN: 123456)</span>
                   </button>
                 </div>
               </div>
@@ -541,6 +601,92 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                   <span>{isHindi ? 'प्रोफाइल विवरण सेव करें' : 'Save Profile Details'}</span>
                 </button>
               </form>
+
+              {/* 6-Digit Security PIN Management Card */}
+              <div className="security-pin-card mt-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <KeyRound size={18} className="text-blue-600 dark:text-blue-400" />
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 m-0">
+                        {isHindi ? '6-अंकों का सुरक्षा पिन (6-Digit PIN)' : '6-Digit Security PIN'}
+                      </h4>
+                      <p className="text-xs text-slate-500 m-0">
+                        {isHindi ? 'फास्ट मोबाइल लॉगिन और ऑथेंटिकेशन के लिए' : 'For fast login & security access'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPinEdit(!showPinEdit);
+                      setPinError('');
+                      setPinSuccess('');
+                    }}
+                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-0 cursor-pointer"
+                  >
+                    {showPinEdit ? (isHindi ? 'रद्द करें' : 'Cancel') : (isHindi ? 'पिन बदलें' : 'Change PIN')}
+                  </button>
+                </div>
+
+                {!showPinEdit ? (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+                    <span>{isHindi ? 'वर्तमान लॉगिन पिन स्थिति:' : 'Current PIN Status:'}</span>
+                    <span className="font-mono font-bold tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
+                      ● ● ● ● ● ● ({isHindi ? 'सक्रिय' : 'Active'})
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-3 animate-slide-up">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        {isHindi ? 'नया 6-अंकों का पिन दर्ज करें:' : 'Enter New 6-Digit PIN:'}
+                      </label>
+                      <SixDigitPinInput
+                        value={newPin}
+                        onChange={setNewPin}
+                        masked={true}
+                        error={!!pinError}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        {isHindi ? 'नया पिन दोबारा दर्ज करें:' : 'Confirm New 6-Digit PIN:'}
+                      </label>
+                      <SixDigitPinInput
+                        value={confirmNewPin}
+                        onChange={setConfirmNewPin}
+                        masked={true}
+                        error={!!pinError}
+                      />
+                    </div>
+
+                    {pinError && (
+                      <div className="text-xs text-rose-500 font-semibold flex items-center gap-1">
+                        <AlertTriangle size={14} />
+                        <span>{pinError}</span>
+                      </div>
+                    )}
+
+                    {pinSuccess && (
+                      <div className="text-xs text-emerald-500 font-semibold flex items-center gap-1">
+                        <CheckCircle size={14} />
+                        <span>{pinSuccess}</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleUpdatePin}
+                      className="m3-button-filled text-xs py-2 px-3 mt-1 flex items-center justify-center gap-1.5"
+                    >
+                      <KeyRound size={14} />
+                      <span>{isHindi ? 'नया 6-Digit PIN सेव करें' : 'Save New 6-Digit PIN'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* PWA Download / Offline Mode Card */}
               <div className="pwa-download-card mt-4">

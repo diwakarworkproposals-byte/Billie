@@ -95,7 +95,8 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
   };
 
   const copyCredentials = (user) => {
-    const text = `Billie Login Details:\nLogin ID: ${user.email}\nPassword: ${user.password}\nPlan: ${user.subscription?.planName || 'Pro'}`;
+    const secret = user.pin || user.password;
+    const text = `Billie Login Details:\nLogin ID: ${user.phone || user.email}\n${user.pin ? '6-Digit PIN' : 'Password'}: ${secret}\nPlan: ${user.subscription?.planName || 'Pro'}`;
     navigator.clipboard.writeText(text);
     setCopiedId(user.id);
     setTimeout(() => setCopiedId(null), 2500);
@@ -643,18 +644,18 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
                               <div className="credentials-box">
                                 <div className="flex items-center gap-1.5">
                                   <span className="cred-label">ID:</span>
-                                  <code className="cred-val font-semibold">{u.email}</code>
+                                  <code className="cred-val font-semibold">{u.phone || u.email}</code>
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="cred-label">Pass:</span>
+                                  <span className="cred-label">{u.pin ? 'PIN:' : 'Pass:'}</span>
                                   <code className="cred-val">
-                                    {isVisible ? u.password : '••••••••'}
+                                    {isVisible ? (u.pin || u.password) : '••••••'}
                                   </code>
                                   <button
                                     type="button"
                                     onClick={() => togglePassVisibility(u.id)}
                                     className="cred-eye-btn"
-                                    title={isVisible ? 'Hide Password' : 'Show Password'}
+                                    title={isVisible ? 'Hide PIN/Password' : 'Show PIN/Password'}
                                   >
                                     {isVisible ? <EyeOff size={13} /> : <Eye size={13} />}
                                   </button>
@@ -662,7 +663,7 @@ export default function AdminDashboardModal({ isOpen, onClose }) {
                                     type="button"
                                     onClick={() => copyCredentials(u)}
                                     className="cred-copy-btn"
-                                    title="Copy ID & Password to share with customer"
+                                    title="Copy ID & PIN to share with user"
                                   >
                                     {copiedId === u.id ? (
                                       <Check size={13} className="text-emerald-500" />

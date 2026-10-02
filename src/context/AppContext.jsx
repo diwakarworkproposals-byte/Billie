@@ -59,6 +59,7 @@ export const DEFAULT_ADMIN = {
   username: 'Diwakar',
   email: 'diwakar@billie.app',
   password: 'Diwakar@123',
+  pin: '123456',
   role: 'admin',
   businessName: 'Billie Admin HQ',
   phone: '+91 99999 00000',
@@ -453,23 +454,25 @@ export function AppProvider({ children }) {
   };
 
   // -------------------------------------------------------------
-  // REAL-TIME CREDENTIAL AUTHENTICATION & LOGIN (Requirement 1 & 2)
+  // REAL-TIME CREDENTIAL AUTHENTICATION & LOGIN (Supports 6-Digit PIN & Password)
   // -------------------------------------------------------------
-  const authenticate = (emailOrId, password) => {
+  const authenticate = (emailOrId, passwordOrPin) => {
     const cleanId = (emailOrId || '').trim().toLowerCase();
-    const cleanPass = (password || '').trim();
+    const cleanSecret = (passwordOrPin || '').trim();
 
-    if (!cleanId || !cleanPass) {
-      return { success: false, error: 'Email / Username और Password दोनों लिखना अनिवार्य है।' };
+    if (!cleanId || !cleanSecret) {
+      return { success: false, error: 'Mobile / Email और 6-Digit PIN दर्ज करना अनिवार्य है।' };
     }
 
-    // A. Master Super Admin Check
+    // A. Master Super Admin Check (Supports master password or 6-digit PIN 123456)
     if (
       (cleanId === 'diwakar' ||
         cleanId === 'diwakar@billie.app' ||
         cleanId === 'diwakar@billie.io' ||
+        cleanId === '9999900000' ||
+        cleanId === '+919999900000' ||
         cleanId === 'diwakar admin') &&
-      cleanPass === 'Diwakar@123'
+      (cleanSecret === 'Diwakar@123' || cleanSecret === '123456')
     ) {
       const adminSession = {
         isLoggedIn: true,
@@ -501,14 +504,18 @@ export function AppProvider({ children }) {
     if (!found) {
       return {
         success: false,
-        error: 'यह यूज़र आईडी / ईमेल पंजीकृत नहीं है। कृपया "साइन अप" करके नया खाता बनाएं।'
+        error: 'यह मोबाइल नंबर / आईडी पंजीकृत नहीं है। कृपया "नया खाता बनाएं" (Sign Up) पर क्लिक करें।'
       };
     }
 
-    if (found.password !== cleanPass) {
+    const matchesSecret =
+      (found.pin && found.pin === cleanSecret) ||
+      (found.password && found.password === cleanSecret);
+
+    if (!matchesSecret) {
       return {
         success: false,
-        error: 'पासवर्ड गलत है! कृपया सही पासवर्ड दर्ज करें।'
+        error: '6-Digit PIN या पासवर्ड गलत है! कृपया सही पिन दर्ज करें।'
       };
     }
 
@@ -548,39 +555,50 @@ export function AppProvider({ children }) {
   };
 
   // -------------------------------------------------------------
-  // REAL-TIME USER SIGNUP / REGISTRATION (Requirement 2)
+  // REAL-TIME USER SIGNUP / REGISTRATION (Supports 6-Digit PIN)
   // -------------------------------------------------------------
   const registerUser = ({
     name,
     email,
     password,
+    pin,
     businessName = '',
     phone = '',
     address = '',
     taxId = '',
     planId = 'free' // 'free' (14 days) | 'monthly' | 'six_months' | 'annual'
   }) => {
-    const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanPass = (password || '').trim();
     const cleanName = (name || '').trim();
+    const cleanPhone = (phone || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPin = (pin || password || '').trim();
 
     if (!cleanName) {
       return { success: false, error: 'कृपया अपना नाम दर्ज करें।' };
     }
-    if (!cleanEmail) {
-      return { success: false, error: 'कृपया ईमेल आईडी दर्ज करें।' };
+    if (!cleanPhone && !cleanEmail) {
+      return { success: false, error: 'कृपया अपना मोबाइल नंबर दर्ज करें।' };
     }
-    if (!cleanPass || cleanPass.length < 4) {
-      return { success: false, error: 'पासवर्ड कम से कम 4 अक्षरों का होना चाहिए।' };
+    if (!cleanPin || cleanPin.length < 6) {
+      return { success: false, error: 'कृपया 6-अंकों का पिन (6-Digit Security PIN) दर्ज करें।' };
     }
 
-    // Check if email already registered
+    const cleanPhoneDigits = cleanPhone.replace(/[\s+-]/g, '');
+
+    // Check if phone or email already registered
+    const alreadyExists = users.some(
+      (u) =>
+        (cleanEmail && (u.email || '').toLowerCase() === cleanEmail) ||
+        (cleanPhoneDigits && (u.phone || '').replace(/[\s+-]/g, '') === cleanPhoneDigits)
+    );
+
     if (
+      alreadyExists ||
       cleanEmail === 'diwakar' ||
       cleanEmail === 'diwakar@billie.app' ||
-      users.some((u) => (u.email || '').toLowerCase() === cleanEmail)
+      cleanPhoneDigits === '9999900000'
     ) {
-      return { success: false, error: 'इस ईमेल से खाता पहले से मौजूद है! कृपया सीधे लॉग इन करें।' };
+      return { success: false, error: 'यह मोबाइल नंबर या ईमेल पहले से पंजीकृत है! कृपया सीधे 6-Digit PIN से लॉग इन करें।' };
     }
 
     const plan = SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.free;
@@ -590,11 +608,12 @@ export function AppProvider({ children }) {
     const newUser = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       name: cleanName,
-      email: cleanEmail,
-      password: cleanPass,
+      email: cleanEmail || `${cleanPhoneDigits || 'user'}@billie.app`,
+      password: cleanPin,
+      pin: cleanPin,
       role: 'user',
       businessName: businessName.trim() || `${cleanName}'s Business`,
-      phone: phone.trim(),
+      phone: cleanPhone,
       address: address.trim(),
       taxId: taxId.trim(),
       subscription: {
@@ -608,7 +627,6 @@ export function AppProvider({ children }) {
         startDate: now.toISOString(),
         expiryDate: expiry.toISOString()
       },
-      createdAt: now.toLocaleDateString()
     };
 
     setUsers((prev) => {
@@ -662,6 +680,15 @@ export function AppProvider({ children }) {
       return updated;
     });
   };
+
+  const updatePin = (newPin) => {
+    if (!newPin || String(newPin).length !== 6) {
+      return { success: false, error: 'पिन ठीक 6 अंकों का होना चाहिए।' };
+    }
+    updateProfile({ pin: String(newPin), password: String(newPin) });
+    return { success: true };
+  };
+
 
   // -------------------------------------------------------------
   // ADMIN DASHBOARD USER & SUBSCRIPTION MANAGEMENT (Requirement 1, 3, 4)
@@ -1224,6 +1251,7 @@ export function AppProvider({ children }) {
         registerUser,
         logout,
         updateProfile,
+        updatePin,
         addUser,
         updateUser,
         deleteUser,

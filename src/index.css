@@ -10578,3 +10578,80 @@ input:checked + .slider:before {
   color: #fbbf24;
   border-color: rgba(245, 158, 11, 0.4);
 }
+
+/* 6-Digit PIN Input System */
+.six-pin-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.six-pin-box {
+  width: 44px;
+  height: 52px;
+  border-radius: 12px;
+  border: 1.5px solid var(--md-outline-variant, #cbd5e1);
+  background-color: var(--md-surface, #ffffff);
+  color: var(--md-on-surface, #0f172a);
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.six-pin-box:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  transform: translateY(-1px);
+}
+
+.six-pin-box.filled {
+  border-color: #3b82f6;
+  background-color: rgba(37, 99, 235, 0.05);
+}
+
+.six-pin-box.error {
+  border-color: #ef4444;
+  background-color: #fff1f2;
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .six-pin-box,
+.dark .six-pin-box {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .six-pin-box:focus,
+.dark .six-pin-box:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+[data-theme="dark"] .six-pin-box.filled,
+.dark .six-pin-box.filled {
+  border-color: #60a5fa;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .six-pin-box.error,
+.dark .six-pin-box.error {
+  background-color: rgba(136, 19, 55, 0.35);
+  border-color: rgba(225, 29, 72, 0.5);
+  color: #fda4af;
+}
+
+@media (max-width: 400px) {
+  .six-pin-box {
+    width: 38px;
+    height: 48px;
+    font-size: 1.2rem;
+  }
+}
+

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp, SUBSCRIPTION_PLANS } from '../context/AppContext';
+import SixDigitPinInput from './SixDigitPinInput';
 import {
   Sparkles,
   Lock,
@@ -14,7 +15,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
-  Gift
+  Gift,
+  KeyRound,
+  Key
 } from 'lucide-react';
 
 export default function AuthPage({ onLoginSuccess }) {
@@ -22,9 +25,12 @@ export default function AuthPage({ onLoginSuccess }) {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
 
   // Login form state
+  const [loginMethod, setLoginMethod] = useState('pin'); // 'pin' | 'password'
   const [loginId, setLoginId] = useState('');
+  const [loginPin, setLoginPin] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [showLoginPass, setShowLoginPass] = useState(false);
+  const [pinMasked, setPinMasked] = useState(true);
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
@@ -33,8 +39,9 @@ export default function AuthPage({ onLoginSuccess }) {
   const [signupBusiness, setSignupBusiness] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
-  const [signupPass, setSignupPass] = useState('');
-  const [showSignupPass, setShowSignupPass] = useState(false);
+  const [signupPin, setSignupPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [signupPinMasked, setSignupPinMasked] = useState(true);
   const [signupPlan, setSignupPlan] = useState('free'); // 'free' | 'monthly' | 'six_months'
   const [signupError, setSignupError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState('');
@@ -45,10 +52,29 @@ export default function AuthPage({ onLoginSuccess }) {
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     setLoginError('');
+
+    if (!loginId.trim()) {
+      setLoginError(isHindi ? 'कृपया मोबाइल नंबर या यूजरनेम दर्ज करें।' : 'Please enter your mobile number or username.');
+      return;
+    }
+
+    if (loginMethod === 'pin') {
+      if (loginPin.length !== 6) {
+        setLoginError(isHindi ? 'कृपया पूरा 6-अंकों का पिन (6-Digit PIN) दर्ज करें।' : 'Please enter full 6-digit PIN.');
+        return;
+      }
+    } else {
+      if (!loginPass.trim()) {
+        setLoginError(isHindi ? 'कृपया पासवर्ड दर्ज करें।' : 'Please enter password.');
+        return;
+      }
+    }
+
     setLoginLoading(true);
 
     setTimeout(() => {
-      const res = authenticate(loginId, loginPass);
+      const secret = loginMethod === 'pin' ? loginPin : loginPass;
+      const res = authenticate(loginId, secret);
       setLoginLoading(false);
       if (!res.success) {
         setLoginError(res.error || (isHindi ? 'लॉगिन विफल रहा! कृपया जांचें।' : 'Login failed! Please check credentials.'));
@@ -64,6 +90,28 @@ export default function AuthPage({ onLoginSuccess }) {
     e.preventDefault();
     setSignupError('');
     setSignupSuccess('');
+
+    if (!signupName.trim()) {
+      setSignupError(isHindi ? 'कृपया अपना पूरा नाम दर्ज करें।' : 'Please enter your full name.');
+      return;
+    }
+
+    const cleanPhone = signupPhone.replace(/[\s+-]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setSignupError(isHindi ? 'कृपया वैध 10-अंकों का मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    if (!signupPin || signupPin.length !== 6) {
+      setSignupError(isHindi ? 'कृपया 6-अंकों का सुरक्षा पिन बनाएं।' : 'Please create a 6-digit security PIN.');
+      return;
+    }
+
+    if (signupPin !== confirmPin) {
+      setSignupError(isHindi ? 'दोनों 6-Digit PIN मेल नहीं खाते! कृपया जांचें।' : 'Both 6-digit PINs do not match! Please check.');
+      return;
+    }
+
     setSignupLoading(true);
 
     setTimeout(() => {
@@ -72,7 +120,8 @@ export default function AuthPage({ onLoginSuccess }) {
         businessName: signupBusiness,
         email: signupEmail,
         phone: signupPhone,
-        password: signupPass,
+        pin: signupPin,
+        password: signupPin,
         planId: signupPlan
       });
       setSignupLoading(false);
@@ -82,8 +131,8 @@ export default function AuthPage({ onLoginSuccess }) {
       } else {
         setSignupSuccess(
           isHindi
-            ? `✓ स्वागत है, ${res.user.name}! आपका खाता तैयार है।`
-            : `✓ Welcome, ${res.user.name}! Your account has been created.`
+            ? `✓ स्वागत है, ${res.user.name}! 6-Digit PIN के साथ खाता तैयार है।`
+            : `✓ Welcome, ${res.user.name}! Account created with 6-digit PIN.`
         );
         setTimeout(() => {
           if (onLoginSuccess) {
@@ -92,6 +141,13 @@ export default function AuthPage({ onLoginSuccess }) {
         }, 600);
       }
     }, 200);
+  };
+
+  const fillQuickAdmin = () => {
+    setLoginId('Diwakar');
+    setLoginMethod('pin');
+    setLoginPin('123456');
+    setLoginError('');
   };
 
   return (
@@ -153,12 +209,14 @@ export default function AuthPage({ onLoginSuccess }) {
           <form onSubmit={handleLoginSubmit} className="auth-form-content animate-slide-up">
             <div className="auth-headings">
               <h2 className="auth-title">
-                {isHindi ? 'Billie में लॉग इन करें' : 'Sign in to Billie'}
+                {loginMethod === 'pin'
+                  ? (isHindi ? '6-Digit PIN से लॉगिन करें' : 'Sign in with 6-Digit PIN')
+                  : (isHindi ? 'पासवर्ड से लॉगिन करें' : 'Sign in with Password')}
               </h2>
               <p className="auth-subtitle">
-                {isHindi
-                  ? 'अपने ईमेल या यूजरनेम और पासवर्ड से प्रवेश करें'
-                  : 'Enter your credentials to access your store'}
+                {loginMethod === 'pin'
+                  ? (isHindi ? 'अपना मोबाइल नंबर या यूजरनेम और 6-अंकों का पिन दर्ज करें' : 'Enter your mobile number or username and 6-digit PIN')
+                  : (isHindi ? 'अपने ईमेल/यूजरनेम और पासवर्ड से प्रवेश करें' : 'Enter your credentials to access your store')}
               </p>
             </div>
 
@@ -169,49 +227,105 @@ export default function AuthPage({ onLoginSuccess }) {
               </div>
             )}
 
+            {/* Mobile / ID Field */}
             <div className="auth-input-group">
               <label className="auth-label">
-                {isHindi ? 'ईमेल या यूजरनेम (Login ID)' : 'Email or Username'}
+                {isHindi ? 'मोबाइल नंबर / यूजरनेम' : 'Mobile Number or Username'}
               </label>
               <div className="auth-field-wrapper">
-                <Mail size={17} className="field-icon" />
+                <Phone size={17} className="field-icon" />
                 <input
                   type="text"
                   required
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
-                  placeholder={isHindi ? 'उदा. your@store.com या Diwakar' : 'e.g. your@store.com or Diwakar'}
+                  placeholder={isHindi ? 'उदा. 9876543210 या Diwakar' : 'e.g. 9876543210 or Diwakar'}
                   className="auth-input"
                   autoComplete="username"
                 />
               </div>
             </div>
 
-            <div className="auth-input-group">
-              <label className="auth-label">
-                {isHindi ? 'पासवर्ड' : 'Password'}
-              </label>
-              <div className="auth-field-wrapper">
-                <Lock size={17} className="field-icon" />
-                <input
-                  type={showLoginPass ? 'text' : 'password'}
-                  required
-                  value={loginPass}
-                  onChange={(e) => setLoginPass(e.target.value)}
-                  placeholder="••••••••"
-                  className="auth-input pr-10"
-                  autoComplete="current-password"
+            {/* 6-Digit PIN Input Mode */}
+            {loginMethod === 'pin' ? (
+              <div className="auth-input-group">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="auth-label m-0">
+                    {isHindi ? '6-अंकों का सुरक्षा पिन (6-Digit PIN)' : '6-Digit Security PIN'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setPinMasked(!pinMasked)}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium bg-transparent border-0 cursor-pointer"
+                  >
+                    {pinMasked ? <Eye size={13} /> : <EyeOff size={13} />}
+                    <span>{pinMasked ? (isHindi ? 'पिन दिखाएं' : 'Show') : (isHindi ? 'पिन छुपाएं' : 'Hide')}</span>
+                  </button>
+                </div>
+
+                <SixDigitPinInput
+                  value={loginPin}
+                  onChange={setLoginPin}
+                  masked={pinMasked}
+                  error={!!loginError}
+                  autoFocus={true}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowLoginPass(!showLoginPass)}
-                  className="field-toggle-btn"
-                  title={showLoginPass ? 'Hide password' : 'Show password'}
-                >
-                  {showLoginPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+
+                <div className="flex justify-end mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginMethod('password');
+                      setLoginError('');
+                    }}
+                    className="text-xs text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 bg-transparent border-0 cursor-pointer flex items-center gap-1"
+                  >
+                    <Key size={12} />
+                    <span>{isHindi ? 'पासवर्ड से लॉगिन करना चाहते हैं?' : 'Login with password instead?'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Password Fallback Mode */
+              <div className="auth-input-group">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="auth-label m-0">
+                    {isHindi ? 'पासवर्ड' : 'Password'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginMethod('pin');
+                      setLoginError('');
+                    }}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium bg-transparent border-0 cursor-pointer"
+                  >
+                    <KeyRound size={13} />
+                    <span>{isHindi ? '6-Digit PIN उपयोग करें' : 'Use 6-Digit PIN'}</span>
+                  </button>
+                </div>
+                <div className="auth-field-wrapper">
+                  <Lock size={17} className="field-icon" />
+                  <input
+                    type={showLoginPass ? 'text' : 'password'}
+                    required
+                    value={loginPass}
+                    onChange={(e) => setLoginPass(e.target.value)}
+                    placeholder="••••••••"
+                    className="auth-input pr-10"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPass(!showLoginPass)}
+                    className="field-toggle-btn"
+                    title={showLoginPass ? 'Hide password' : 'Show password'}
+                  >
+                    {showLoginPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -222,11 +336,28 @@ export default function AuthPage({ onLoginSuccess }) {
                 <span>{isHindi ? 'लॉग इन हो रहा है...' : 'Signing in...'}</span>
               ) : (
                 <>
-                  <span>{isHindi ? 'लॉग इन करें' : 'Sign In'}</span>
+                  <span>{loginMethod === 'pin' ? (isHindi ? 'पिन से प्रवेश करें' : 'Sign In with PIN') : (isHindi ? 'लॉग इन करें' : 'Sign In')}</span>
                   <ArrowRight size={17} />
                 </>
               )}
             </button>
+
+            {/* Quick Super Admin Helper Box */}
+            <div className="mt-3 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck size={15} className="text-amber-500 flex-shrink-0" />
+                <span>
+                  <strong>Admin:</strong> Diwakar (PIN: <strong>123456</strong>)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={fillQuickAdmin}
+                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-0 cursor-pointer"
+              >
+                {isHindi ? 'ऑटो-भरें' : 'Auto Fill'}
+              </button>
+            </div>
 
             <div className="auth-footer-prompt">
               <span>{isHindi ? 'नया खाता चाहिए?' : "Don't have an account?"}</span>
@@ -246,12 +377,12 @@ export default function AuthPage({ onLoginSuccess }) {
           <form onSubmit={handleSignupSubmit} className="auth-form-content animate-slide-up">
             <div className="auth-headings">
               <h2 className="auth-title">
-                {isHindi ? 'नया खाता बनाएं' : 'Create an Account'}
+                {isHindi ? 'नया खाता और 6-Digit PIN बनाएं' : 'Create Account & 6-Digit PIN'}
               </h2>
               <p className="auth-subtitle">
                 {isHindi
-                  ? 'तुरंत 14-दिन का निःशुल्क ट्रायल शुरू करें'
-                  : 'Start your 14-day free trial or choose a plan'}
+                  ? 'अपना मोबाइल नंबर दर्ज करें और आसान 6-अंकों का लॉगिन पिन सेट करें'
+                  : 'Enter your mobile number and set a 6-digit login PIN'}
               </p>
             </div>
 
@@ -307,13 +438,30 @@ export default function AuthPage({ onLoginSuccess }) {
             <div className="auth-grid-2">
               <div className="auth-input-group">
                 <label className="auth-label">
-                  {isHindi ? 'ईमेल आईडी *' : 'Email Address *'}
+                  {isHindi ? 'मोबाइल नंबर (Login ID) *' : 'Mobile Number (Login ID) *'}
+                </label>
+                <div className="auth-field-wrapper">
+                  <Phone size={17} className="field-icon" />
+                  <input
+                    type="tel"
+                    required
+                    maxLength={15}
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(e.target.value)}
+                    placeholder="9876543210"
+                    className="auth-input"
+                  />
+                </div>
+              </div>
+
+              <div className="auth-input-group">
+                <label className="auth-label">
+                  {isHindi ? 'ईमेल आईडी (वैकल्पिक)' : 'Email Address (Optional)'}
                 </label>
                 <div className="auth-field-wrapper">
                   <Mail size={17} className="field-icon" />
                   <input
                     type="email"
-                    required
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="ramesh@textiles.in"
@@ -322,50 +470,42 @@ export default function AuthPage({ onLoginSuccess }) {
                   />
                 </div>
               </div>
-
-              <div className="auth-input-group">
-                <label className="auth-label">
-                  {isHindi ? 'मोबाइल नंबर *' : 'Phone Number *'}
-                </label>
-                <div className="auth-field-wrapper">
-                  <Phone size={17} className="field-icon" />
-                  <input
-                    type="tel"
-                    required
-                    value={signupPhone}
-                    onChange={(e) => setSignupPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className="auth-input"
-                  />
-                </div>
-              </div>
             </div>
 
+            {/* 6-Digit PIN Setup */}
             <div className="auth-input-group">
-              <label className="auth-label">
-                {isHindi ? 'पासवर्ड (कम से कम 4 अक्षर) *' : 'Password (min 4 chars) *'}
-              </label>
-              <div className="auth-field-wrapper">
-                <Lock size={17} className="field-icon" />
-                <input
-                  type={showSignupPass ? 'text' : 'password'}
-                  required
-                  minLength={4}
-                  value={signupPass}
-                  onChange={(e) => setSignupPass(e.target.value)}
-                  placeholder="Create secure password"
-                  className="auth-input pr-10"
-                  autoComplete="new-password"
-                />
+              <div className="flex items-center justify-between mb-1">
+                <label className="auth-label m-0">
+                  {isHindi ? '6-अंकों का सुरक्षा पिन बनाएं (Create 6-Digit PIN) *' : 'Create 6-Digit PIN *'}
+                </label>
                 <button
                   type="button"
-                  onClick={() => setShowSignupPass(!showSignupPass)}
-                  className="field-toggle-btn"
-                  title={showSignupPass ? 'Hide password' : 'Show password'}
+                  onClick={() => setSignupPinMasked(!signupPinMasked)}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium bg-transparent border-0 cursor-pointer"
                 >
-                  {showSignupPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {signupPinMasked ? <Eye size={13} /> : <EyeOff size={13} />}
+                  <span>{signupPinMasked ? (isHindi ? 'पिन दिखाएं' : 'Show') : (isHindi ? 'पिन छुपाएं' : 'Hide')}</span>
                 </button>
               </div>
+              <SixDigitPinInput
+                value={signupPin}
+                onChange={setSignupPin}
+                masked={signupPinMasked}
+                error={!!signupError && signupPin.length < 6}
+              />
+            </div>
+
+            {/* Confirm 6-Digit PIN */}
+            <div className="auth-input-group">
+              <label className="auth-label mb-1">
+                {isHindi ? 'पिन की पुष्टि करें (Confirm 6-Digit PIN) *' : 'Confirm 6-Digit PIN *'}
+              </label>
+              <SixDigitPinInput
+                value={confirmPin}
+                onChange={setConfirmPin}
+                masked={signupPinMasked}
+                error={!!signupError && confirmPin !== signupPin}
+              />
             </div>
 
             {/* Plan Selector on Sign Up */}
@@ -382,12 +522,12 @@ export default function AuthPage({ onLoginSuccess }) {
                   <div className="auth-plan-header">
                     <span className="auth-plan-title">
                       <Gift size={14} className="text-emerald-500" />
-                      {isHindi ? '14 दिन फ्री ट्रायल' : '14-Day Free'}
+                      {isHindi ? '14 दिन फ्री' : '14-Day Free'}
                     </span>
                     <span className="auth-plan-price-free">₹0</span>
                   </div>
                   <span className="auth-plan-desc">
-                    {isHindi ? 'बिना क्रेडिट कार्ड के 14 दिन मुफ्त' : '14 days free trial, no card needed'}
+                    {isHindi ? '14 दिन ट्रायल, कार्ड नहीं चाहिए' : '14 days trial, no card needed'}
                   </span>
                 </div>
 
@@ -436,7 +576,7 @@ export default function AuthPage({ onLoginSuccess }) {
                 <span>{isHindi ? 'खाता बन रहा है...' : 'Creating Account...'}</span>
               ) : (
                 <>
-                  <span>{isHindi ? 'खाता बनाएं और शुरू करें' : 'Create Account & Start'}</span>
+                  <span>{isHindi ? '6-Digit PIN के साथ खाता बनाएं' : 'Create Account & Set PIN'}</span>
                   <ArrowRight size={17} />
                 </>
               )}
