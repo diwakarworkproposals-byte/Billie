@@ -39,7 +39,6 @@ jobs:
         run: |
           mkdir -p android/app/src/main/assets/public
           cp -rf dist/* android/app/src/main/assets/public/
-          npx cap sync android || true
 
       - name: Make Gradle Wrapper Executable
         run: chmod +x android/gradlew
@@ -61,7 +60,13 @@ jobs:
             echo "Found APK at $APK_FILE"
             cp "$APK_FILE" Billie-POS.apk
           else
-            ERR_MSG=$(tail -n 25 gradle_output.log | tr '\r' ' ' | sed ':a;N;$!ba;s/\n/%0A/g')
+            ERR_MSG=$(grep -A 30 -m 1 "What went wrong:" gradle_output.log | tr '\r' ' ' | sed ':a;N;$!ba;s/\n/%0A/g')
+            if [ -z "$ERR_MSG" ]; then
+              ERR_MSG=$(grep -A 30 -m 1 "Caused by:" gradle_output.log | tr '\r' ' ' | sed ':a;N;$!ba;s/\n/%0A/g')
+            fi
+            if [ -z "$ERR_MSG" ]; then
+              ERR_MSG=$(tail -n 30 gradle_output.log | tr '\r' ' ' | sed ':a;N;$!ba;s/\n/%0A/g')
+            fi
             echo "::error title=Gradle Error::$ERR_MSG"
             exit 1
           fi
