@@ -2,13 +2,13 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
-import { initNativeApp } from './utils/mobileNative.js';
+import { initNativeApp, isNativeMobile } from './utils/mobileNative.js';
 
 // Initialize Capacitor native mobile features (Splash screen, status bar, hardware back button)
 initNativeApp();
 
-// Register Service Worker for Progressive Web App offline capabilities
-if ('serviceWorker' in navigator) {
+// Register Service Worker for Progressive Web App offline capabilities (only in browser/PWA mode)
+if ('serviceWorker' in navigator && !isNativeMobile()) {
   window.addEventListener('load', () => {
     const swUrl = `${import.meta.env.BASE_URL}sw.js`;
     navigator.serviceWorker
