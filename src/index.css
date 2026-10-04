@@ -10655,3 +10655,697 @@ input:checked + .slider:before {
   }
 }
 
+/* ==========================================================================
+   Material Design 3 Auth & 6-Digit PIN System
+   ========================================================================== */
+.m3-login-method-selector {
+  display: flex;
+  background: var(--md-surface-container-highest, #f1f5f9);
+  padding: 4px;
+  border-radius: var(--radius-full, 9999px);
+  margin-bottom: 16px;
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+}
+
+[data-theme="dark"] .m3-login-method-selector,
+.dark .m3-login-method-selector {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.m3-method-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-full, 9999px);
+  border: none;
+  background: transparent;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--md-on-surface-variant, #64748b);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.m3-method-tab.active {
+  background: #ffffff;
+  color: #1e40af;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .m3-method-tab.active,
+.dark .m3-method-tab.active {
+  background: #0f172a;
+  color: #60a5fa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.m3-pin-auth-container {
+  background: var(--md-surface-container, #f8fafc);
+  border: 1.5px solid var(--md-outline-variant, #e2e8f0);
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .m3-pin-auth-container,
+.dark .m3-pin-auth-container {
+  background: rgba(30, 41, 59, 0.55);
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.m3-pin-auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.m3-pin-auth-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.m3-pin-auth-label {
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--md-on-surface, #0f172a);
+}
+
+[data-theme="dark"] .m3-pin-auth-label,
+.dark .m3-pin-auth-label {
+  color: #f1f5f9;
+}
+
+.m3-pin-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.m3-pin-toggle-btn:hover {
+  background: rgba(37, 99, 235, 0.14);
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .m3-pin-toggle-btn,
+.dark .m3-pin-toggle-btn {
+  background: rgba(96, 165, 250, 0.12);
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.25);
+}
+
+[data-theme="dark"] .m3-pin-toggle-btn:hover,
+.dark .m3-pin-toggle-btn:hover {
+  background: rgba(96, 165, 250, 0.2);
+}
+
+.m3-pin-hint-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--md-on-surface-variant, #64748b);
+  justify-content: center;
+  margin-top: -2px;
+}
+
+/* Material Design 3 Profile Security PIN Card */
+.m3-security-pin-card {
+  background: var(--md-surface, #ffffff);
+  border: 1.5px solid var(--md-outline-variant, #e2e8f0);
+  border-radius: 22px;
+  padding: 18px;
+  margin-top: 16px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .m3-security-pin-card,
+.dark .m3-security-pin-card {
+  background: #151d2c;
+  border-color: #2a374a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.m3-pin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.m3-pin-card-leading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.m3-pin-avatar-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .m3-pin-avatar-badge,
+.dark .m3-pin-avatar-badge {
+  background: rgba(96, 165, 250, 0.15);
+}
+
+.m3-pin-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--md-on-surface, #0f172a);
+  margin: 0;
+}
+
+[data-theme="dark"] .m3-pin-title,
+.dark .m3-pin-title {
+  color: #f8fafc;
+}
+
+.m3-pin-subtitle {
+  font-size: 0.74rem;
+  color: var(--md-on-surface-variant, #64748b);
+  margin: 2px 0 0 0;
+}
+
+.m3-pin-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 9999px);
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .m3-pin-status-pill,
+.dark .m3-pin-status-pill {
+  background: rgba(6, 78, 59, 0.4);
+  color: #34d399;
+}
+
+.m3-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.m3-btn-tonal-pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(37, 99, 235, 0.09);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  flex-shrink: 0;
+}
+
+.m3-btn-tonal-pin:hover {
+  background: rgba(37, 99, 235, 0.16);
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .m3-btn-tonal-pin,
+.dark .m3-btn-tonal-pin {
+  background: rgba(96, 165, 250, 0.14);
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
+.m3-btn-tonal-pin.cancel {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+[data-theme="dark"] .m3-btn-tonal-pin.cancel,
+.dark .m3-btn-tonal-pin.cancel {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.m3-pin-preview-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--md-outline-variant, #f1f5f9);
+}
+
+[data-theme="dark"] .m3-pin-preview-strip,
+.dark .m3-pin-preview-strip {
+  border-color: #2a374a;
+}
+
+.m3-pin-preview-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.m3-pin-preview-dots .pin-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.m3-pin-preview-caption {
+  font-size: 0.72rem;
+  color: var(--md-on-surface-variant, #64748b);
+  font-style: italic;
+}
+
+.m3-pin-edit-expanded {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--md-outline-variant, #f1f5f9);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+[data-theme="dark"] .m3-pin-edit-expanded,
+.dark .m3-pin-edit-expanded {
+  border-color: #2a374a;
+}
+
+.m3-field-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--md-on-surface, #334155);
+  display: block;
+  margin-bottom: 2px;
+}
+
+[data-theme="dark"] .m3-field-label,
+.dark .m3-field-label {
+  color: #cbd5e1;
+}
+
+.m3-pin-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.m3-btn-outlined-cancel {
+  padding: 8px 16px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1.5px solid var(--md-outline-variant, #cbd5e1);
+  background: transparent;
+  color: var(--md-on-surface-variant, #64748b);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.m3-btn-outlined-cancel:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .m3-btn-outlined-cancel,
+.dark .m3-btn-outlined-cancel {
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.m3-btn-filled-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-full, 9999px);
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.m3-btn-filled-save:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.m3-form-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.m3-form-alert.error {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+[data-theme="dark"] .m3-form-alert.error,
+.dark .m3-form-alert.error {
+  background: rgba(136, 19, 55, 0.4);
+  color: #fda4af;
+}
+
+.m3-form-alert.success {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+[data-theme="dark"] .m3-form-alert.success,
+.dark .m3-form-alert.success {
+  background: rgba(6, 78, 59, 0.4);
+  color: #34d399;
+}
+
+/* ==========================================================================
+   Material Design 3 Centered Barcode Scanner Modal
+   ========================================================================== */
+.m3-barcode-scanner-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(15, 23, 42, 0.82) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  padding: 16px !important;
+  box-sizing: border-box !important;
+}
+
+.m3-barcode-scanner-card {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: auto !important;
+  background: var(--md-surface, #ffffff) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 25px 70px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+  padding: 22px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  box-sizing: border-box !important;
+  animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+[data-theme="dark"] .m3-barcode-scanner-card,
+.dark .m3-barcode-scanner-card {
+  background: #111827 !important;
+  border: 1px solid rgba(51, 65, 85, 0.8) !important;
+}
+
+.m3-barcode-scanner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.m3-scanner-header-lead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.m3-scanner-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #ecfdf5;
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .m3-scanner-badge,
+.dark .m3-scanner-badge {
+  background: rgba(6, 78, 59, 0.4);
+  color: #34d399;
+}
+
+.m3-scanner-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--md-on-surface, #0f172a);
+  margin: 0;
+}
+
+[data-theme="dark"] .m3-scanner-title,
+.dark .m3-scanner-title {
+  color: #f8fafc;
+}
+
+.m3-scanner-subtitle {
+  font-size: 0.75rem;
+  color: var(--md-on-surface-variant, #64748b);
+  margin: 2px 0 0 0;
+}
+
+.m3-scanner-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--md-surface-container, #f1f5f9);
+  color: var(--md-on-surface-variant, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.m3-scanner-close-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+[data-theme="dark"] .m3-scanner-close-btn,
+.dark .m3-scanner-close-btn {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+.m3-scanner-viewfinder {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #000;
+  min-height: 270px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.8);
+}
+
+.m3-scanner-html5-feed {
+  width: 100% !important;
+  min-height: 270px !important;
+}
+
+.m3-scanner-html5-feed video {
+  border-radius: 20px;
+  object-fit: cover !important;
+}
+
+/* 4 Aiming Reticle Corners */
+.m3-reticle-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.m3-reticle-corner.top-left {
+  top: 14px;
+  left: 14px;
+  border-top: 3.5px solid #10b981;
+  border-left: 3.5px solid #10b981;
+  border-top-left-radius: 8px;
+}
+
+.m3-reticle-corner.top-right {
+  top: 14px;
+  right: 14px;
+  border-top: 3.5px solid #10b981;
+  border-right: 3.5px solid #10b981;
+  border-top-right-radius: 8px;
+}
+
+.m3-reticle-corner.bottom-left {
+  bottom: 14px;
+  left: 14px;
+  border-bottom: 3.5px solid #10b981;
+  border-left: 3.5px solid #10b981;
+  border-bottom-left-radius: 8px;
+}
+
+.m3-reticle-corner.bottom-right {
+  bottom: 14px;
+  right: 14px;
+  border-bottom: 3.5px solid #10b981;
+  border-right: 3.5px solid #10b981;
+  border-bottom-right-radius: 8px;
+}
+
+.m3-scanner-laser-line {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #10b981, #34d399, transparent);
+  box-shadow: 0 0 12px #10b981;
+  animation: scannerLaser 2s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.m3-scanner-frame-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  border-radius: var(--radius-full, 9999px);
+  color: #f1f5f9;
+  font-size: 0.72rem;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 4;
+  white-space: nowrap;
+}
+
+.m3-scanner-success-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 185, 129, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  padding: 16px;
+  text-align: center;
+  z-index: 10;
+}
+
+.m3-scanner-error-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.94);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #f8fafc;
+  padding: 24px;
+  text-align: center;
+  z-index: 10;
+}
+
+.m3-scanner-toolbar {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.m3-scanner-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--md-surface-container, #f1f5f9);
+  color: var(--md-on-surface, #1e293b);
+  border: 1px solid var(--md-outline-variant, #cbd5e1);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.m3-scanner-tool-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .m3-scanner-tool-btn,
+.dark .m3-scanner-tool-btn {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+
+.m3-scanner-tool-btn.active {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+[data-theme="dark"] .m3-scanner-tool-btn.active,
+.dark .m3-scanner-tool-btn.active {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #fde68a;
+}
+
+.m3-scanner-footer-note {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--md-on-surface-variant, #64748b);
+}
+

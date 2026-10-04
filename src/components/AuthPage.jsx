@@ -143,13 +143,6 @@ export default function AuthPage({ onLoginSuccess }) {
     }, 200);
   };
 
-  const fillQuickAdmin = () => {
-    setLoginId('Diwakar');
-    setLoginMethod('pin');
-    setLoginPin('123456');
-    setLoginError('');
-  };
-
   return (
     <div className="auth-fullscreen-container animate-fade-in">
       <div className="auth-card-wrapper animate-scale-up">
@@ -210,13 +203,13 @@ export default function AuthPage({ onLoginSuccess }) {
             <div className="auth-headings">
               <h2 className="auth-title">
                 {loginMethod === 'pin'
-                  ? (isHindi ? '6-Digit PIN से लॉगिन करें' : 'Sign in with 6-Digit PIN')
-                  : (isHindi ? 'पासवर्ड से लॉगिन करें' : 'Sign in with Password')}
+                  ? (isHindi ? '6-Digit PIN से लॉगिन करें' : 'Sign In with 6-Digit PIN')
+                  : (isHindi ? 'पासवर्ड से लॉगिन करें' : 'Sign In with Password')}
               </h2>
               <p className="auth-subtitle">
                 {loginMethod === 'pin'
-                  ? (isHindi ? 'अपना मोबाइल नंबर या यूजरनेम और 6-अंकों का पिन दर्ज करें' : 'Enter your mobile number or username and 6-digit PIN')
-                  : (isHindi ? 'अपने ईमेल/यूजरनेम और पासवर्ड से प्रवेश करें' : 'Enter your credentials to access your store')}
+                  ? (isHindi ? 'अपने मोबाइल नंबर या यूजरनेम और 6-अंकों के पिन से सुरक्षित प्रवेश करें' : 'Enter your mobile number or username and 6-digit PIN to continue')
+                  : (isHindi ? 'अपने पंजीकृत मोबाइल नंबर और पासवर्ड से प्रवेश करें' : 'Enter your credentials to access your store')}
               </p>
             </div>
 
@@ -226,6 +219,32 @@ export default function AuthPage({ onLoginSuccess }) {
                 <span>{loginError}</span>
               </div>
             )}
+
+            {/* M3 Segmented Login Method Selector */}
+            <div className="m3-login-method-selector">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod('pin');
+                  setLoginError('');
+                }}
+                className={`m3-method-tab ${loginMethod === 'pin' ? 'active' : ''}`}
+              >
+                <KeyRound size={15} />
+                <span>{isHindi ? '6-Digit PIN' : '6-Digit PIN'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod('password');
+                  setLoginError('');
+                }}
+                className={`m3-method-tab ${loginMethod === 'password' ? 'active' : ''}`}
+              >
+                <Lock size={15} />
+                <span>{isHindi ? 'पासवर्ड (Password)' : 'Password'}</span>
+              </button>
+            </div>
 
             {/* Mobile / ID Field */}
             <div className="auth-input-group">
@@ -239,7 +258,7 @@ export default function AuthPage({ onLoginSuccess }) {
                   required
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
-                  placeholder={isHindi ? 'उदा. 9876543210 या Diwakar' : 'e.g. 9876543210 or Diwakar'}
+                  placeholder={isHindi ? 'उदा. 9876543210 या यूजरनेम' : 'e.g. 9876543210 or username'}
                   className="auth-input"
                   autoComplete="username"
                 />
@@ -248,62 +267,48 @@ export default function AuthPage({ onLoginSuccess }) {
 
             {/* 6-Digit PIN Input Mode */}
             {loginMethod === 'pin' ? (
-              <div className="auth-input-group">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="auth-label m-0">
-                    {isHindi ? '6-अंकों का सुरक्षा पिन (6-Digit PIN)' : '6-Digit Security PIN'}
-                  </label>
+              <div className="m3-pin-auth-container">
+                <div className="m3-pin-auth-header">
+                  <div className="m3-pin-auth-label-wrap">
+                    <KeyRound size={16} className="text-blue-600 dark:text-blue-400" />
+                    <span className="m3-pin-auth-label">
+                      {isHindi ? '6-अंकों का सुरक्षा पिन' : '6-Digit Security PIN'}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setPinMasked(!pinMasked)}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium bg-transparent border-0 cursor-pointer"
+                    className="m3-pin-toggle-btn"
+                    title={pinMasked ? (isHindi ? 'पिन दिखाएं' : 'Show PIN') : (isHindi ? 'पिन छुपाएं' : 'Hide PIN')}
                   >
-                    {pinMasked ? <Eye size={13} /> : <EyeOff size={13} />}
-                    <span>{pinMasked ? (isHindi ? 'पिन दिखाएं' : 'Show') : (isHindi ? 'पिन छुपाएं' : 'Hide')}</span>
+                    {pinMasked ? <Eye size={14} /> : <EyeOff size={14} />}
+                    <span>{pinMasked ? (isHindi ? 'पिन दिखाएं' : 'Show PIN') : (isHindi ? 'पिन छुपाएं' : 'Hide PIN')}</span>
                   </button>
                 </div>
 
-                <SixDigitPinInput
-                  value={loginPin}
-                  onChange={setLoginPin}
-                  masked={pinMasked}
-                  error={!!loginError}
-                  autoFocus={true}
-                />
+                <div className="m3-pin-input-wrapper">
+                  <SixDigitPinInput
+                    value={loginPin}
+                    onChange={setLoginPin}
+                    masked={pinMasked}
+                    error={!!loginError}
+                    autoFocus={true}
+                  />
+                </div>
 
-                <div className="flex justify-end mt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginMethod('password');
-                      setLoginError('');
-                    }}
-                    className="text-xs text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 bg-transparent border-0 cursor-pointer flex items-center gap-1"
-                  >
-                    <Key size={12} />
-                    <span>{isHindi ? 'पासवर्ड से लॉगिन करना चाहते हैं?' : 'Login with password instead?'}</span>
-                  </button>
+                <div className="m3-pin-hint-row">
+                  <ShieldCheck size={13} className="text-emerald-500 flex-shrink-0" />
+                  <span>
+                    {isHindi ? 'तेज़ और सुरक्षित 1-टैप पिन ऑथेंटिकेशन' : 'Fast and encrypted 1-tap PIN authentication'}
+                  </span>
                 </div>
               </div>
             ) : (
               /* Password Fallback Mode */
-              <div className="auth-input-group">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="auth-label m-0">
-                    {isHindi ? 'पासवर्ड' : 'Password'}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginMethod('pin');
-                      setLoginError('');
-                    }}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium bg-transparent border-0 cursor-pointer"
-                  >
-                    <KeyRound size={13} />
-                    <span>{isHindi ? '6-Digit PIN उपयोग करें' : 'Use 6-Digit PIN'}</span>
-                  </button>
-                </div>
+              <div className="auth-input-group animate-fade-in">
+                <label className="auth-label">
+                  {isHindi ? 'पासवर्ड' : 'Password'}
+                </label>
                 <div className="auth-field-wrapper">
                   <Lock size={17} className="field-icon" />
                   <input
@@ -333,31 +338,18 @@ export default function AuthPage({ onLoginSuccess }) {
               className="auth-submit-btn m3-ripple"
             >
               {loginLoading ? (
-                <span>{isHindi ? 'लॉग इन हो रहा है...' : 'Signing in...'}</span>
+                <span>{isHindi ? 'सत्यापित हो रहा है...' : 'Verifying credentials...'}</span>
               ) : (
                 <>
-                  <span>{loginMethod === 'pin' ? (isHindi ? 'पिन से प्रवेश करें' : 'Sign In with PIN') : (isHindi ? 'लॉग इन करें' : 'Sign In')}</span>
+                  <span>
+                    {loginMethod === 'pin'
+                      ? (isHindi ? 'सुरक्षित पिन से प्रवेश करें' : 'Sign In with PIN')
+                      : (isHindi ? 'लॉग इन करें' : 'Sign In')}
+                  </span>
                   <ArrowRight size={17} />
                 </>
               )}
             </button>
-
-            {/* Quick Super Admin Helper Box */}
-            <div className="mt-3 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck size={15} className="text-amber-500 flex-shrink-0" />
-                <span>
-                  <strong>Admin:</strong> Diwakar (PIN: <strong>123456</strong>)
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={fillQuickAdmin}
-                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-0 cursor-pointer"
-              >
-                {isHindi ? 'ऑटो-भरें' : 'Auto Fill'}
-              </button>
-            </div>
 
             <div className="auth-footer-prompt">
               <span>{isHindi ? 'नया खाता चाहिए?' : "Don't have an account?"}</span>

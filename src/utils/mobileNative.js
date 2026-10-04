@@ -17,11 +17,19 @@ export const initNativeApp = async () => {
   }
 
   try {
-    // Style status bar for dark theme
-    await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: '#1E242C' });
+    // Hide status bar completely in immersive fullscreen mode (hides time, battery, network indicators)
+    await StatusBar.hide();
+
+    // Ensure status bar remains hidden whenever app regains focus or resumes
+    App.addListener('appStateChange', async (state) => {
+      if (state.isActive) {
+        try {
+          await StatusBar.hide();
+        } catch (_) {}
+      }
+    });
   } catch (e) {
-    console.warn('[Native] Status bar error:', e);
+    console.warn('[Native] Status bar hide error:', e);
   }
 
   try {

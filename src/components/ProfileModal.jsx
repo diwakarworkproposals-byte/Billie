@@ -150,23 +150,6 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
     }
   };
 
-  const handleQuickDemoLogin = (email, passOrPin) => {
-    setLoginEmail(email);
-    if (passOrPin.length === 6 && /^\d+$/.test(passOrPin)) {
-      setLoginMethod('pin');
-      setLoginPin(passOrPin);
-    } else {
-      setLoginMethod('password');
-      setLoginPass(passOrPin);
-    }
-    setAuthError('');
-    setAuthWarning('');
-    const res = authenticate(email, passOrPin);
-    if (res.success && res.isAdmin) {
-      onClose();
-      if (onOpenAdmin) onOpenAdmin();
-    }
-  };
 
   const handleInstallClick = async () => {
     if (isInstallable) {
@@ -254,7 +237,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                       required
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder={isHindi ? 'उदा. 9876543210 या Diwakar' : 'e.g. 9876543210 or Diwakar'}
+                      placeholder={isHindi ? 'उदा. 9876543210 या यूजरनेम' : 'e.g. 9876543210 or username'}
                       className="m3-text-field"
                     />
                   </div>
@@ -320,24 +303,6 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                   <span>{loginMethod === 'pin' ? (isHindi ? 'पिन से साइन इन करें' : 'Sign In with PIN') : (isHindi ? 'साइन इन करें' : 'Sign In')}</span>
                 </button>
               </form>
-
-              {/* 1-Tap Quick Credentials Demo Pill */}
-              <div className="demo-accounts-box mt-4">
-                <span className="demo-accounts-title">
-                  {isHindi ? '⚡ सुपर एडमिन एक्सेस:' : '⚡ Super Admin Access:'}
-                </span>
-                <div className="demo-pills-grid">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoLogin('Diwakar', '123456')}
-                    className="demo-account-pill admin w-full justify-center"
-                    title="Super Admin Dashboard (Diwakar / PIN: 123456)"
-                  >
-                    <ShieldCheck size={14} />
-                    <span>👑 Super Admin (Diwakar / PIN: 123456)</span>
-                  </button>
-                </div>
-              </div>
             </div>
           ) : (
             /* CASE 2: Logged In -> Profile Settings, Subscription & Inventory */
@@ -602,20 +567,29 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                 </button>
               </form>
 
-              {/* 6-Digit Security PIN Management Card */}
-              <div className="security-pin-card mt-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <KeyRound size={18} className="text-blue-600 dark:text-blue-400" />
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 m-0">
-                        {isHindi ? '6-अंकों का सुरक्षा पिन (6-Digit PIN)' : '6-Digit Security PIN'}
-                      </h4>
-                      <p className="text-xs text-slate-500 m-0">
-                        {isHindi ? 'फास्ट मोबाइल लॉगिन और ऑथेंटिकेशन के लिए' : 'For fast login & security access'}
+              {/* Material Design 3 Security PIN Management Card */}
+              <div className="m3-security-pin-card">
+                <div className="m3-pin-card-header">
+                  <div className="m3-pin-card-leading">
+                    <div className="m3-pin-avatar-badge">
+                      <KeyRound size={20} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="m3-pin-info-texts">
+                      <div className="flex items-center gap-2">
+                        <h4 className="m3-pin-title">
+                          {isHindi ? '6-अंकों का सुरक्षा पिन' : '6-Digit Security PIN'}
+                        </h4>
+                        <span className="m3-pin-status-pill">
+                          <span className="m3-status-dot"></span>
+                          {isHindi ? 'सक्रिय' : 'Active'}
+                        </span>
+                      </div>
+                      <p className="m3-pin-subtitle">
+                        {isHindi ? 'त्वरित मोबाइल लॉगिन और सुरक्षा के लिए' : 'Fast mobile authentication & store protection'}
                       </p>
                     </div>
                   </div>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -623,23 +597,32 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                       setPinError('');
                       setPinSuccess('');
                     }}
-                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-0 cursor-pointer"
+                    className={`m3-btn-tonal-pin ${showPinEdit ? 'cancel' : ''}`}
+                    title={showPinEdit ? (isHindi ? 'रद्द करें' : 'Cancel') : (isHindi ? 'पिन बदलें' : 'Change PIN')}
                   >
-                    {showPinEdit ? (isHindi ? 'रद्द करें' : 'Cancel') : (isHindi ? 'पिन बदलें' : 'Change PIN')}
+                    {showPinEdit ? <X size={15} /> : <KeyRound size={15} />}
+                    <span>{showPinEdit ? (isHindi ? 'रद्द करें' : 'Cancel') : (isHindi ? 'पिन बदलें' : 'Change PIN')}</span>
                   </button>
                 </div>
 
                 {!showPinEdit ? (
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-                    <span>{isHindi ? 'वर्तमान लॉगिन पिन स्थिति:' : 'Current PIN Status:'}</span>
-                    <span className="font-mono font-bold tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
-                      ● ● ● ● ● ● ({isHindi ? 'सक्रिय' : 'Active'})
+                  <div className="m3-pin-preview-strip">
+                    <div className="m3-pin-preview-dots">
+                      <span className="pin-dot"></span>
+                      <span className="pin-dot"></span>
+                      <span className="pin-dot"></span>
+                      <span className="pin-dot"></span>
+                      <span className="pin-dot"></span>
+                      <span className="pin-dot"></span>
+                    </div>
+                    <span className="m3-pin-preview-caption">
+                      {isHindi ? 'पिन सुरक्षित रूप से एनक्रिप्टेड है' : 'Encrypted with device security'}
                     </span>
                   </div>
                 ) : (
-                  <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-3 animate-slide-up">
-                    <div>
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  <div className="m3-pin-edit-expanded animate-slide-up">
+                    <div className="m3-pin-field-block">
+                      <label className="m3-field-label">
                         {isHindi ? 'नया 6-अंकों का पिन दर्ज करें:' : 'Enter New 6-Digit PIN:'}
                       </label>
                       <SixDigitPinInput
@@ -650,9 +633,9 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                       />
                     </div>
 
-                    <div>
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                        {isHindi ? 'नया पिन दोबारा दर्ज करें:' : 'Confirm New 6-Digit PIN:'}
+                    <div className="m3-pin-field-block">
+                      <label className="m3-field-label">
+                        {isHindi ? 'नया पिन दोबारा दर्ज करें (Confirm):' : 'Confirm New 6-Digit PIN:'}
                       </label>
                       <SixDigitPinInput
                         value={confirmNewPin}
@@ -663,27 +646,40 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                     </div>
 
                     {pinError && (
-                      <div className="text-xs text-rose-500 font-semibold flex items-center gap-1">
-                        <AlertTriangle size={14} />
+                      <div className="m3-form-alert error animate-slide-up">
+                        <AlertTriangle size={15} />
                         <span>{pinError}</span>
                       </div>
                     )}
 
                     {pinSuccess && (
-                      <div className="text-xs text-emerald-500 font-semibold flex items-center gap-1">
-                        <CheckCircle size={14} />
+                      <div className="m3-form-alert success animate-slide-up">
+                        <CheckCircle size={15} />
                         <span>{pinSuccess}</span>
                       </div>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={handleUpdatePin}
-                      className="m3-button-filled text-xs py-2 px-3 mt-1 flex items-center justify-center gap-1.5"
-                    >
-                      <KeyRound size={14} />
-                      <span>{isHindi ? 'नया 6-Digit PIN सेव करें' : 'Save New 6-Digit PIN'}</span>
-                    </button>
+                    <div className="m3-pin-actions-row">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPinEdit(false);
+                          setPinError('');
+                          setPinSuccess('');
+                        }}
+                        className="m3-btn-outlined-cancel"
+                      >
+                        <span>{isHindi ? 'रद्द करें' : 'Cancel'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleUpdatePin}
+                        className="m3-btn-filled-save m3-ripple"
+                      >
+                        <Check size={16} />
+                        <span>{isHindi ? 'नया पिन सेव करें' : 'Save New PIN'}</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

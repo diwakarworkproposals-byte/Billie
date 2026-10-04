@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { Camera, X, Flashlight, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Camera, X, Flashlight, RefreshCw, CheckCircle2, AlertCircle, ScanLine } from 'lucide-react';
 
 /**
  * Play a crisp barcode scanner beep via Web Audio API
@@ -61,8 +62,8 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan, title = '
 
         const config = {
           fps: 15,
-          qrbox: { width: 260, height: 180 },
-          aspectRatio: 1.333334
+          qrbox: { width: 250, height: 180 },
+          aspectRatio: 1.25
         };
 
         await qrCode.start(
@@ -142,88 +143,70 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan, title = '
 
   if (!isOpen) return null;
 
-  return (
-    <div className="low-stock-modal-backdrop">
-      <div className="low-stock-modal-card" style={{ maxWidth: '420px', padding: '20px' }}>
+  const modalContent = (
+    <div className="m3-barcode-scanner-backdrop animate-fade-in" onClick={handleClose}>
+      <div 
+        className="m3-barcode-scanner-card animate-scale-up" 
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="low-stock-header">
-          <div className="low-stock-header-main">
-            <div className="low-stock-icon-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>
-              <Camera size={24} />
+        <div className="m3-barcode-scanner-header">
+          <div className="m3-scanner-header-lead">
+            <div className="m3-scanner-badge">
+              <Camera size={22} />
             </div>
             <div>
-              <h3 className="low-stock-title">{title}</h3>
-              <p className="low-stock-subtitle">Point camera at product barcode or QR</p>
+              <h3 className="m3-scanner-title">{title}</h3>
+              <p className="m3-scanner-subtitle">Align barcode or QR code within frame</p>
             </div>
           </div>
-          <button type="button" onClick={handleClose} className="low-stock-close-btn">
+          <button 
+            type="button" 
+            onClick={handleClose} 
+            className="m3-scanner-close-btn m3-ripple"
+            aria-label="Close scanner"
+          >
             <X size={18} />
           </button>
         </div>
 
-        {/* Viewfinder Container */}
-        <div style={{ position: 'relative', borderRadius: '18px', overflow: 'hidden', background: '#000', minHeight: '260px' }}>
-          <div id={scannerContainerId} style={{ width: '100%', minHeight: '260px' }}></div>
+        {/* Center Viewfinder Container with Reticle */}
+        <div className="m3-scanner-viewfinder">
+          <div id={scannerContainerId} className="m3-scanner-html5-feed"></div>
+
+          {/* Aiming Reticle Corners */}
+          <div className="m3-reticle-corner top-left"></div>
+          <div className="m3-reticle-corner top-right"></div>
+          <div className="m3-reticle-corner bottom-left"></div>
+          <div className="m3-reticle-corner bottom-right"></div>
 
           {/* Laser Line Scanning Animation */}
-          {!scannerError && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '2px',
-                background: 'linear-gradient(90deg, transparent, #10b981, #34d399, transparent)',
-                boxShadow: '0 0 10px #10b981',
-                animation: 'scannerLaser 2s ease-in-out infinite alternate',
-                pointerEvents: 'none'
-              }}
-            />
+          {!scannerError && !lastScanned && (
+            <div className="m3-scanner-laser-line" />
+          )}
+
+          {/* Center alignment guide text */}
+          {!scannerError && !lastScanned && (
+            <div className="m3-scanner-frame-hint">
+              <ScanLine size={14} />
+              <span>Scanning automatically...</span>
+            </div>
           )}
 
           {/* Success Overlay */}
           {lastScanned && (
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'rgba(16, 185, 129, 0.85)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                padding: '16px',
-                textAlign: 'center',
-                zIndex: 10
-              }}
-            >
-              <CheckCircle2 size={48} style={{ marginBottom: '8px' }} />
-              <div style={{ fontWeight: 800, fontSize: '1rem' }}>Code Scanned!</div>
-              <div style={{ fontSize: '0.85rem', opacity: 0.9, marginTop: '4px' }}>{lastScanned}</div>
+            <div className="m3-scanner-success-overlay animate-scale-up">
+              <CheckCircle2 size={44} className="mb-2 text-white" />
+              <div className="font-extrabold text-base text-white">Product Scanned!</div>
+              <div className="text-xs text-white/90 font-mono mt-1 px-3 py-1 bg-black/30 rounded-lg">{lastScanned}</div>
             </div>
           )}
 
           {/* Error Banner */}
           {scannerError && (
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'rgba(15, 23, 42, 0.92)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#f8fafc',
-                padding: '20px',
-                textAlign: 'center',
-                zIndex: 10
-              }}
-            >
-              <AlertCircle size={40} color="#f43f5e" style={{ marginBottom: '10px' }} />
-              <div style={{ fontSize: '0.86rem', color: '#fca5a5', lineHeight: 1.4 }}>
+            <div className="m3-scanner-error-overlay animate-fade-in">
+              <AlertCircle size={36} color="#f43f5e" className="mb-2" />
+              <div className="text-xs text-rose-200 leading-relaxed text-center">
                 {scannerError}
               </div>
             </div>
@@ -231,12 +214,11 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan, title = '
         </div>
 
         {/* Controls Toolbar (Torch & Camera Switch) */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '6px' }}>
+        <div className="m3-scanner-toolbar">
           <button
             type="button"
             onClick={toggleTorch}
-            className="low-stock-chip-btn"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px' }}
+            className={`m3-scanner-tool-btn ${torchOn ? 'active' : ''}`}
           >
             <Flashlight size={16} color={torchOn ? '#f59e0b' : 'currentColor'} />
             <span>{torchOn ? 'Torch ON' : 'Torch OFF'}</span>
@@ -245,8 +227,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan, title = '
           <button
             type="button"
             onClick={switchCamera}
-            className="low-stock-chip-btn"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px' }}
+            className="m3-scanner-tool-btn"
           >
             <RefreshCw size={16} />
             <span>Switch Camera</span>
@@ -254,10 +235,13 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan, title = '
         </div>
 
         {/* Footer info */}
-        <div style={{ textAlign: 'center', fontSize: '0.74rem', color: 'var(--md-on-surface-variant, #64748b)' }}>
-          Supports Barcodes (EAN, UPC, Code 128) & QR Codes
+        <div className="m3-scanner-footer-note">
+          Supports 1D Barcodes (EAN, UPC, Code 128) & 2D QR Codes
         </div>
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
+
