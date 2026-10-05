@@ -33,6 +33,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { shareToWhatsAppDirectly } from '../utils/mobileNative';
+import { useBackHandler } from '../utils/navigationManager';
 
 export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenAdmin, onOpenReporting }) {
   const {
@@ -122,6 +123,9 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
 
     shareToWhatsAppDirectly({ phone: cleanPhone, text: message });
   };
+
+  // Close PIN edit sub-view on device back press
+  useBackHandler('profile-pin-edit', isOpen && showPinEdit, () => setShowPinEdit(false), 25);
 
   if (!isOpen) return null;
 

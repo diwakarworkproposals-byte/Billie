@@ -32,26 +32,7 @@ export const initNativeApp = async () => {
     console.warn('[Native] Status bar hide error:', e);
   }
 
-  try {
-    // Handle Android hardware back button
-    App.addListener('backButton', ({ canGoBack }) => {
-      // Check if any modal is open
-      const hasOpenModal = document.querySelector('.modal-backdrop, .low-stock-modal-backdrop, .m3-dialog-container');
-      if (hasOpenModal) {
-        const escEvent = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true });
-        document.dispatchEvent(escEvent);
-        return;
-      }
-
-      if (canGoBack && window.history.length > 1) {
-        window.history.back();
-      } else {
-        App.exitApp();
-      }
-    });
-  } catch (e) {
-    console.warn('[Native] Back button setup error:', e);
-  }
+  // Android hardware back button and PWA navigation are managed by navigationManager
 };
 
 export const shareInvoiceNative = async ({ title, text, url, dialogTitle }) => {

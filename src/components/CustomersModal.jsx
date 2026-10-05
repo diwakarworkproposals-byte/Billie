@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
+import { useBackHandler } from '../utils/navigationManager';
 
 export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBill }) {
   const {
@@ -130,6 +131,11 @@ export default function CustomersModal({ isOpen, onClose, onSelectCustomerForBil
       );
     });
   }, [customers, searchQuery]);
+
+  // Handle back button for customer forms and expanded invoice views
+  useBackHandler('customers-add-form', isOpen && isAddingNew, () => setIsAddingNew(false), 25);
+  useBackHandler('customers-edit-form', isOpen && editingId !== null, () => setEditingId(null), 25);
+  useBackHandler('customers-expanded-row', isOpen && !isAddingNew && !editingId && expandedCustId !== null, () => setExpandedCustId(null), 23);
 
   if (!isOpen) return null;
 

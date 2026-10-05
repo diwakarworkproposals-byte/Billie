@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Camera, X, Flashlight, RefreshCw, CheckCircle2, AlertCircle, ScanLine } from 'lucide-react';
+import { useBackHandler } from '../utils/navigationManager';
 
 /**
  * Play a crisp barcode scanner beep via Web Audio API
@@ -122,6 +123,9 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScan, title = '
     await stopScanner();
     onClose();
   };
+
+  // Close scanner on device back button press
+  useBackHandler('barcode-scanner-modal', isOpen, handleClose, 30);
 
   const toggleTorch = async () => {
     if (!html5QrCodeRef.current || !html5QrCodeRef.current.isScanning) return;

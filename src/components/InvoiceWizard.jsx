@@ -28,6 +28,7 @@ import InvoiceCard from './InvoiceCard';
 import StockReportCard from './StockReportCard';
 import ReportingSection from './ReportingSection';
 import { useApp } from '../context/AppContext';
+import { useBackHandler } from '../utils/navigationManager';
 import {
   isInvoiceIntent,
   isAddStockIntent,
@@ -1487,6 +1488,15 @@ export default function InvoiceWizard({
   };
 
   const currentTotal = draftItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
+
+  // Cancel active invoice draft or low stock modal when device back button is pressed
+  useBackHandler('invoice-low-stock-modal', Boolean(lowStockModalData), handleCancelLowStockBill, 25);
+  useBackHandler(
+    'invoice-active-draft',
+    step !== STEPS.IDLE && step !== STEPS.COMPLETED && !lowStockModalData,
+    () => resetWizard(),
+    5
+  );
 
   return (
     <div className="billie-main-container">

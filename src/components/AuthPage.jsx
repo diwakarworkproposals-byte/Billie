@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp, SUBSCRIPTION_PLANS } from '../context/AppContext';
+import { useBackHandler } from '../utils/navigationManager';
 import SixDigitPinInput from './SixDigitPinInput';
 import {
   Sparkles,
@@ -48,6 +49,10 @@ export default function AuthPage({ onLoginSuccess }) {
   const [signupLoading, setSignupLoading] = useState(false);
 
   const isHindi = settings.language === 'hi';
+
+  // Back button navigation: If in signup mode, back returns to login; if in password method, back returns to PIN
+  useBackHandler('auth-signup-mode', authMode === 'signup', () => setAuthMode('login'), 15);
+  useBackHandler('auth-password-method', authMode === 'login' && loginMethod === 'password', () => setLoginMethod('pin'), 12);
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();

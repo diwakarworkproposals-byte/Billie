@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
 import { shareToWhatsAppDirectly } from '../utils/mobileNative';
+import { useBackHandler } from '../utils/navigationManager';
 import {
   TrendingUp,
   CreditCard,
@@ -102,6 +103,11 @@ export default function ReportingSection({
   const [payMethod, setPayMethod] = useState('UPI');
   const [payNotes, setPayNotes] = useState('');
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState('');
+
+  // Sub-dialog back button handlers
+  useBackHandler('reporting-add-purchase', isAddPurchaseOpen, () => setIsAddPurchaseOpen(false), 25);
+  useBackHandler('reporting-supplier-payment', activePaymentPurchase !== null, () => setActivePaymentPurchase(null), 25);
+  useBackHandler('reporting-customer-payment', activeCustomerPaymentInvoice !== null, () => setActiveCustomerPaymentInvoice(null), 25);
 
   // Add Purchase Bill Form State (Supports multiple products per bill)
   const [newSupplierName, setNewSupplierName] = useState('');

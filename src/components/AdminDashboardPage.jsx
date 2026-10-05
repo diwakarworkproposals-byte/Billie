@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp, SUBSCRIPTION_PLANS } from '../context/AppContext';
+import { useBackHandler } from '../utils/navigationManager';
 import {
   ShieldCheck,
   Users,
@@ -85,6 +86,11 @@ export default function AdminDashboardPage({ onBackToStore }) {
   // Edit user state
   const [editingUser, setEditingUser] = useState(null);
   const [editShowPass, setEditShowPass] = useState(false);
+
+  // Close sub-dialogs on device back button press
+  useBackHandler('admin-edit-user', editingUser !== null, () => setEditingUser(null), 25);
+  useBackHandler('admin-extend-user', extendingUser !== null, () => setExtendingUser(null), 25);
+  useBackHandler('admin-change-plan', changingPlanUser !== null, () => setChangingPlanUser(null), 25);
 
   const isHindi = settings.language === 'hi';
   const currency = '₹';

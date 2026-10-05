@@ -11,6 +11,7 @@ import AdminDashboardPage from './components/AdminDashboardPage';
 import CustomersModal from './components/CustomersModal';
 import AuthPage from './components/AuthPage';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
+import { useBackHandler, navigationManager } from './utils/navigationManager';
 
 function BillieApp() {
   const { user, settings, setIsVoiceSessionActive } = useApp();
@@ -72,18 +73,42 @@ function BillieApp() {
     setSubmittedQuery(query);
   };
 
+  // Exit Toast state subscription
+  const [exitToastVisible, setExitToastVisible] = useState(false);
+
+  useEffect(() => {
+    return navigationManager.subscribeToast((show) => {
+      setExitToastVisible(show);
+    });
+  }, []);
+
+  // Back button navigation handlers for top-level views and modals
+  useBackHandler('admin-view', currentView === 'admin', backToStore, 10);
+  useBackHandler('profile-modal', isProfileOpen, () => setIsProfileOpen(false), 20);
+  useBackHandler('settings-modal', isSettingsOpen, () => setIsSettingsOpen(false), 20);
+  useBackHandler('inventory-modal', isInventoryOpen, () => setIsInventoryOpen(false), 20);
+  useBackHandler('customers-modal', isCustomersOpen, () => setIsCustomersOpen(false), 20);
+  useBackHandler('reporting-modal', isReportingOpen, () => setIsReportingOpen(false), 20);
+
   // FULL PAGE VIEW 0: AUTHENTICATION / LOGIN / SIGNUP PAGE (Before actual app loads)
   if (!user || !user.isLoggedIn) {
     return (
-      <AuthPage
-        onLoginSuccess={(loggedInUser) => {
-          if (loggedInUser?.role === 'admin' && (window.location.hash === '#/admin' || window.location.hash === '#admin')) {
-            setCurrentView('admin');
-          } else {
-            setCurrentView('app');
-          }
-        }}
-      />
+      <>
+        <AuthPage
+          onLoginSuccess={(loggedInUser) => {
+            if (loggedInUser?.role === 'admin' && (window.location.hash === '#/admin' || window.location.hash === '#admin')) {
+              setCurrentView('admin');
+            } else {
+              setCurrentView('app');
+            }
+          }}
+        />
+        {exitToastVisible && (
+          <div className="m3-exit-toast animate-slide-up" role="status">
+            <span>{isHindi ? 'ऐप बंद करने के लिए दोबारा बैक दबाएं' : 'Press back again to exit'}</span>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -113,7 +138,16 @@ function BillieApp() {
         </div>
       );
     }
-    return <AdminDashboardPage onBackToStore={backToStore} />;
+    return (
+      <>
+        <AdminDashboardPage onBackToStore={backToStore} />
+        {exitToastVisible && (
+          <div className="m3-exit-toast animate-slide-up" role="status">
+            <span>{isHindi ? 'ऐप बंद करने के लिए दोबारा बैक दबाएं' : 'Press back again to exit'}</span>
+          </div>
+        )}
+      </>
+    );
   }
 
   // FULL PAGE VIEW 2: BILLIE BILLING STORE APP
@@ -228,6 +262,13 @@ function BillieApp() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />
+
+      {/* Material 3 Double-Tap-To-Exit Floating Toast */}
+      {exitToastVisible && (
+        <div className="m3-exit-toast animate-slide-up" role="status">
+          <span>{isHindi ? 'ऐप बंद करने के लिए दोबारा बैक दबाएं' : 'Press back again to exit'}</span>
+        </div>
+      )}
     </div>
   );
 }

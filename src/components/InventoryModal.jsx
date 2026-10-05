@@ -16,6 +16,7 @@ import {
   Camera
 } from 'lucide-react';
 import BarcodeScannerModal from './BarcodeScannerModal';
+import { useBackHandler } from '../utils/navigationManager';
 
 export default function InventoryModal({ isOpen, onClose }) {
   const {
@@ -49,6 +50,10 @@ export default function InventoryModal({ isOpen, onClose }) {
     costPrice: 0,
     lowStockThreshold: 5
   });
+
+  // Handle back button for add-new product form and inline editing
+  useBackHandler('inventory-add-form', isOpen && isAddingNew, () => setIsAddingNew(false), 25);
+  useBackHandler('inventory-edit-row', isOpen && editingId !== null, () => setEditingId(null), 25);
 
   if (!isOpen) return null;
 
