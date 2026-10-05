@@ -14,8 +14,11 @@ export default function InvoiceCard({
 }) {
   const { user, settings, addInvoice } = useApp();
   const [printingStatus, setPrintingStatus] = useState(null);
-  const currency = invoice.currency || settings.currency || '₹';
-  const isHindi = settings.language === 'hi';
+
+  if (!invoice) return null;
+
+  const currency = invoice?.currency || settings?.currency || '₹';
+  const isHindi = settings?.language === 'hi';
 
   const handleDownloadPDF = () => {
     if (invoice.id) {

@@ -95,6 +95,9 @@ export default function InvoiceWizard({
     updateProduct
   } = useApp();
 
+  const isHindi = settings?.language === 'hi';
+  const currency = settings?.currency || '₹';
+
   // Active language
   const [lang, setLang] = useState(settings?.language || 'hi');
   const [step, setStep] = useState(STEPS.IDLE);

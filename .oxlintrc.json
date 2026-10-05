@@ -1,7 +1,32 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "oxc"],
+  "env": {
+    "browser": true,
+    "es2024": true,
+    "node": true
+  },
+  "globals": {
+    "window": "readonly",
+    "document": "readonly",
+    "navigator": "readonly",
+    "setTimeout": "readonly",
+    "clearTimeout": "readonly",
+    "setInterval": "readonly",
+    "clearInterval": "readonly",
+    "alert": "readonly",
+    "confirm": "readonly",
+    "console": "readonly",
+    "localStorage": "readonly",
+    "Blob": "readonly",
+    "URL": "readonly",
+    "speechSynthesis": "readonly",
+    "SpeechSynthesisUtterance": "readonly",
+    "webkitSpeechRecognition": "readonly",
+    "SpeechRecognition": "readonly"
+  },
   "rules": {
+    "no-undef": "error",
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
   }
