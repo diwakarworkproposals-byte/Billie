@@ -199,7 +199,9 @@ export default function ReportingSection({
   // 1. SALES REPORT CALCULATIONS
   // -------------------------------------------------------------
   const processedInvoices = useMemo(() => {
-    return invoices.map((inv) => {
+    return (invoices || [])
+      .filter((inv) => inv && typeof inv === 'object')
+      .map((inv) => {
       const invDate = parseDateSafe(inv.date, inv.rawDate, inv.timestamp, inv.id);
       let invCost = 0;
 
@@ -333,7 +335,9 @@ export default function ReportingSection({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return purchases.map((pur) => {
+    return (purchases || [])
+      .filter((pur) => pur && typeof pur === 'object')
+      .map((pur) => {
       const dueDateObj = pur.dueDate ? new Date(pur.dueDate) : null;
       let daysRemaining = null;
       let isOverdue = false;
@@ -453,6 +457,7 @@ export default function ReportingSection({
   // -------------------------------------------------------------
   const processedDueInvoices = useMemo(() => {
     return (invoices || [])
+      .filter((inv) => inv && typeof inv === 'object')
       .map((inv) => {
         const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
         const paidAmount = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));

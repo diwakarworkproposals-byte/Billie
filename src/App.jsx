@@ -36,12 +36,15 @@ function BillieApp() {
     setIsReportingOpen(true);
   };
 
-  const isHindi = settings.language === 'hi';
-  const isSubExpired =
-    user.isLoggedIn &&
-    user.role !== 'admin' &&
-    (user.subscription?.status === 'expired' ||
-      (user.subscription?.expiryDate && new Date(user.subscription.expiryDate) < new Date()));
+  const isHindi = settings?.language === 'hi';
+  const isSubExpired = Boolean(
+    user?.isLoggedIn &&
+    user?.role !== 'admin' &&
+    (user?.subscription?.status === 'expired' ||
+      (user?.subscription?.expiryDate &&
+        !isNaN(new Date(user.subscription.expiryDate).getTime()) &&
+        new Date(user.subscription.expiryDate) < new Date()))
+  );
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -247,31 +250,46 @@ class ErrorBoundary extends React.Component {
           <div style={{ maxWidth: '440px', width: '100%', background: '#fff', borderRadius: '16px', padding: '28px 24px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' }}>
             <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '26px' }}>⚠️</div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>कुछ गड़बड़ हुई / Something went wrong</h2>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
-              एप्लिकेशन को पुनः लोड करें। आपका बिल व डेटा पूरी तरह सुरक्षित है।
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 12px', lineHeight: 1.5 }}>
+              एप्लिकेशन को पुनः लोड करें। आपका बिल व डेटा सुरक्षित है।
             </p>
+            {this.state.error?.message && (
+              <div style={{ margin: '0 0 16px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.78rem', color: '#b91c1c', textAlign: 'left', wordBreak: 'break-word', maxHeight: '100px', overflowY: 'auto' }}>
+                <code>{this.state.error.message}</code>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => {
-                  this.setState({ hasError: false });
+                  this.setState({ hasError: false, error: null });
                   window.location.reload();
                 }}
-                style={{ padding: '10px 20px', borderRadius: '10px', background: '#2563eb', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.88rem' }}
+                style={{ padding: '10px 18px', borderRadius: '10px', background: '#2563eb', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.88rem' }}
               >
                 रीफ्रेश करें (Reload App)
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  localStorage.removeItem('billie_invoices');
-                  localStorage.removeItem('billie_customers');
-                  this.setState({ hasError: false });
+                  localStorage.removeItem('billie_user');
+                  this.setState({ hasError: false, error: null });
                   window.location.reload();
                 }}
-                style={{ padding: '10px 16px', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', fontWeight: 700, border: '1px solid #fecaca', cursor: 'pointer', fontSize: '0.85rem' }}
+                style={{ padding: '10px 14px', borderRadius: '10px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: '1px solid #bae6fd', cursor: 'pointer', fontSize: '0.84rem' }}
               >
-                डेटा रीसेट करें (Reset Data)
+                लॉगिन रीसेट (Reset Login)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.clear();
+                  this.setState({ hasError: false, error: null });
+                  window.location.reload();
+                }}
+                style={{ padding: '10px 14px', borderRadius: '10px', background: '#fee2e2', color: '#b91c1c', fontWeight: 700, border: '1px solid #fecaca', cursor: 'pointer', fontSize: '0.84rem' }}
+              >
+                डेटा रीसेट (Reset All)
               </button>
             </div>
           </div>

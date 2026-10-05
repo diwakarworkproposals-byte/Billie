@@ -232,6 +232,7 @@ export function AppProvider({ children }) {
           const cleanUsers = parsed.filter(
             (u) =>
               u &&
+              typeof u === 'object' &&
               !['usr_101', 'usr_102', 'usr_103'].includes(u.id) &&
               !['rajesh@store.com', 'pooja@boutique.in', 'vikas@hardware.com'].includes(
                 (u.email || '').toLowerCase()
@@ -240,9 +241,11 @@ export function AppProvider({ children }) {
           // Ensure Super Admin is always present
           const hasAdmin = cleanUsers.some(
             (u) =>
-              u.role === 'admin' ||
-              (u.email || '').toLowerCase() === 'diwakar' ||
-              (u.email || '').toLowerCase() === 'diwakar@billie.app'
+              u && (
+                u.role === 'admin' ||
+                (u.email || '').toLowerCase() === 'diwakar' ||
+                (u.email || '').toLowerCase() === 'diwakar@billie.app'
+              )
           );
           if (!hasAdmin) {
             cleanUsers.unshift(DEFAULT_ADMIN);
@@ -267,6 +270,7 @@ export function AppProvider({ children }) {
         // If parsed is a demo user, purge session
         if (
           parsed &&
+          typeof parsed === 'object' &&
           (parsed.id === 'usr_101' ||
             parsed.id === 'usr_102' ||
             parsed.id === 'usr_103' ||
@@ -276,8 +280,12 @@ export function AppProvider({ children }) {
           localStorage.removeItem('billie_user');
           return { isLoggedIn: false, role: 'guest', name: '', email: '' };
         }
-        if (parsed && parsed.isLoggedIn) {
-          return parsed;
+        if (parsed && typeof parsed === 'object' && parsed.isLoggedIn) {
+          return {
+            ...parsed,
+            name: parsed.name || parsed.phone || 'User',
+            role: parsed.role || 'user'
+          };
         }
       }
       return { isLoggedIn: false, role: 'guest', name: '', email: '' };
@@ -290,7 +298,13 @@ export function AppProvider({ children }) {
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_settings');
-      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_SETTINGS, ...parsed };
+        }
+      }
+      return DEFAULT_SETTINGS;
     } catch {
       return DEFAULT_SETTINGS;
     }
@@ -303,8 +317,8 @@ export function AppProvider({ children }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Remove old demo bills
-          return parsed.filter((inv) => inv && !String(inv.id || '').startsWith('inv_demo_'));
+          // Remove old demo bills and null entries
+          return parsed.filter((inv) => inv && typeof inv === 'object' && !String(inv.id || '').startsWith('inv_demo_'));
         }
       }
       return DEFAULT_INVOICES;
@@ -317,7 +331,13 @@ export function AppProvider({ children }) {
   const [purchases, setPurchases] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_purchases');
-      return saved ? JSON.parse(saved) : DEFAULT_PURCHASES;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((p) => p && typeof p === 'object');
+        }
+      }
+      return DEFAULT_PURCHASES;
     } catch {
       return DEFAULT_PURCHASES;
     }
@@ -327,7 +347,13 @@ export function AppProvider({ children }) {
   const [inventory, setInventory] = useState(() => {
     try {
       const saved = localStorage.getItem('billie_inventory');
-      return saved ? JSON.parse(saved) : DEFAULT_INVENTORY;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((it) => it && typeof it === 'object');
+        }
+      }
+      return DEFAULT_INVENTORY;
     } catch {
       return DEFAULT_INVENTORY;
     }
@@ -341,7 +367,7 @@ export function AppProvider({ children }) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed
-            .filter((c) => c && !['cust_1', 'cust_2', 'cust_3'].includes(c.id))
+            .filter((c) => c && typeof c === 'object' && !['cust_1', 'cust_2', 'cust_3'].includes(c.id))
             .map((c, i) => ({
               id: c.id || `cust_saved_${i}`,
               name: c.name || c.companyName || 'Customer',
@@ -1067,8 +1093,8 @@ export function AppProvider({ children }) {
   };
 
   const getNextInvoiceNumber = () => {
-    const prefix = settings.invoicePrefix || 'INV-2026-';
-    const count = invoices.length + 1;
+    const prefix = settings?.invoicePrefix || 'INV-2026-';
+    const count = (invoices || []).length + 1;
     return `${prefix}${String(count).padStart(3, '0')}`;
   };
 
@@ -1083,8 +1109,9 @@ export function AppProvider({ children }) {
     let updatedProduct = null;
 
     setInventory((prev) => {
-      const existingIndex = prev.findIndex(
-        (item) => item.name && item.name.toLowerCase().trim() === normName.toLowerCase()
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const existingIndex = safePrev.findIndex(
+        (item) => item && item.name && item.name.toLowerCase().trim() === normName.toLowerCase()
       );
 
       if (existingIndex >= 0) {
@@ -1301,82 +1328,117 @@ export function AppProvider({ children }) {
 
   // Dynamic Real-time Notifications & Alerts for Profile Panel
   const notificationAlerts = useMemo(() => {
-    // 1. Low stock alerts (quantity <= lowStockThreshold or 5)
-    const lowStock = (inventory || [])
-      .filter((item) => {
-        const threshold = Number(item.lowStockThreshold) || Number(settings.lowStockThreshold) || 5;
-        return Number(item.quantity || 0) <= threshold;
-      })
-      .map((item) => ({
-        id: `low_${item.id}`,
-        type: 'low_stock',
-        title: item.name,
-        qty: Number(item.quantity || 0),
-        threshold: Number(item.lowStockThreshold) || Number(settings.lowStockThreshold) || 5,
-        item
-      }));
+    try {
+      const safeInventory = Array.isArray(inventory) ? inventory.filter((it) => it && typeof it === 'object') : [];
+      const safePurchases = Array.isArray(purchases) ? purchases.filter((p) => p && typeof p === 'object') : [];
+      const safeInvoices = Array.isArray(invoices) ? invoices.filter((inv) => inv && typeof inv === 'object') : [];
 
-    // 2. Supplier due payment alerts (due in <= 2 days or overdue)
-    const supplierDue = (purchases || [])
-      .filter((pur) => Number(pur.pendingAmount || 0) > 0 && pur.dueDate)
-      .map((pur) => {
-        const dueDate = new Date(pur.dueDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        dueDate.setHours(0, 0, 0, 0);
-        const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-        return {
-          id: `sup_${pur.id}`,
-          type: 'supplier_due',
-          purchase: pur,
-          supplierName: pur.supplierName,
-          supplierContact: pur.supplierContact,
-          pendingAmount: Number(pur.pendingAmount || 0),
-          dueDate: pur.dueDate,
-          daysLeft
-        };
-      })
-      .filter((alert) => alert.daysLeft <= 2);
+      // 1. Low stock alerts (quantity <= lowStockThreshold or 5)
+      const lowStock = safeInventory
+        .filter((item) => {
+          const threshold = Number(item.lowStockThreshold) || Number(settings?.lowStockThreshold) || 5;
+          return Number(item.quantity || 0) <= threshold;
+        })
+        .map((item) => ({
+          id: `low_${item.id || Math.random()}`,
+          type: 'low_stock',
+          title: item.name || 'Item',
+          qty: Number(item.quantity || 0),
+          threshold: Number(item.lowStockThreshold) || Number(settings?.lowStockThreshold) || 5,
+          item
+        }));
 
-    // 3. Customer sales due alerts (due amount > 0 and bill age > 7 days)
-    const customerDue = (invoices || [])
-      .filter((inv) => {
-        const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
-        const paid = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));
-        const due = inv.dueAmount !== undefined ? Number(inv.dueAmount) : Math.max(0, grandTotal - paid);
-        return due > 0;
-      })
-      .map((inv) => {
-        const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
-        const paid = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));
-        const due = inv.dueAmount !== undefined ? Number(inv.dueAmount) : Math.max(0, grandTotal - paid);
-        const invTime = inv.timestamp || (inv.rawDate ? new Date(inv.rawDate).getTime() : new Date(inv.date).getTime());
-        const ageDays = Math.floor((Date.now() - invTime) / (1000 * 60 * 60 * 24));
-        return {
-          id: `cust_${inv.id}`,
-          type: 'customer_due',
-          invoice: inv,
-          customerName: inv.customerName,
-          customerPhone: inv.customerPhone,
-          grandTotal,
-          paidAmount: paid,
-          dueAmount: due,
-          invoiceNumber: inv.invoiceNumber,
-          date: inv.date,
-          ageDays
-        };
-      })
-      .filter((alert) => alert.ageDays > 7);
+      // 2. Supplier due payment alerts (due in <= 2 days or overdue)
+      const supplierDue = safePurchases
+        .filter((pur) => Number(pur.pendingAmount || 0) > 0 && pur.dueDate)
+        .map((pur) => {
+          let daysLeft = 999;
+          try {
+            const dueDate = new Date(pur.dueDate);
+            if (!isNaN(dueDate.getTime())) {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              dueDate.setHours(0, 0, 0, 0);
+              daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            }
+          } catch {
+            daysLeft = 999;
+          }
+          return {
+            id: `sup_${pur.id || Math.random()}`,
+            type: 'supplier_due',
+            purchase: pur,
+            supplierName: pur.supplierName || 'Supplier',
+            supplierContact: pur.supplierContact || '',
+            pendingAmount: Number(pur.pendingAmount || 0),
+            dueDate: pur.dueDate || '',
+            daysLeft
+          };
+        })
+        .filter((alert) => alert.daysLeft <= 2);
 
-    const totalCount = lowStock.length + supplierDue.length + customerDue.length;
+      // 3. Customer sales due alerts (due amount > 0 and bill age > 7 days)
+      const customerDue = safeInvoices
+        .filter((inv) => {
+          const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
+          const paid = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));
+          const due = inv.dueAmount !== undefined ? Number(inv.dueAmount) : Math.max(0, grandTotal - paid);
+          return due > 0;
+        })
+        .map((inv) => {
+          const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
+          const paid = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));
+          const due = inv.dueAmount !== undefined ? Number(inv.dueAmount) : Math.max(0, grandTotal - paid);
 
-    return {
-      lowStock,
-      supplierDue,
-      customerDue,
-      totalCount
-    };
-  }, [inventory, purchases, invoices, settings.lowStockThreshold]);
+          let invTime = 0;
+          try {
+            if (inv.timestamp && !isNaN(Number(inv.timestamp))) {
+              invTime = Number(inv.timestamp);
+            } else if (inv.rawDate) {
+              const d = new Date(inv.rawDate);
+              invTime = !isNaN(d.getTime()) ? d.getTime() : 0;
+            } else if (inv.date) {
+              const d = new Date(inv.date);
+              invTime = !isNaN(d.getTime()) ? d.getTime() : 0;
+            }
+          } catch {
+            invTime = 0;
+          }
+          const ageDays = invTime > 0 ? Math.floor((Date.now() - invTime) / (1000 * 60 * 60 * 24)) : 0;
+          return {
+            id: `cust_${inv.id || Math.random()}`,
+            type: 'customer_due',
+            invoice: inv,
+            customerName: inv.customerName || 'Customer',
+            customerPhone: inv.customerPhone || '',
+            grandTotal,
+            paidAmount: paid,
+            dueAmount: due,
+            invoiceNumber: inv.invoiceNumber || inv.id || 'INV',
+            date: inv.date || '',
+            ageDays
+          };
+        })
+        .filter((alert) => alert.ageDays > 7);
+
+      const totalCount = lowStock.length + supplierDue.length + customerDue.length;
+
+      return {
+        lowStock,
+        supplierDue,
+        customerDue,
+        totalCount
+      };
+    } catch (err) {
+      console.error('Error computing notificationAlerts:', err);
+      return {
+        lowStock: [],
+        supplierDue: [],
+        customerDue: [],
+        totalCount: 0
+      };
+    }
+  }, [inventory, purchases, invoices, settings?.lowStockThreshold]);
 
   return (
     <AppContext.Provider

@@ -17,7 +17,7 @@ export default function BottomSearchBar({ onQuerySubmit, activePromptHint = '' }
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const inputRef = useRef(null);
 
-  const isHindi = settings.language === 'hi';
+  const isHindi = settings?.language === 'hi';
   const langCode = isHindi ? 'hi-IN' : 'en-US';
 
   const {

@@ -96,13 +96,13 @@ export default function InvoiceWizard({
   } = useApp();
 
   // Active language
-  const [lang, setLang] = useState(settings.language || 'hi');
+  const [lang, setLang] = useState(settings?.language || 'hi');
   const [step, setStep] = useState(STEPS.IDLE);
 
   const [messages, setMessages] = useState([
     {
       sender: 'billie',
-      text: PROMPTS[settings.language || 'hi'].welcome,
+      text: PROMPTS[settings?.language || 'hi']?.welcome || PROMPTS.hi.welcome,
       timestamp: new Date()
     }
   ]);

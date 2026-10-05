@@ -149,12 +149,12 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
           type="button"
           onClick={onOpenProfile}
           className="profile-button m3-ripple"
-          title={user.isLoggedIn ? `${user.name} (${user.businessName || 'Profile'})` : 'Sign In / Profile'}
+          title={user?.isLoggedIn ? `${user?.name || 'User'} (${user?.businessName || 'Profile'})` : 'Sign In / Profile'}
           aria-label="User Profile"
         >
-          {user.isLoggedIn ? (
+          {user?.isLoggedIn ? (
             <div className="avatar-circle">
-              <span>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
+              <span>{user?.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
               <span className="active-dot" />
             </div>
           ) : (
@@ -163,7 +163,7 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
             </div>
           )}
           <span className="profile-name-text">
-            {user.isLoggedIn ? user.name.split(' ')[0] : (isHindi ? 'लॉग इन' : 'Sign In')}
+            {user?.isLoggedIn ? (user?.name?.trim() ? user.name.trim().split(' ')[0] : (user?.phone || 'User')) : (isHindi ? 'लॉग इन' : 'Sign In')}
           </span>
         </button>
       </div>

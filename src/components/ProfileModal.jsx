@@ -50,27 +50,27 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
     settings
   } = useApp();
 
-  const isHindi = settings.language === 'hi';
-  const currency = settings.currency || '₹';
+  const isHindi = settings?.language === 'hi';
+  const currency = settings?.currency || '₹';
 
   const [formData, setFormData] = useState({
-    name: user.name || '',
-    businessName: user.businessName || '',
-    email: user.email || '',
-    phone: user.phone || '',
-    address: user.address || '',
-    taxId: user.taxId || ''
+    name: user?.name || '',
+    businessName: user?.businessName || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    address: user?.address || '',
+    taxId: user?.taxId || ''
   });
 
   // Sync formData with user changes
   useEffect(() => {
     setFormData({
-      name: user.name || '',
-      businessName: user.businessName || '',
-      email: user.email || '',
-      phone: user.phone || '',
-      address: user.address || '',
-      taxId: user.taxId || ''
+      name: user?.name || '',
+      businessName: user?.businessName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      address: user?.address || '',
+      taxId: user?.taxId || ''
     });
   }, [user]);
 
@@ -202,9 +202,9 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
   };
 
   // Subscription calculation
-  const sub = user.subscription;
+  const sub = user?.subscription;
   const isSubExpired = sub?.status === 'expired' || (sub?.expiryDate && new Date(sub.expiryDate) < new Date());
-  const expiryDateObj = sub?.expiryDate ? new Date(sub.expiryDate) : null;
+  const expiryDateObj = sub?.expiryDate && !isNaN(new Date(sub.expiryDate).getTime()) ? new Date(sub.expiryDate) : null;
   const daysRemaining = expiryDateObj ? Math.ceil((expiryDateObj - new Date()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
@@ -220,11 +220,11 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
         <div className="dialog-header">
           <div className="dialog-title-group">
             <h2 id="profile-dialog-title" className="dialog-title">
-              {user.isLoggedIn ? (user.role === 'admin' ? '🛡️ Billie Admin Profile' : 'Business Profile') : 'Sign In to Billie'}
+              {user?.isLoggedIn ? (user?.role === 'admin' ? '🛡️ Billie Admin Profile' : 'Business Profile') : 'Sign In to Billie'}
             </h2>
             <p className="dialog-subtitle">
-              {user.isLoggedIn
-                ? (user.role === 'admin' ? 'Super Admin Mode • Full Subscription Control' : 'Manage your business details, subscription & offline PWA')
+              {user?.isLoggedIn
+                ? (user?.role === 'admin' ? 'Super Admin Mode • Full Subscription Control' : 'Manage your business details, subscription & offline PWA')
                 : 'Enter your credentials created by the administrator'}
             </p>
           </div>
@@ -241,7 +241,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
         {/* Dialog Body */}
         <div className="dialog-body custom-scrollbar">
           {/* CASE 1: Logged Out -> Login Page with Credential Authentication */}
-          {!user.isLoggedIn ? (
+          {!user?.isLoggedIn ? (
             <div className="login-form-container">
               <div className="login-hero-badge">
                 <Sparkles size={28} className="text-blue-500" />
@@ -403,7 +403,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
               )}
 
               {/* USER SUBSCRIPTION DETAILS CARD (Requirement 3 & 4) */}
-              {user.role !== 'admin' && (
+              {user?.role !== 'admin' && (
                 <div className={`user-subscription-card mt-4 ${isSubExpired ? 'expired' : 'active'}`}>
                   <div className="sub-card-header">
                     <div className="flex items-center gap-2">
@@ -715,8 +715,8 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                     </h4>
                     <p className="profile-inventory-desc">
                       {isHindi
-                        ? `${inventory.length} प्रोडक्ट्स उपलब्ध • स्टॉक जांचें और एडिट करें`
-                        : `${inventory.length} products listed • View, restock & edit prices`}
+                        ? `${(inventory || []).length} प्रोडक्ट्स उपलब्ध • स्टॉक जांचें और एडिट करें`
+                        : `${(inventory || []).length} products listed • View, restock & edit prices`}
                     </p>
                   </div>
                   <button
