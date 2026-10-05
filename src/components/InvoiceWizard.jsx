@@ -142,6 +142,7 @@ export default function InvoiceWizard({
   // Payment Settlement State (Paid Full Amount vs Custom Paid / Due)
   const [isFullPaid, setIsFullPaid] = useState(true);
   const [paidAmountInput, setPaidAmountInput] = useState('');
+  const [selectedPayMode, setSelectedPayMode] = useState('cash');
 
   // Live draft invoice totals calculation
   const draftTotals = useMemo(() => {
@@ -524,6 +525,23 @@ export default function InvoiceWizard({
     );
   };
 
+  // Triggered by the dedicated "Generate Bill" button on the payment settlement card
+  const handleConfirmGenerateBill = () => {
+    const currentSettledPaid = isFullPaid
+      ? draftTotals.grandTotal
+      : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
+
+    finalizeInvoice(
+      draftCustomer,
+      draftItems,
+      draftDiscountRef.current.discount,
+      draftDiscountRef.current.discountType,
+      lang,
+      selectedPayMode || 'cash',
+      currentSettledPaid
+    );
+  };
+
   // Low Stock Modal Action 1: Proceed to bill anyway (stock goes negative)
   const handleProceedLowStock = () => {
     if (!lowStockModalData) return;
@@ -784,15 +802,45 @@ export default function InvoiceWizard({
               }
             ];
 
-      const customPaid = oneShot.paidAmount === 'full' ? undefined : (oneShot.paidAmount !== null && oneShot.paidAmount !== undefined ? oneShot.paidAmount : undefined);
-      finalizeInvoice(
-        oneShot.customerName,
+      // Populate draft invoice state and transition to STEPS.ASK_PAYMENT_MODE
+      // so user sees the payment settlement card with Full / Partial Paid & Due and "Generate Bill" button!
+      setDraftCustomer(oneShot.customerName || '');
+      setDraftItems(itemsToFinalize);
+      draftDiscountRef.current = {
+        discount: oneShot.discount || 0,
+        discountType: oneShot.discountType || 'percent'
+      };
+      const chosenMode = oneShot.paymentMode || 'cash';
+      setSelectedPayMode(chosenMode);
+      draftPaymentModeRef.current = chosenMode;
+
+      const calcTotals = calculateInvoiceTotals(
         itemsToFinalize,
-        oneShot.discount,
-        oneShot.discountType,
-        activeLang,
-        oneShot.paymentMode || 'cash',
-        customPaid
+        settings?.defaultTaxRate || 0,
+        oneShot.discount || 0,
+        oneShot.discountType || 'percent'
+      );
+
+      if (oneShot.paidAmount !== null && oneShot.paidAmount !== undefined) {
+        if (oneShot.paidAmount === 'full') {
+          setIsFullPaid(true);
+          setPaidAmountInput(String(calcTotals.grandTotal));
+        } else {
+          setIsFullPaid(false);
+          setPaidAmountInput(String(oneShot.paidAmount));
+        }
+      } else {
+        setIsFullPaid(true);
+        setPaidAmountInput(String(calcTotals.grandTotal));
+      }
+
+      setStep(STEPS.ASK_PAYMENT_MODE);
+      const custDisplay = oneShot.customerName ? ` ${oneShot.customerName} के लिए` : '';
+      replyBillie(
+        activeLang === 'hi'
+          ? `✓${custDisplay} ₹${calcTotals.grandTotal.toFixed(0)} का बिल तैयार है। कृपया भुगतान विवरण (Paid / Due) चुनें और नीचे "बिल बनाएं" पर क्लिक करें:`
+          : `✓ Bill of ₹${calcTotals.grandTotal.toFixed(0)} ready. Select payment settlement (Paid / Due) below and tap "Generate Bill":`,
+        activeLang
       );
       return;
     }
@@ -1157,14 +1205,21 @@ export default function InvoiceWizard({
         }
 
         draftDiscountRef.current = { discount, discountType };
+        setIsFullPaid(true);
+        setPaidAmountInput(String(draftTotals.grandTotal));
         setStep(STEPS.ASK_PAYMENT_MODE);
-        replyBillie(p.ask_payment_mode, activeLang);
+        replyBillie(
+          activeLang === 'hi'
+            ? `कुल बिल: ₹${draftTotals.grandTotal.toFixed(0)}। कृपया भुगतान स्थिति (Full Paid या Partial & Due) चुनें और "बिल बनाएं" पर क्लिक करें:`
+            : `Total bill: ₹${draftTotals.grandTotal.toFixed(0)}. Please select payment settlement (Full or Partial & Due) and tap "Generate Bill":`,
+          activeLang
+        );
         break;
       }
 
       case STEPS.ASK_PAYMENT_MODE: {
         const normTrim = trimmed.toLowerCase();
-        let selectedMode = 'cash';
+        let selectedMode = selectedPayMode || 'cash';
         if (
           normTrim.includes('upi') ||
           normTrim.includes('gpay') ||
@@ -1182,18 +1237,46 @@ export default function InvoiceWizard({
           selectedMode = 'card';
         } else if (normTrim.includes('cheque') || normTrim.includes('check')) {
           selectedMode = 'cheque';
-        } else {
+        } else if (normTrim.includes('cash') || normTrim.includes('nagad') || normTrim.includes('roker')) {
           selectedMode = 'cash';
         }
 
+        const numInText = extractNumber(trimmed, null);
+        let customPaid = isFullPaid
+          ? draftTotals.grandTotal
+          : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
+
+        if (normTrim.includes('udhar') || normTrim.includes('due') || normTrim.includes('baki')) {
+          if (numInText !== null && numInText !== undefined && numInText >= 0) {
+            customPaid = Math.min(draftTotals.grandTotal, numInText);
+            setIsFullPaid(false);
+            setPaidAmountInput(String(customPaid));
+          } else {
+            customPaid = 0;
+            setIsFullPaid(false);
+            setPaidAmountInput('0');
+          }
+        } else if (normTrim.includes('poora') || normTrim.includes('full') || normTrim.includes('100%')) {
+          customPaid = draftTotals.grandTotal;
+          setIsFullPaid(true);
+          setPaidAmountInput(String(draftTotals.grandTotal));
+        } else if (numInText !== null && numInText > 0 && numInText <= draftTotals.grandTotal) {
+          customPaid = numInText;
+          setIsFullPaid(false);
+          setPaidAmountInput(String(customPaid));
+        }
+
+        setSelectedPayMode(selectedMode);
         draftPaymentModeRef.current = selectedMode;
+
         finalizeInvoice(
           draftCustomer,
           draftItems,
           draftDiscountRef.current.discount,
           draftDiscountRef.current.discountType,
           activeLang,
-          selectedMode
+          selectedMode,
+          customPaid
         );
         break;
       }
@@ -1735,228 +1818,240 @@ export default function InvoiceWizard({
           </div>
         )}
 
-        {/* INTERACTIVE CONTROLS 4: PAYMENT SETTLEMENT & PAYMENT MODE SELECTION */}
+        {/* INTERACTIVE CONTROLS 4: PAYMENT SETTLEMENT & GENERATE BILL CARD */}
         {step === STEPS.ASK_PAYMENT_MODE && (
-          <div className="m3-paymode-picker animate-slide-up space-y-3">
+          <div className="m3-paymode-picker animate-slide-up space-y-3.5">
             {/* Bill Summary & Paid/Due Settlement Box */}
             <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-slate-800/90 dark:to-slate-800/50 border border-slate-200 dark:border-slate-700/80 shadow-xs">
-              <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-200 dark:border-slate-700/60">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  {lang === 'hi' ? 'कुल बिल राशि (Total Bill Amount):' : 'Total Bill Amount:'}
-                </span>
-                <span className="text-base font-extrabold text-blue-600 dark:text-blue-400">
+              <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-200 dark:border-slate-700/60">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+                    {draftCustomer ? `${lang === 'hi' ? 'ग्राहक' : 'Customer'}: ${draftCustomer}` : (lang === 'hi' ? 'ग्राहक बिल' : 'Customer Invoice')}
+                  </span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {lang === 'hi' ? 'कुल बिल राशि (Total Bill):' : 'Total Bill Amount:'}
+                  </span>
+                </div>
+                <span className="text-lg font-black text-blue-600 dark:text-blue-400">
                   {currency} {draftTotals.grandTotal.toFixed(2)}
                 </span>
               </div>
 
-              {/* Paid Full Amount Toggle */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-800 dark:text-slate-200 select-none">
-                  <input
-                    type="checkbox"
-                    checked={isFullPaid}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setIsFullPaid(checked);
-                      if (checked) {
-                        setPaidAmountInput(String(draftTotals.grandTotal));
-                      } else {
-                        setPaidAmountInput('');
-                      }
-                    }}
-                    className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                  />
-                  <span>
-                    {lang === 'hi'
-                      ? `पूरा भुगतान प्राप्त (Paid Full Amount) - ${currency}${draftTotals.grandTotal.toFixed(2)}`
-                      : `Paid Full Amount - ${currency}${draftTotals.grandTotal.toFixed(2)}`}
-                  </span>
-                </label>
+              {/* Settlement Options: Paid Full Amount vs Partial Paid & Due */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {/* 1. Paid Full Amount Option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFullPaid(true);
+                    setPaidAmountInput(String(draftTotals.grandTotal));
+                  }}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    isFullPaid
+                      ? 'border-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/40 shadow-xs ring-2 ring-emerald-500/25'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      isFullPaid ? 'bg-emerald-600 text-white' : 'border border-slate-400 text-transparent'
+                    }`}>
+                      ✓
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      {lang === 'hi' ? 'पूर्ण भुगतान (Full Paid)' : 'Paid Full Amount'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold pl-5">
+                    {currency}{draftTotals.grandTotal.toFixed(2)} ({lang === 'hi' ? 'बकाया ₹0' : 'Due ₹0'})
+                  </div>
+                </button>
 
-                {/* Custom Paid & Due Calculation Box */}
-                {!isFullPaid && (
-                  <div className="animate-slide-up space-y-2 pt-1 border-t border-dashed border-slate-200 dark:border-slate-700">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-center">
-                      {/* User Input for Paid Amount */}
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                          {lang === 'hi' ? 'प्राप्त राशि (Paid):' : 'Paid Amount (to be filled):'}
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                            {currency}
-                          </span>
-                          <input
-                            type="number"
-                            min="0"
-                            max={draftTotals.grandTotal}
-                            step="any"
-                            value={paidAmountInput}
-                            onChange={(e) => setPaidAmountInput(e.target.value)}
-                            placeholder={lang === 'hi' ? 'जमा राशि डालें' : 'Enter paid amount'}
-                            className="w-full pl-7 pr-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-blue-500"
-                            autoFocus
-                          />
-                        </div>
-                      </div>
+                {/* 2. Partial Paid / Due Option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFullPaid(false);
+                    if (paidAmountInput === String(draftTotals.grandTotal) || paidAmountInput === '') {
+                      setPaidAmountInput('');
+                    }
+                  }}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    !isFullPaid
+                      ? 'border-amber-500 bg-amber-50/90 dark:bg-amber-950/40 shadow-xs ring-2 ring-amber-500/25'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      !isFullPaid ? 'bg-amber-600 text-white' : 'border border-slate-400 text-transparent'
+                    }`}>
+                      ✓
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      {lang === 'hi' ? 'आंशिक / उधारी (Partial / Due)' : 'Partial Paid & Due'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold pl-5">
+                    {lang === 'hi' ? 'जमा + बकाया उधारी' : 'Custom Paid + Due'}
+                  </div>
+                </button>
+              </div>
 
-                      {/* Automatically Calculated Due Amount (Total - Paid) */}
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                          {lang === 'hi' ? 'बकाया (Due = Total - Paid):' : 'Due (Total - Paid):'}
-                        </label>
-                        <div className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-amber-900 dark:text-amber-300 uppercase">
-                            {lang === 'hi' ? 'स्वतः गणना' : 'Auto Due'}
-                          </span>
-                          <span className="text-xs font-extrabold text-rose-600 dark:text-rose-400">
-                            {currency} {Math.max(0, draftTotals.grandTotal - (Number(paidAmountInput) || 0)).toFixed(2)}
-                          </span>
-                        </div>
+              {/* Partial Paid Custom Input & Real-time Due Amount Display */}
+              {!isFullPaid && (
+                <div className="animate-slide-up space-y-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-center">
+                    {/* User Input for Paid Amount */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        {lang === 'hi' ? 'जमा राशि (Paid Amount):' : 'Paid Amount (to be filled):'}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                          {currency}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          max={draftTotals.grandTotal}
+                          step="any"
+                          value={paidAmountInput}
+                          onChange={(e) => setPaidAmountInput(e.target.value)}
+                          placeholder={lang === 'hi' ? 'उदा. 500' : 'Enter paid amount'}
+                          className="w-full pl-7 pr-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-blue-500 shadow-inner"
+                          autoFocus
+                        />
                       </div>
                     </div>
 
-                    {/* Quick Preset Buttons */}
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsFullPaid(true);
-                          setPaidAmountInput(String(draftTotals.grandTotal));
-                        }}
-                        className="px-2 py-1 text-[10px] font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-200 cursor-pointer"
-                      >
-                        {lang === 'hi' ? '✓ पूर्ण भुगतान' : '✓ 100% Paid'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPaidAmountInput(String(Math.round(draftTotals.grandTotal / 2)))}
-                        className="px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 cursor-pointer"
-                      >
-                        50% Paid
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPaidAmountInput('0')}
-                        className="px-2 py-1 text-[10px] font-bold rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 hover:bg-rose-200 cursor-pointer"
-                      >
-                        {lang === 'hi' ? 'पूरा उधार (₹0 Paid)' : 'Full Due (₹0 Paid)'}
-                      </button>
+                    {/* Real-time Automatically Calculated Due Amount (Total - Paid) */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        {lang === 'hi' ? 'बकाया (Due = Total - Paid):' : 'Due (Total - Paid):'}
+                      </label>
+                      <div className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-rose-800 dark:text-rose-300 uppercase">
+                          {lang === 'hi' ? 'स्वतः गणना' : 'Auto Due'}
+                        </span>
+                        <span className="text-sm font-black text-rose-600 dark:text-rose-400">
+                          {currency} {Math.max(0, draftTotals.grandTotal - (Number(paidAmountInput) || 0)).toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                )}
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      {lang === 'hi' ? 'त्वरित विकल्प:' : 'Quick Presets:'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPaidAmountInput(String(Math.round(draftTotals.grandTotal / 2)))}
+                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 cursor-pointer"
+                    >
+                      50% Paid ({currency}{Math.round(draftTotals.grandTotal / 2)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaidAmountInput('0')}
+                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 hover:bg-rose-200 cursor-pointer"
+                    >
+                      {lang === 'hi' ? 'पूरा उधार (₹0 जमा)' : 'Full Due (₹0 Paid)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsFullPaid(true);
+                        setPaidAmountInput(String(draftTotals.grandTotal));
+                      }}
+                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-200 cursor-pointer"
+                    >
+                      100% Paid
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Mode Selection */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="picker-header-title text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <CreditCard size={15} className="text-blue-500" />
+                  <span>{lang === 'hi' ? 'पेमेंट का माध्यम (Payment Mode):' : 'Payment Mode:'}</span>
+                </span>
+                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                  {selectedPayMode.toUpperCase()}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPayMode('cash')}
+                  className={`m3-paymode-choice-btn cash m3-ripple ${selectedPayMode === 'cash' ? 'selected' : ''}`}
+                >
+                  <div className="paymode-choice-icon">💵</div>
+                  <div className="paymode-choice-text">
+                    <span className="paymode-choice-name">{lang === 'hi' ? 'नकद (Cash)' : 'Cash'}</span>
+                    <span className="paymode-choice-desc">{lang === 'hi' ? 'कैश' : 'In hand'}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedPayMode('upi')}
+                  className={`m3-paymode-choice-btn upi m3-ripple ${selectedPayMode === 'upi' ? 'selected' : ''}`}
+                >
+                  <div className="paymode-choice-icon">⚡</div>
+                  <div className="paymode-choice-text">
+                    <span className="paymode-choice-name">UPI / QR</span>
+                    <span className="paymode-choice-desc">GPay, PhonePe</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedPayMode('card')}
+                  className={`m3-paymode-choice-btn card m3-ripple ${selectedPayMode === 'card' ? 'selected' : ''}`}
+                >
+                  <div className="paymode-choice-icon">💳</div>
+                  <div className="paymode-choice-text">
+                    <span className="paymode-choice-name">{lang === 'hi' ? 'कार्ड (Card)' : 'Card'}</span>
+                    <span className="paymode-choice-desc">Debit / Credit</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedPayMode('cheque')}
+                  className={`m3-paymode-choice-btn cheque m3-ripple ${selectedPayMode === 'cheque' ? 'selected' : ''}`}
+                >
+                  <div className="paymode-choice-icon">📝</div>
+                  <div className="paymode-choice-text">
+                    <span className="paymode-choice-name">{lang === 'hi' ? 'चेक (Cheque)' : 'Cheque'}</span>
+                    <span className="paymode-choice-desc">Bank DD</span>
+                  </div>
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="picker-header-title">
-                <CreditCard size={15} className="text-blue-500" />
-                <span>{lang === 'hi' ? 'पेमेंट का माध्यम चुनें (Payment Mode):' : 'Select Payment Mode:'}</span>
-              </span>
-              <span className="text-[11px] text-slate-400">
-                {lang === 'hi' ? 'टैप करें या बोलें' : 'Tap or speak'}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+            {/* Bottom Generate Bill Button */}
+            <div className="pt-1">
               <button
                 type="button"
-                onClick={() => {
-                  const currentSettledPaid = isFullPaid
-                    ? draftTotals.grandTotal
-                    : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
-                  finalizeInvoice(
-                    draftCustomer,
-                    draftItems,
-                    draftDiscountRef.current.discount,
-                    draftDiscountRef.current.discountType,
-                    lang,
-                    'cash',
-                    currentSettledPaid
-                  );
-                }}
-                className="m3-paymode-choice-btn cash m3-ripple"
+                onClick={handleConfirmGenerateBill}
+                className="m3-generate-bill-btn m3-ripple"
               >
-                <div className="paymode-choice-icon">💵</div>
-                <div className="paymode-choice-text">
-                  <span className="paymode-choice-name">{lang === 'hi' ? 'नकद (Cash)' : 'Cash'}</span>
-                  <span className="paymode-choice-desc">{lang === 'hi' ? 'कैश भुगतान' : 'Cash in hand'}</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const currentSettledPaid = isFullPaid
-                    ? draftTotals.grandTotal
-                    : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
-                  finalizeInvoice(
-                    draftCustomer,
-                    draftItems,
-                    draftDiscountRef.current.discount,
-                    draftDiscountRef.current.discountType,
-                    lang,
-                    'upi',
-                    currentSettledPaid
-                  );
-                }}
-                className="m3-paymode-choice-btn upi m3-ripple"
-              >
-                <div className="paymode-choice-icon">⚡</div>
-                <div className="paymode-choice-text">
-                  <span className="paymode-choice-name">UPI / QR</span>
-                  <span className="paymode-choice-desc">GPay, PhonePe, Paytm</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const currentSettledPaid = isFullPaid
-                    ? draftTotals.grandTotal
-                    : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
-                  finalizeInvoice(
-                    draftCustomer,
-                    draftItems,
-                    draftDiscountRef.current.discount,
-                    draftDiscountRef.current.discountType,
-                    lang,
-                    'card',
-                    currentSettledPaid
-                  );
-                }}
-                className="m3-paymode-choice-btn card m3-ripple"
-              >
-                <div className="paymode-choice-icon">💳</div>
-                <div className="paymode-choice-text">
-                  <span className="paymode-choice-name">{lang === 'hi' ? 'कार्ड (Card)' : 'Card'}</span>
-                  <span className="paymode-choice-desc">Debit / Credit Card</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const currentSettledPaid = isFullPaid
-                    ? draftTotals.grandTotal
-                    : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
-                  finalizeInvoice(
-                    draftCustomer,
-                    draftItems,
-                    draftDiscountRef.current.discount,
-                    draftDiscountRef.current.discountType,
-                    lang,
-                    'cheque',
-                    currentSettledPaid
-                  );
-                }}
-                className="m3-paymode-choice-btn cheque m3-ripple"
-              >
-                <div className="paymode-choice-icon">📝</div>
-                <div className="paymode-choice-text">
-                  <span className="paymode-choice-name">{lang === 'hi' ? 'चेक (Cheque)' : 'Cheque'}</span>
-                  <span className="paymode-choice-desc">Bank Cheque / DD</span>
-                </div>
+                <FileText size={18} />
+                <span>
+                  {lang === 'hi'
+                    ? `🧾 बिल बनाएं (Generate Bill - ${currency}${draftTotals.grandTotal.toFixed(2)})`
+                    : `🧾 Generate Bill (${currency}${draftTotals.grandTotal.toFixed(2)})`}
+                </span>
+                <ArrowRight size={18} />
               </button>
             </div>
           </div>

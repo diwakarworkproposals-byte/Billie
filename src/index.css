@@ -9028,6 +9028,77 @@ input:checked + .slider:before {
   border-color: #f59e0b;
 }
 
+.m3-paymode-choice-btn.selected {
+  border-width: 2px !important;
+}
+.m3-paymode-choice-btn.cash.selected {
+  border-color: #10b981 !important;
+  background: #ecfdf5 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+}
+.m3-paymode-choice-btn.upi.selected {
+  border-color: #6366f1 !important;
+  background: #eef2ff !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+.m3-paymode-choice-btn.card.selected {
+  border-color: #3b82f6 !important;
+  background: #eff6ff !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+.m3-paymode-choice-btn.cheque.selected {
+  border-color: #f59e0b !important;
+  background: #fffbeb !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+[data-theme="dark"] .m3-paymode-choice-btn.cash.selected,
+.dark .m3-paymode-choice-btn.cash.selected {
+  background: rgba(16, 185, 129, 0.25) !important;
+  border-color: #10b981 !important;
+}
+[data-theme="dark"] .m3-paymode-choice-btn.upi.selected,
+.dark .m3-paymode-choice-btn.upi.selected {
+  background: rgba(99, 102, 241, 0.25) !important;
+  border-color: #6366f1 !important;
+}
+[data-theme="dark"] .m3-paymode-choice-btn.card.selected,
+.dark .m3-paymode-choice-btn.card.selected {
+  background: rgba(59, 130, 246, 0.25) !important;
+  border-color: #3b82f6 !important;
+}
+[data-theme="dark"] .m3-paymode-choice-btn.cheque.selected,
+.dark .m3-paymode-choice-btn.cheque.selected {
+  background: rgba(245, 158, 11, 0.25) !important;
+  border-color: #f59e0b !important;
+}
+
+.m3-generate-bill-btn {
+  width: 100%;
+  padding: 13px 20px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  border-radius: 14px;
+  border: none;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.02em;
+}
+.m3-generate-bill-btn:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+  filter: brightness(1.05);
+}
+.m3-generate-bill-btn:active {
+  transform: translateY(0);
+}
+
 .paymode-choice-icon {
   font-size: 1.3rem;
   line-height: 1;
