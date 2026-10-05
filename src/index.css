@@ -8960,116 +8960,536 @@ input:checked + .slider:before {
   border-color: #2563eb;
 }
 
-.m3-paymode-choice-btn {
+/* ========================================================
+   COMPACT MATERIAL 3 PAYMENT SETTLEMENT & BILL GENERATE CARD
+   ======================================================== */
+.m3-paymode-picker {
+  background: var(--md-surface-container-high, #ffffff);
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 100%;
+}
+
+[data-theme="dark"] .m3-paymode-picker,
+.dark .m3-paymode-picker {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* 1. Header: Customer on Left & Total Bill on Right */
+.m3-settle-card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-outline-variant, #f1f5f9);
   gap: 10px;
-  padding: 10px 12px;
+}
+
+[data-theme="dark"] .m3-settle-card-header,
+.dark .m3-settle-card-header {
+  border-bottom-color: #334155;
+}
+
+.m3-settle-customer-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: left;
+}
+
+.m3-settle-customer-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--md-on-surface-variant, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-theme="dark"] .m3-settle-customer-label,
+.dark .m3-settle-customer-label {
+  color: #94a3b8;
+}
+
+.m3-settle-customer-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--md-on-surface, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+[data-theme="dark"] .m3-settle-customer-name,
+.dark .m3-settle-customer-name {
+  color: #f8fafc;
+}
+
+.m3-settle-amount-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.m3-settle-amount-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--md-on-surface-variant, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-theme="dark"] .m3-settle-amount-label,
+.dark .m3-settle-amount-label {
+  color: #94a3b8;
+}
+
+.m3-settle-amount-val {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #2563eb;
+  font-feature-settings: "tnum";
+  line-height: 1.2;
+}
+
+[data-theme="dark"] .m3-settle-amount-val,
+.dark .m3-settle-amount-val {
+  color: #60a5fa;
+}
+
+/* 2. Settlement Segmented Track (Pill Switch) */
+.m3-settle-segment-track {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  background: var(--md-surface-container, #f1f5f9);
+  padding: 3px;
   border-radius: 12px;
   border: 1px solid var(--md-outline-variant, #e2e8f0);
-  background: var(--md-surface-container, #f8fafc);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s ease;
 }
 
-.m3-paymode-choice-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
-}
-
-.m3-paymode-choice-btn.cash:hover {
-  border-color: #10b981;
-  background: #ecfdf5;
-}
-
-.m3-paymode-choice-btn.upi:hover {
-  border-color: #6366f1;
-  background: #eef2ff;
-}
-
-.m3-paymode-choice-btn.card:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
-}
-
-.m3-paymode-choice-btn.cheque:hover {
-  border-color: #f59e0b;
-  background: #fffbeb;
-}
-
-[data-theme="dark"] .m3-paymode-choice-btn,
-.dark .m3-paymode-choice-btn {
+[data-theme="dark"] .m3-settle-segment-track,
+.dark .m3-settle-segment-track {
   background: #0f172a;
   border-color: #334155;
 }
 
-[data-theme="dark"] .m3-paymode-choice-btn.cash:hover,
-.dark .m3-paymode-choice-btn.cash:hover {
+.m3-settle-segment-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--md-on-surface-variant, #64748b);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .m3-settle-segment-btn,
+.dark .m3-settle-segment-btn {
+  color: #94a3b8;
+}
+
+.m3-settle-segment-btn.active-full {
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+.m3-settle-segment-btn.active-due {
+  background: #d97706;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+/* 3. Full Paid Micro Status */
+.m3-settle-quick-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
+  font-size: 0.74rem;
+}
+
+[data-theme="dark"] .m3-settle-quick-status,
+.dark .m3-settle-quick-status {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.m3-settle-quick-status .status-paid-text {
+  font-weight: 800;
+  color: #059669;
+}
+
+[data-theme="dark"] .m3-settle-quick-status .status-paid-text,
+.dark .m3-settle-quick-status .status-paid-text {
+  color: #34d399;
+}
+
+.m3-settle-quick-status .status-dot {
+  color: #94a3b8;
+}
+
+.m3-settle-quick-status .status-due-text {
+  font-weight: 700;
+  color: #64748b;
+}
+
+[data-theme="dark"] .m3-settle-quick-status .status-due-text,
+.dark .m3-settle-quick-status .status-due-text {
+  color: #94a3b8;
+}
+
+/* 4. Partial Paid & Due Compact Box */
+.m3-settle-partial-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--md-surface-container, #f8fafc);
+  border: 1px dashed var(--md-outline-variant, #cbd5e1);
+}
+
+[data-theme="dark"] .m3-settle-partial-box,
+.dark .m3-settle-partial-box {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.m3-settle-partial-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.m3-settle-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.m3-settle-field label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--md-on-surface-variant, #64748b);
+  text-transform: uppercase;
+}
+
+[data-theme="dark"] .m3-settle-field label,
+.dark .m3-settle-field label {
+  color: #94a3b8;
+}
+
+.m3-settle-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.m3-settle-input-wrapper .currency-prefix {
+  position: absolute;
+  left: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.m3-settle-input-wrapper input {
+  width: 100%;
+  padding: 6px 8px 6px 20px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  border-radius: 8px;
+  border: 1.5px solid var(--md-outline-variant, #cbd5e1);
+  background: #ffffff;
+  color: var(--md-on-surface, #0f172a);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+[data-theme="dark"] .m3-settle-input-wrapper input,
+.dark .m3-settle-input-wrapper input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #ffffff;
+}
+
+.m3-settle-input-wrapper input:focus {
+  border-color: #2563eb;
+}
+
+.m3-settle-due-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(225, 29, 72, 0.08);
+  border: 1px solid rgba(225, 29, 72, 0.2);
+}
+
+[data-theme="dark"] .m3-settle-due-display,
+.dark .m3-settle-due-display {
+  background: rgba(225, 29, 72, 0.15);
+  border-color: rgba(225, 29, 72, 0.3);
+}
+
+.m3-settle-due-display .due-badge-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #be123c;
+}
+
+[data-theme="dark"] .m3-settle-due-display .due-badge-tag,
+.dark .m3-settle-due-display .due-badge-tag {
+  color: #fb7185;
+}
+
+.m3-settle-due-display .due-badge-val {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #e11d48;
+}
+
+[data-theme="dark"] .m3-settle-due-display .due-badge-val,
+.dark .m3-settle-due-display .due-badge-val {
+  color: #f43f5e;
+}
+
+.m3-settle-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.m3-settle-chip {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border: 1px solid var(--md-outline-variant, #cbd5e1);
+  background: #ffffff;
+  color: var(--md-on-surface, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .m3-settle-chip,
+.dark .m3-settle-chip {
+  background: #1e293b;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+.m3-settle-chip.danger {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+[data-theme="dark"] .m3-settle-chip.danger,
+.dark .m3-settle-chip.danger {
+  background: rgba(225, 29, 72, 0.15);
+  border-color: rgba(225, 29, 72, 0.3);
+  color: #fb7185;
+}
+
+.m3-settle-chip.success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+[data-theme="dark"] .m3-settle-chip.success,
+.dark .m3-settle-chip.success {
   background: rgba(16, 185, 129, 0.15);
-  border-color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
 }
 
-[data-theme="dark"] .m3-paymode-choice-btn.upi:hover,
-.dark .m3-paymode-choice-btn.upi:hover {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: #6366f1;
+/* 5. Declared Payment Mode Row (Single Compact Bar) */
+.m3-settle-declared-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.15);
 }
 
-[data-theme="dark"] .m3-paymode-choice-btn.card:hover,
-.dark .m3-paymode-choice-btn.card:hover {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: #3b82f6;
+[data-theme="dark"] .m3-settle-declared-row,
+.dark .m3-settle-declared-row {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.25);
 }
 
-[data-theme="dark"] .m3-paymode-choice-btn.cheque:hover,
-.dark .m3-paymode-choice-btn.cheque:hover {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: #f59e0b;
+.m3-settle-declared-pill {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #1d4ed8;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(37, 99, 235, 0.1);
 }
 
-.m3-paymode-choice-btn.selected {
-  border-width: 2px !important;
+[data-theme="dark"] .m3-settle-declared-pill,
+.dark .m3-settle-declared-pill {
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.25);
 }
-.m3-paymode-choice-btn.cash.selected {
-  border-color: #10b981 !important;
-  background: #ecfdf5 !important;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+
+.m3-settle-change-link {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 2px 4px;
 }
-.m3-paymode-choice-btn.upi.selected {
-  border-color: #6366f1 !important;
-  background: #eef2ff !important;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+
+[data-theme="dark"] .m3-settle-change-link,
+.dark .m3-settle-change-link {
+  color: #60a5fa;
 }
-.m3-paymode-choice-btn.card.selected {
-  border-color: #3b82f6 !important;
+
+/* 6. Vertical Payment Mode List (Compact Single-line Column) */
+.m3-paymode-vertical-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.m3-paymode-list-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--md-on-surface-variant, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding-left: 2px;
+}
+
+[data-theme="dark"] .m3-paymode-list-header,
+.dark .m3-paymode-list-header {
+  color: #94a3b8;
+}
+
+.m3-paymode-compact-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.m3-paymode-vert-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  background: var(--md-surface-container, #f8fafc);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+[data-theme="dark"] .m3-paymode-vert-item,
+.dark .m3-paymode-vert-item {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.m3-paymode-vert-item .vert-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.m3-paymode-vert-item .vert-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--md-on-surface, #0f172a);
+  flex: 1;
+}
+
+[data-theme="dark"] .m3-paymode-vert-item .vert-name,
+.dark .m3-paymode-vert-item .vert-name {
+  color: #f1f5f9;
+}
+
+.m3-paymode-vert-item .vert-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  flex-shrink: 0;
+}
+
+.m3-paymode-vert-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+[data-theme="dark"] .m3-paymode-vert-item:hover,
+.dark .m3-paymode-vert-item:hover {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.m3-paymode-vert-item.selected {
+  border-color: #2563eb !important;
   background: #eff6ff !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  border-width: 1.5px !important;
 }
-.m3-paymode-choice-btn.cheque.selected {
-  border-color: #f59e0b !important;
-  background: #fffbeb !important;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
-}
-[data-theme="dark"] .m3-paymode-choice-btn.cash.selected,
-.dark .m3-paymode-choice-btn.cash.selected {
-  background: rgba(16, 185, 129, 0.25) !important;
-  border-color: #10b981 !important;
-}
-[data-theme="dark"] .m3-paymode-choice-btn.upi.selected,
-.dark .m3-paymode-choice-btn.upi.selected {
-  background: rgba(99, 102, 241, 0.25) !important;
-  border-color: #6366f1 !important;
-}
-[data-theme="dark"] .m3-paymode-choice-btn.card.selected,
-.dark .m3-paymode-choice-btn.card.selected {
-  background: rgba(59, 130, 246, 0.25) !important;
+
+[data-theme="dark"] .m3-paymode-vert-item.selected,
+.dark .m3-paymode-vert-item.selected {
+  background: rgba(37, 99, 235, 0.18) !important;
   border-color: #3b82f6 !important;
 }
-[data-theme="dark"] .m3-paymode-choice-btn.cheque.selected,
-.dark .m3-paymode-choice-btn.cheque.selected {
-  background: rgba(245, 158, 11, 0.25) !important;
-  border-color: #f59e0b !important;
+
+.m3-paymode-vert-item.selected .vert-check {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .m3-paymode-vert-item.selected .vert-check,
+.dark .m3-paymode-vert-item.selected .vert-check {
+  background: #3b82f6;
+  color: #ffffff;
 }
 
 .m3-generate-bill-btn {

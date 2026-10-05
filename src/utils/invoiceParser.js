@@ -536,13 +536,20 @@ export function parseOneShotInvoice(rawText = '', inventory = []) {
 
   // 3. Payment Mode Extraction
   let paymentMode = 'cash';
+  let isPaymentModeDeclared = false;
   const normRaw = text.toLowerCase();
   if (/upi|gpay|google\s*pay|phonepe|paytm|online|qr/.test(normRaw)) {
     paymentMode = 'upi';
+    isPaymentModeDeclared = true;
   } else if (/card|debit|credit/.test(normRaw)) {
     paymentMode = 'card';
-  } else if (/cheque|check/.test(normRaw)) {
+    isPaymentModeDeclared = true;
+  } else if (/cheque|check|चेक/.test(normRaw)) {
     paymentMode = 'cheque';
+    isPaymentModeDeclared = true;
+  } else if (/\b(?:cash|nagad|nakad|roker|rokad|रोकड़|रोकड़ा|नकद|कैश)\b/i.test(normRaw)) {
+    paymentMode = 'cash';
+    isPaymentModeDeclared = true;
   }
 
   // 4. Paid / Due Extraction if explicitly spoken (e.g. "500 paid baki udhar" or "1000 advance")
@@ -748,6 +755,7 @@ export function parseOneShotInvoice(rawText = '', inventory = []) {
     discount,
     discountType,
     paymentMode,
+    isPaymentModeDeclared,
     paidAmount,
     hasFullDetails
   };

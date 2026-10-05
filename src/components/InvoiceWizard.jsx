@@ -21,7 +21,8 @@ import {
   Search,
   X,
   CreditCard,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import InvoiceCard from './InvoiceCard';
 import StockReportCard from './StockReportCard';
@@ -146,6 +147,14 @@ export default function InvoiceWizard({
   const [isFullPaid, setIsFullPaid] = useState(true);
   const [paidAmountInput, setPaidAmountInput] = useState('');
   const [selectedPayMode, setSelectedPayMode] = useState('cash');
+  const [isPaymentModeDeclared, setIsPaymentModeDeclared] = useState(false);
+
+  const PAY_MODES = useMemo(() => [
+    { id: 'cash', icon: '💵', nameHi: 'नकद (Cash)', nameEn: 'Cash' },
+    { id: 'upi', icon: '⚡', nameHi: 'UPI / QR', nameEn: 'UPI / QR' },
+    { id: 'card', icon: '💳', nameHi: 'कार्ड (Card)', nameEn: 'Card' },
+    { id: 'cheque', icon: '📝', nameHi: 'चेक (Cheque)', nameEn: 'Cheque' }
+  ], []);
 
   // Live draft invoice totals calculation
   const draftTotals = useMemo(() => {
@@ -816,6 +825,7 @@ export default function InvoiceWizard({
       const chosenMode = oneShot.paymentMode || 'cash';
       setSelectedPayMode(chosenMode);
       draftPaymentModeRef.current = chosenMode;
+      setIsPaymentModeDeclared(Boolean(oneShot.isPaymentModeDeclared));
 
       const calcTotals = calculateInvoiceTotals(
         itemsToFinalize,
@@ -839,10 +849,15 @@ export default function InvoiceWizard({
 
       setStep(STEPS.ASK_PAYMENT_MODE);
       const custDisplay = oneShot.customerName ? ` ${oneShot.customerName} के लिए` : '';
+      const modeDisplay = oneShot.isPaymentModeDeclared
+        ? (activeLang === 'hi'
+            ? ` (${chosenMode === 'cash' ? 'नकद' : chosenMode.toUpperCase()})`
+            : ` (${chosenMode.toUpperCase()})`)
+        : '';
       replyBillie(
         activeLang === 'hi'
-          ? `✓${custDisplay} ₹${calcTotals.grandTotal.toFixed(0)} का बिल तैयार है। कृपया भुगतान विवरण (Paid / Due) चुनें और नीचे "बिल बनाएं" पर क्लिक करें:`
-          : `✓ Bill of ₹${calcTotals.grandTotal.toFixed(0)} ready. Select payment settlement (Paid / Due) below and tap "Generate Bill":`,
+          ? `✓${custDisplay} ₹${calcTotals.grandTotal.toFixed(0)} का बिल तैयार है${modeDisplay}। नीचे "बिल बनाएं" पर क्लिक करें:`
+          : `✓ Bill of ₹${calcTotals.grandTotal.toFixed(0)} ready${custDisplay}${modeDisplay}. Tap "Generate Bill" below:`,
         activeLang
       );
       return;
@@ -1232,16 +1247,20 @@ export default function InvoiceWizard({
           normTrim.includes('qr')
         ) {
           selectedMode = 'upi';
+          setIsPaymentModeDeclared(true);
         } else if (
           normTrim.includes('card') ||
           normTrim.includes('debit') ||
           normTrim.includes('credit')
         ) {
           selectedMode = 'card';
-        } else if (normTrim.includes('cheque') || normTrim.includes('check')) {
+          setIsPaymentModeDeclared(true);
+        } else if (normTrim.includes('cheque') || normTrim.includes('check') || normTrim.includes('चेक')) {
           selectedMode = 'cheque';
-        } else if (normTrim.includes('cash') || normTrim.includes('nagad') || normTrim.includes('roker')) {
+          setIsPaymentModeDeclared(true);
+        } else if (normTrim.includes('cash') || normTrim.includes('nagad') || normTrim.includes('roker') || normTrim.includes('rokad') || normTrim.includes('नकद') || normTrim.includes('कैश')) {
           selectedMode = 'cash';
+          setIsPaymentModeDeclared(true);
         }
 
         const numInText = extractNumber(trimmed, null);
@@ -1437,6 +1456,10 @@ export default function InvoiceWizard({
     setCurrentItem({ name: '', quantity: 1, price: 0 });
     draftStockRef.current = { name: '', quantity: 1, price: 0 };
     setDraftStockItem({ name: '', quantity: 1, price: 0 });
+    setIsFullPaid(true);
+    setPaidAmountInput('');
+    setSelectedPayMode('cash');
+    setIsPaymentModeDeclared(false);
   };
 
   const triggerChip = (text) => {
@@ -1823,238 +1846,187 @@ export default function InvoiceWizard({
 
         {/* INTERACTIVE CONTROLS 4: PAYMENT SETTLEMENT & GENERATE BILL CARD */}
         {step === STEPS.ASK_PAYMENT_MODE && (
-          <div className="m3-paymode-picker animate-slide-up space-y-3.5">
-            {/* Bill Summary & Paid/Due Settlement Box */}
-            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-slate-800/90 dark:to-slate-800/50 border border-slate-200 dark:border-slate-700/80 shadow-xs">
-              <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-200 dark:border-slate-700/60">
-                <div>
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
-                    {draftCustomer ? `${lang === 'hi' ? 'ग्राहक' : 'Customer'}: ${draftCustomer}` : (lang === 'hi' ? 'ग्राहक बिल' : 'Customer Invoice')}
-                  </span>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    {lang === 'hi' ? 'कुल बिल राशि (Total Bill):' : 'Total Bill Amount:'}
-                  </span>
-                </div>
-                <span className="text-lg font-black text-blue-600 dark:text-blue-400">
+          <div className="m3-paymode-picker animate-slide-up">
+            {/* 1. Header: Customer on Left & Total Bill on Right (Clean & Separated) */}
+            <div className="m3-settle-card-header">
+              <div className="m3-settle-customer-info">
+                <span className="m3-settle-customer-label">
+                  {lang === 'hi' ? 'ग्राहक (Customer)' : 'Customer'}
+                </span>
+                <span className="m3-settle-customer-name">
+                  👤 {draftCustomer || (lang === 'hi' ? 'सम्मानित ग्राहक' : 'Customer')}
+                </span>
+              </div>
+              <div className="m3-settle-amount-info">
+                <span className="m3-settle-amount-label">
+                  {lang === 'hi' ? 'कुल बिल राशि' : 'Total Bill'}
+                </span>
+                <span className="m3-settle-amount-val">
                   {currency} {draftTotals.grandTotal.toFixed(2)}
                 </span>
               </div>
+            </div>
 
-              {/* Settlement Options: Paid Full Amount vs Partial Paid & Due */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                {/* 1. Paid Full Amount Option */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsFullPaid(true);
-                    setPaidAmountInput(String(draftTotals.grandTotal));
-                  }}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    isFullPaid
-                      ? 'border-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/40 shadow-xs ring-2 ring-emerald-500/25'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      isFullPaid ? 'bg-emerald-600 text-white' : 'border border-slate-400 text-transparent'
-                    }`}>
-                      ✓
-                    </span>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                      {lang === 'hi' ? 'पूर्ण भुगतान (Full Paid)' : 'Paid Full Amount'}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold pl-5">
-                    {currency}{draftTotals.grandTotal.toFixed(2)} ({lang === 'hi' ? 'बकाया ₹0' : 'Due ₹0'})
-                  </div>
-                </button>
+            {/* 2. Settlement Segmented Track (Pill Switch) */}
+            <div className="m3-settle-segment-track">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFullPaid(true);
+                  setPaidAmountInput(String(draftTotals.grandTotal));
+                }}
+                className={`m3-settle-segment-btn ${isFullPaid ? 'active-full' : ''}`}
+              >
+                <CheckCircle2 size={13} />
+                <span>{lang === 'hi' ? 'पूर्ण भुगतान (Full)' : 'Full Paid'}</span>
+              </button>
 
-                {/* 2. Partial Paid / Due Option */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsFullPaid(false);
-                    if (paidAmountInput === String(draftTotals.grandTotal) || paidAmountInput === '') {
-                      setPaidAmountInput('');
-                    }
-                  }}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    !isFullPaid
-                      ? 'border-amber-500 bg-amber-50/90 dark:bg-amber-950/40 shadow-xs ring-2 ring-amber-500/25'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      !isFullPaid ? 'bg-amber-600 text-white' : 'border border-slate-400 text-transparent'
-                    }`}>
-                      ✓
-                    </span>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                      {lang === 'hi' ? 'आंशिक / उधारी (Partial / Due)' : 'Partial Paid & Due'}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold pl-5">
-                    {lang === 'hi' ? 'जमा + बकाया उधारी' : 'Custom Paid + Due'}
-                  </div>
-                </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFullPaid(false);
+                  if (paidAmountInput === String(draftTotals.grandTotal) || paidAmountInput === '') {
+                    setPaidAmountInput('');
+                  }
+                }}
+                className={`m3-settle-segment-btn ${!isFullPaid ? 'active-due' : ''}`}
+              >
+                <Clock size={13} />
+                <span>{lang === 'hi' ? 'उधारी / आंशिक (Due)' : 'Partial & Due'}</span>
+              </button>
+            </div>
+
+            {/* 3. Status Display (Full vs Partial) */}
+            {isFullPaid ? (
+              <div className="m3-settle-quick-status">
+                <span className="status-paid-text">✓ {currency}{draftTotals.grandTotal.toFixed(2)} {lang === 'hi' ? 'पूर्ण जमा' : 'Fully Paid'}</span>
+                <span className="status-dot">•</span>
+                <span className="status-due-text">{lang === 'hi' ? 'बकाया: ₹0' : 'Due: ₹0'}</span>
               </div>
-
-              {/* Partial Paid Custom Input & Real-time Due Amount Display */}
-              {!isFullPaid && (
-                <div className="animate-slide-up space-y-2 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-center">
-                    {/* User Input for Paid Amount */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        {lang === 'hi' ? 'जमा राशि (Paid Amount):' : 'Paid Amount (to be filled):'}
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                          {currency}
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          max={draftTotals.grandTotal}
-                          step="any"
-                          value={paidAmountInput}
-                          onChange={(e) => setPaidAmountInput(e.target.value)}
-                          placeholder={lang === 'hi' ? 'उदा. 500' : 'Enter paid amount'}
-                          className="w-full pl-7 pr-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-blue-500 shadow-inner"
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-
-                    {/* Real-time Automatically Calculated Due Amount (Total - Paid) */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        {lang === 'hi' ? 'बकाया (Due = Total - Paid):' : 'Due (Total - Paid):'}
-                      </label>
-                      <div className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-rose-800 dark:text-rose-300 uppercase">
-                          {lang === 'hi' ? 'स्वतः गणना' : 'Auto Due'}
-                        </span>
-                        <span className="text-sm font-black text-rose-600 dark:text-rose-400">
-                          {currency} {Math.max(0, draftTotals.grandTotal - (Number(paidAmountInput) || 0)).toFixed(2)}
-                        </span>
-                      </div>
+            ) : (
+              <div className="m3-settle-partial-box animate-slide-up">
+                <div className="m3-settle-partial-inputs">
+                  <div className="m3-settle-field">
+                    <label>{lang === 'hi' ? 'जमा राशि (Paid):' : 'Paid Amount:'}</label>
+                    <div className="m3-settle-input-wrapper">
+                      <span className="currency-prefix">{currency}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max={draftTotals.grandTotal}
+                        step="any"
+                        value={paidAmountInput}
+                        onChange={(e) => setPaidAmountInput(e.target.value)}
+                        placeholder="0"
+                        autoFocus
+                      />
                     </div>
                   </div>
 
-                  {/* Quick Preset Buttons */}
-                  <div className="flex items-center gap-1.5 pt-1 flex-wrap">
-                    <span className="text-[10px] font-semibold text-slate-400">
-                      {lang === 'hi' ? 'त्वरित विकल्प:' : 'Quick Presets:'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPaidAmountInput(String(Math.round(draftTotals.grandTotal / 2)))}
-                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 cursor-pointer"
-                    >
-                      50% Paid ({currency}{Math.round(draftTotals.grandTotal / 2)})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaidAmountInput('0')}
-                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 hover:bg-rose-200 cursor-pointer"
-                    >
-                      {lang === 'hi' ? 'पूरा उधार (₹0 जमा)' : 'Full Due (₹0 Paid)'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsFullPaid(true);
-                        setPaidAmountInput(String(draftTotals.grandTotal));
-                      }}
-                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-200 cursor-pointer"
-                    >
-                      100% Paid
-                    </button>
+                  <div className="m3-settle-field">
+                    <label>{lang === 'hi' ? 'बकाया (Due):' : 'Due (Auto-calc):'}</label>
+                    <div className="m3-settle-due-display">
+                      <span className="due-badge-tag">{lang === 'hi' ? 'स्वतः गणना' : 'Auto Due'}</span>
+                      <span className="due-badge-val">
+                        {currency} {Math.max(0, draftTotals.grandTotal - (Number(paidAmountInput) || 0)).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Payment Mode Selection */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="picker-header-title text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <CreditCard size={15} className="text-blue-500" />
-                  <span>{lang === 'hi' ? 'पेमेंट का माध्यम (Payment Mode):' : 'Payment Mode:'}</span>
-                </span>
-                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
-                  {selectedPayMode.toUpperCase()}
-                </span>
+                <div className="m3-settle-chips-row">
+                  <button
+                    type="button"
+                    onClick={() => setPaidAmountInput(String(Math.round(draftTotals.grandTotal / 2)))}
+                    className="m3-settle-chip"
+                  >
+                    50% ({currency}{Math.round(draftTotals.grandTotal / 2)})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaidAmountInput('0')}
+                    className="m3-settle-chip danger"
+                  >
+                    {lang === 'hi' ? 'पूरा उधार (₹0)' : 'Full Due (₹0)'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFullPaid(true);
+                      setPaidAmountInput(String(draftTotals.grandTotal));
+                    }}
+                    className="m3-settle-chip success"
+                  >
+                    100% Paid
+                  </button>
+                </div>
               </div>
+            )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* 4. Payment Mode: Shown only if not declared; if declared, shown as compact micro-badge */}
+            {isPaymentModeDeclared ? (
+              <div className="m3-settle-declared-row">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <CreditCard size={13} className="text-blue-500 shrink-0" />
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
+                    {lang === 'hi' ? 'माध्यम:' : 'Mode:'}
+                  </span>
+                  <span className="m3-settle-declared-pill truncate">
+                    {selectedPayMode === 'cash' && '💵 नकद (Cash)'}
+                    {selectedPayMode === 'upi' && '⚡ UPI / QR'}
+                    {selectedPayMode === 'card' && '💳 Card'}
+                    {selectedPayMode === 'cheque' && '📝 Cheque'}
+                  </span>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedPayMode('cash')}
-                  className={`m3-paymode-choice-btn cash m3-ripple ${selectedPayMode === 'cash' ? 'selected' : ''}`}
+                  onClick={() => setIsPaymentModeDeclared(false)}
+                  className="m3-settle-change-link"
                 >
-                  <div className="paymode-choice-icon">💵</div>
-                  <div className="paymode-choice-text">
-                    <span className="paymode-choice-name">{lang === 'hi' ? 'नकद (Cash)' : 'Cash'}</span>
-                    <span className="paymode-choice-desc">{lang === 'hi' ? 'कैश' : 'In hand'}</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedPayMode('upi')}
-                  className={`m3-paymode-choice-btn upi m3-ripple ${selectedPayMode === 'upi' ? 'selected' : ''}`}
-                >
-                  <div className="paymode-choice-icon">⚡</div>
-                  <div className="paymode-choice-text">
-                    <span className="paymode-choice-name">UPI / QR</span>
-                    <span className="paymode-choice-desc">GPay, PhonePe</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedPayMode('card')}
-                  className={`m3-paymode-choice-btn card m3-ripple ${selectedPayMode === 'card' ? 'selected' : ''}`}
-                >
-                  <div className="paymode-choice-icon">💳</div>
-                  <div className="paymode-choice-text">
-                    <span className="paymode-choice-name">{lang === 'hi' ? 'कार्ड (Card)' : 'Card'}</span>
-                    <span className="paymode-choice-desc">Debit / Credit</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedPayMode('cheque')}
-                  className={`m3-paymode-choice-btn cheque m3-ripple ${selectedPayMode === 'cheque' ? 'selected' : ''}`}
-                >
-                  <div className="paymode-choice-icon">📝</div>
-                  <div className="paymode-choice-text">
-                    <span className="paymode-choice-name">{lang === 'hi' ? 'चेक (Cheque)' : 'Cheque'}</span>
-                    <span className="paymode-choice-desc">Bank DD</span>
-                  </div>
+                  {lang === 'hi' ? 'बदलें (Change)' : 'Change'}
                 </button>
               </div>
-            </div>
+            ) : (
+              /* If NOT declared: Show compact vertical list of payment modes */
+              <div className="m3-paymode-vertical-list">
+                <div className="m3-paymode-list-header">
+                  <CreditCard size={12} className="text-blue-500" />
+                  <span>{lang === 'hi' ? 'पेमेंट का माध्यम चुनें:' : 'Select Payment Mode:'}</span>
+                </div>
 
-            {/* Bottom Generate Bill Button */}
-            <div className="pt-1">
+                <div className="m3-paymode-compact-column">
+                  {PAY_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setSelectedPayMode(mode.id)}
+                      className={`m3-paymode-vert-item ${selectedPayMode === mode.id ? 'selected' : ''}`}
+                    >
+                      <span className="vert-icon">{mode.icon}</span>
+                      <span className="vert-name">{lang === 'hi' ? mode.nameHi : mode.nameEn}</span>
+                      <span className="vert-check">
+                        {selectedPayMode === mode.id && <Check size={13} />}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 5. Bottom Generate Bill Action Button */}
+            <div className="pt-0.5">
               <button
                 type="button"
                 onClick={handleConfirmGenerateBill}
                 className="m3-generate-bill-btn m3-ripple"
               >
-                <FileText size={18} />
+                <FileText size={17} />
                 <span>
                   {lang === 'hi'
-                    ? `🧾 बिल बनाएं (Generate Bill - ${currency}${draftTotals.grandTotal.toFixed(2)})`
-                    : `🧾 Generate Bill (${currency}${draftTotals.grandTotal.toFixed(2)})`}
+                    ? `बिल बनाएं (Generate Bill - ${currency}${draftTotals.grandTotal.toFixed(2)})`
+                    : `Generate Bill (${currency}${draftTotals.grandTotal.toFixed(2)})`}
                 </span>
-                <ArrowRight size={18} />
+                <ArrowRight size={17} />
               </button>
             </div>
           </div>
