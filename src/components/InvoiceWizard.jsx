@@ -150,10 +150,10 @@ export default function InvoiceWizard({
   const [isPaymentModeDeclared, setIsPaymentModeDeclared] = useState(false);
 
   const PAY_MODES = useMemo(() => [
-    { id: 'cash', icon: '💵', nameHi: 'नकद (Cash)', nameEn: 'Cash' },
-    { id: 'upi', icon: '⚡', nameHi: 'UPI / QR', nameEn: 'UPI / QR' },
-    { id: 'card', icon: '💳', nameHi: 'कार्ड (Card)', nameEn: 'Card' },
-    { id: 'cheque', icon: '📝', nameHi: 'चेक (Cheque)', nameEn: 'Cheque' }
+    { id: 'cash', icon: '💵', shortHi: 'कैश', shortEn: 'Cash', nameHi: 'नकद (Cash)', nameEn: 'Cash' },
+    { id: 'upi', icon: '⚡', shortHi: 'UPI', shortEn: 'UPI', nameHi: 'UPI / QR', nameEn: 'UPI / QR' },
+    { id: 'card', icon: '💳', shortHi: 'कार्ड', shortEn: 'Card', nameHi: 'कार्ड (Card)', nameEn: 'Card' },
+    { id: 'cheque', icon: '📝', shortHi: 'चेक', shortEn: 'Cheque', nameHi: 'चेक (Cheque)', nameEn: 'Cheque' }
   ], []);
 
   // Live draft invoice totals calculation
@@ -655,6 +655,24 @@ export default function InvoiceWizard({
       return;
     }
 
+    // Explicit Payment Mode Check in user query (e.g. "paid through cash", "cash", "upi", "card")
+    let detectedMode = null;
+    if (/\b(?:upi|gpay|google\s*pay|phonepe|paytm|online|qr)\b/i.test(norm)) {
+      detectedMode = 'upi';
+    } else if (/\b(?:card|debit|credit)\b/i.test(norm)) {
+      detectedMode = 'card';
+    } else if (/\b(?:cheque|check|चेक)\b/i.test(norm)) {
+      detectedMode = 'cheque';
+    } else if (/\b(?:cash|nagad|nakad|roker|rokad|रोकड़|रोकड़ा|नकद|कैश|paid\s+(?:through|via|by|in|with)?\s*cash)\b/i.test(norm)) {
+      detectedMode = 'cash';
+    }
+
+    if (detectedMode) {
+      setSelectedPayMode(detectedMode);
+      draftPaymentModeRef.current = detectedMode;
+      setIsPaymentModeDeclared(true);
+    }
+
     // Check admin portal trigger (voice or text - Admin role required)
     if (
       ['admin', 'admin portal', 'admin dashboard', 'open admin', 'admin panel', 'एडमिन', 'एडमिन पोर्टल', 'एडमिन डैशबोर्ड', 'subscription', 'manage subscription'].some(
@@ -822,10 +840,11 @@ export default function InvoiceWizard({
         discount: oneShot.discount || 0,
         discountType: oneShot.discountType || 'percent'
       };
-      const chosenMode = oneShot.paymentMode || 'cash';
+      const isDeclared = Boolean(oneShot.isPaymentModeDeclared || detectedMode);
+      const chosenMode = (oneShot.isPaymentModeDeclared ? oneShot.paymentMode : (detectedMode || oneShot.paymentMode || 'cash'));
       setSelectedPayMode(chosenMode);
       draftPaymentModeRef.current = chosenMode;
-      setIsPaymentModeDeclared(Boolean(oneShot.isPaymentModeDeclared));
+      setIsPaymentModeDeclared(isDeclared);
 
       const calcTotals = calculateInvoiceTotals(
         itemsToFinalize,
@@ -849,7 +868,7 @@ export default function InvoiceWizard({
 
       setStep(STEPS.ASK_PAYMENT_MODE);
       const custDisplay = oneShot.customerName ? ` ${oneShot.customerName} के लिए` : '';
-      const modeDisplay = oneShot.isPaymentModeDeclared
+      const modeDisplay = isDeclared
         ? (activeLang === 'hi'
             ? ` (${chosenMode === 'cash' ? 'नकद' : chosenMode.toUpperCase()})`
             : ` (${chosenMode.toUpperCase()})`)
@@ -1853,9 +1872,19 @@ export default function InvoiceWizard({
                 <span className="m3-settle-customer-label">
                   {lang === 'hi' ? 'ग्राहक (Customer)' : 'Customer'}
                 </span>
-                <span className="m3-settle-customer-name">
-                  👤 {draftCustomer || (lang === 'hi' ? 'सम्मानित ग्राहक' : 'Customer')}
-                </span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="m3-settle-customer-name">
+                    👤 {draftCustomer || (lang === 'hi' ? 'सम्मानित ग्राहक' : 'Customer')}
+                  </span>
+                  {isPaymentModeDeclared && (
+                    <span className="m3-settle-declared-badge" title="Payment Mode">
+                      {selectedPayMode === 'cash' && '💵 नकद (Cash)'}
+                      {selectedPayMode === 'upi' && '⚡ UPI'}
+                      {selectedPayMode === 'card' && '💳 Card'}
+                      {selectedPayMode === 'cheque' && '📝 Cheque'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="m3-settle-amount-info">
                 <span className="m3-settle-amount-label">
@@ -1963,50 +1992,24 @@ export default function InvoiceWizard({
               </div>
             )}
 
-            {/* 4. Payment Mode: Shown only if not declared; if declared, shown as compact micro-badge */}
-            {isPaymentModeDeclared ? (
-              <div className="m3-settle-declared-row">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <CreditCard size={13} className="text-blue-500 shrink-0" />
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
-                    {lang === 'hi' ? 'माध्यम:' : 'Mode:'}
-                  </span>
-                  <span className="m3-settle-declared-pill truncate">
-                    {selectedPayMode === 'cash' && '💵 नकद (Cash)'}
-                    {selectedPayMode === 'upi' && '⚡ UPI / QR'}
-                    {selectedPayMode === 'card' && '💳 Card'}
-                    {selectedPayMode === 'cheque' && '📝 Cheque'}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPaymentModeDeclared(false)}
-                  className="m3-settle-change-link"
-                >
-                  {lang === 'hi' ? 'बदलें (Change)' : 'Change'}
-                </button>
-              </div>
-            ) : (
-              /* If NOT declared: Show compact vertical list of payment modes */
-              <div className="m3-paymode-vertical-list">
-                <div className="m3-paymode-list-header">
+            {/* 4. Payment Mode: Shown HORIZONTALLY ONLY if user did NOT specify mode in command! */}
+            {!isPaymentModeDeclared && (
+              <div className="m3-paymode-horiz-section">
+                <div className="m3-paymode-horiz-header">
                   <CreditCard size={12} className="text-blue-500" />
                   <span>{lang === 'hi' ? 'पेमेंट का माध्यम चुनें:' : 'Select Payment Mode:'}</span>
                 </div>
 
-                <div className="m3-paymode-compact-column">
+                <div className="m3-paymode-horiz-tabs">
                   {PAY_MODES.map((mode) => (
                     <button
                       key={mode.id}
                       type="button"
                       onClick={() => setSelectedPayMode(mode.id)}
-                      className={`m3-paymode-vert-item ${selectedPayMode === mode.id ? 'selected' : ''}`}
+                      className={`m3-paymode-horiz-btn ${selectedPayMode === mode.id ? 'active' : ''}`}
                     >
-                      <span className="vert-icon">{mode.icon}</span>
-                      <span className="vert-name">{lang === 'hi' ? mode.nameHi : mode.nameEn}</span>
-                      <span className="vert-check">
-                        {selectedPayMode === mode.id && <Check size={13} />}
-                      </span>
+                      <span className="tab-icon">{mode.icon}</span>
+                      <span className="tab-label">{lang === 'hi' ? mode.shortHi : mode.shortEn}</span>
                     </button>
                   ))}
                 </div>

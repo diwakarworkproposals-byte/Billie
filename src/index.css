@@ -9380,14 +9380,14 @@ input:checked + .slider:before {
   color: #60a5fa;
 }
 
-/* 6. Vertical Payment Mode List (Compact Single-line Column) */
-.m3-paymode-vertical-list {
+/* 6. Horizontal Payment Mode Tabs (Single Row 4-Column Grid) */
+.m3-paymode-horiz-section {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.m3-paymode-list-header {
+.m3-paymode-horiz-header {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -9396,100 +9396,109 @@ input:checked + .slider:before {
   color: var(--md-on-surface-variant, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  padding-left: 2px;
 }
 
-[data-theme="dark"] .m3-paymode-list-header,
-.dark .m3-paymode-list-header {
+[data-theme="dark"] .m3-paymode-horiz-header,
+.dark .m3-paymode-horiz-header {
   color: #94a3b8;
 }
 
-.m3-paymode-compact-column {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.m3-paymode-horiz-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
 }
 
-.m3-paymode-vert-item {
+.m3-paymode-horiz-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 9px;
-  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--md-outline-variant, #cbd5e1);
   background: var(--md-surface-container, #f8fafc);
   cursor: pointer;
   transition: all 0.15s ease;
-  text-align: left;
+  white-space: nowrap;
 }
 
-[data-theme="dark"] .m3-paymode-vert-item,
-.dark .m3-paymode-vert-item {
+[data-theme="dark"] .m3-paymode-horiz-btn,
+.dark .m3-paymode-horiz-btn {
   background: #0f172a;
   border-color: #334155;
 }
 
-.m3-paymode-vert-item .vert-icon {
-  font-size: 1.05rem;
+.m3-paymode-horiz-btn .tab-icon {
+  font-size: 1rem;
   line-height: 1;
-  flex-shrink: 0;
 }
 
-.m3-paymode-vert-item .vert-name {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--md-on-surface, #0f172a);
-  flex: 1;
+.m3-paymode-horiz-btn .tab-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--md-on-surface, #1e293b);
 }
 
-[data-theme="dark"] .m3-paymode-vert-item .vert-name,
-.dark .m3-paymode-vert-item .vert-name {
+[data-theme="dark"] .m3-paymode-horiz-btn .tab-label,
+.dark .m3-paymode-horiz-btn .tab-label {
   color: #f1f5f9;
 }
 
-.m3-paymode-vert-item .vert-check {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: transparent;
-  flex-shrink: 0;
-}
-
-.m3-paymode-vert-item:hover {
+.m3-paymode-horiz-btn:hover {
   background: #f1f5f9;
-  border-color: #cbd5e1;
+  border-color: #94a3b8;
 }
 
-[data-theme="dark"] .m3-paymode-vert-item:hover,
-.dark .m3-paymode-vert-item:hover {
+[data-theme="dark"] .m3-paymode-horiz-btn:hover,
+.dark .m3-paymode-horiz-btn:hover {
   background: #1e293b;
   border-color: #475569;
 }
 
-.m3-paymode-vert-item.selected {
+.m3-paymode-horiz-btn.active {
   border-color: #2563eb !important;
   background: #eff6ff !important;
-  border-width: 1.5px !important;
+  box-shadow: 0 0 0 1.5px rgba(37, 99, 235, 0.35);
 }
 
-[data-theme="dark"] .m3-paymode-vert-item.selected,
-.dark .m3-paymode-vert-item.selected {
-  background: rgba(37, 99, 235, 0.18) !important;
+.m3-paymode-horiz-btn.active .tab-label {
+  color: #1d4ed8 !important;
+}
+
+[data-theme="dark"] .m3-paymode-horiz-btn.active,
+.dark .m3-paymode-horiz-btn.active {
+  background: rgba(37, 99, 235, 0.22) !important;
   border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 1.5px rgba(59, 130, 246, 0.4);
 }
 
-.m3-paymode-vert-item.selected .vert-check {
-  background: #2563eb;
-  color: #ffffff;
+[data-theme="dark"] .m3-paymode-horiz-btn.active .tab-label,
+.dark .m3-paymode-horiz-btn.active .tab-label {
+  color: #93c5fd !important;
 }
 
-[data-theme="dark"] .m3-paymode-vert-item.selected .vert-check,
-.dark .m3-paymode-vert-item.selected .vert-check {
-  background: #3b82f6;
-  color: #ffffff;
+/* Header Declared Mode Pill Badge */
+.m3-settle-declared-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .m3-settle-declared-badge,
+.dark .m3-settle-declared-badge {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
 }
 
 .m3-generate-bill-btn {
