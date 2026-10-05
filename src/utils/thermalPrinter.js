@@ -205,6 +205,22 @@ export function buildEscPosBuffer(invoice, store, width = 58) {
   commands.push(...textToBytes(formatRow('GRAND TOTAL:', `${currency}${invoice.total}`, colWidth)));
   commands.push(0x1B, 0x45, 0x00); // Bold off
 
+  // Paid and Due amounts
+  const grandTot = Number(invoice.total || invoice.grandTotal || 0);
+  const paid = invoice.paidAmount !== undefined && invoice.paidAmount !== null
+    ? Number(invoice.paidAmount)
+    : (invoice.dueAmount !== undefined ? Math.max(0, grandTot - Number(invoice.dueAmount)) : grandTot);
+  const due = invoice.dueAmount !== undefined && invoice.dueAmount !== null
+    ? Number(invoice.dueAmount)
+    : Math.max(0, grandTot - paid);
+
+  commands.push(...textToBytes(formatRow('Paid Amount:', `${currency}${paid}`, colWidth)));
+  if (due > 0) {
+    commands.push(...textToBytes(formatRow('Due Balance:', `${currency}${due} [PENDING]`, colWidth)));
+  } else {
+    commands.push(...textToBytes(formatRow('Due Balance:', `${currency}0.00 [CLEARED]`, colWidth)));
+  }
+
   commands.push(...textToBytes(doubleDivider));
 
   // Payment Details

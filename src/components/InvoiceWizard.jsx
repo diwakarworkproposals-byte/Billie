@@ -139,6 +139,20 @@ export default function InvoiceWizard({
   const draftDiscountRef = useRef({ discount: 0, discountType: 'percent' });
   const draftPaymentModeRef = useRef('cash');
 
+  // Payment Settlement State (Paid Full Amount vs Custom Paid / Due)
+  const [isFullPaid, setIsFullPaid] = useState(true);
+  const [paidAmountInput, setPaidAmountInput] = useState('');
+
+  // Live draft invoice totals calculation
+  const draftTotals = useMemo(() => {
+    return calculateInvoiceTotals(
+      draftItems,
+      settings.defaultTaxRate || 0,
+      draftDiscountRef.current.discount || 0,
+      draftDiscountRef.current.discountType || 'percent'
+    );
+  }, [draftItems, settings.defaultTaxRate, draftDiscountRef.current]);
+
   // Search query for picking existing customer during billing
   const [existingCustSearch, setExistingCustSearch] = useState('');
 
@@ -307,7 +321,8 @@ export default function InvoiceWizard({
     discountVal = 0,
     discountType = 'percent',
     chosenLang = lang,
-    chosenPaymentMode = 'cash'
+    chosenPaymentMode = 'cash',
+    customPaidAmount = undefined
   ) => {
     const totals = calculateInvoiceTotals(
       itemsList,
@@ -317,6 +332,17 @@ export default function InvoiceWizard({
     );
     const invoiceNum = getNextInvoiceNumber();
     const currency = settings.currency || '₹';
+    const grandTotalNum = totals.grandTotal;
+
+    // Calculate Paid and Due amounts
+    let finalPaid = grandTotalNum;
+    if (customPaidAmount !== undefined && customPaidAmount !== null) {
+      finalPaid = Math.min(grandTotalNum, Math.max(0, Number(customPaidAmount)));
+    } else if (!isFullPaid && paidAmountInput !== '') {
+      finalPaid = Math.min(grandTotalNum, Math.max(0, Number(paidAmountInput) || 0));
+    }
+    const finalDue = Math.max(0, grandTotalNum - finalPaid);
+    const finalPaymentStatus = finalDue === 0 ? 'paid' : (finalPaid > 0 ? 'partial' : 'unpaid');
 
     const custName = customerName || draftCustomerDetailsRef.current.name || (chosenLang === 'hi' ? 'सम्मानित ग्राहक' : 'Valued Customer');
     const custCompany = draftCustomerDetailsRef.current.companyName || '';
@@ -363,6 +389,18 @@ export default function InvoiceWizard({
       taxAmount: totals.taxAmount,
       total: totals.grandTotal,
       grandTotal: totals.grandTotal,
+      paidAmount: finalPaid,
+      dueAmount: finalDue,
+      paymentStatus: finalPaymentStatus,
+      paymentHistory: [
+        {
+          id: `pay_${Date.now()}`,
+          amount: finalPaid,
+          date: new Date().toISOString().split('T')[0],
+          method: chosenPaymentMode || 'cash',
+          notes: finalDue === 0 ? 'Full payment received' : 'Initial partial payment'
+        }
+      ],
       currency: currency,
       items: enrichedItems
     };
@@ -385,7 +423,7 @@ export default function InvoiceWizard({
 
     const p = PROMPTS[chosenLang] || PROMPTS.hi;
     const discLabel = totals.discountType === 'percent' && totals.discount > 0 ? `${totals.discount}%` : '';
-    const msg = p.invoice_ready(
+    let msg = p.invoice_ready(
       invoiceNum,
       completeInvoice.customerName,
       totals.subtotal.toFixed(2),
@@ -394,6 +432,11 @@ export default function InvoiceWizard({
       currency,
       discLabel
     );
+    if (finalDue > 0) {
+      msg += chosenLang === 'hi'
+        ? ` जमा राशि: ${currency}${finalPaid.toFixed(2)}, शेष बकाया: ${currency}${finalDue.toFixed(2)}।`
+        : ` Paid: ${currency}${finalPaid.toFixed(2)}, Due: ${currency}${finalDue.toFixed(2)}.`;
+    }
 
     // Final message spoken -> task is finished, turn off hands-free voice!
     replyBillie(msg, chosenLang, () => {
@@ -419,7 +462,8 @@ export default function InvoiceWizard({
     discountVal = 0,
     discountType = 'percent',
     chosenLang = lang,
-    chosenPaymentMode = 'cash'
+    chosenPaymentMode = 'cash',
+    customPaidAmount = undefined
   ) => {
     // Check if any product has low stock or 0 stock
     const deficits = [];
@@ -461,6 +505,7 @@ export default function InvoiceWizard({
         discountType,
         chosenLang,
         chosenPaymentMode,
+        customPaidAmount,
         deficits,
         currentDeficitIdx: 0
       });
@@ -474,16 +519,17 @@ export default function InvoiceWizard({
       discountVal,
       discountType,
       chosenLang,
-      chosenPaymentMode
+      chosenPaymentMode,
+      customPaidAmount
     );
   };
 
   // Low Stock Modal Action 1: Proceed to bill anyway (stock goes negative)
   const handleProceedLowStock = () => {
     if (!lowStockModalData) return;
-    const { customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode } = lowStockModalData;
+    const { customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode, customPaidAmount } = lowStockModalData;
     setLowStockModalData(null);
-    executeFinalizeInvoice(customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode);
+    executeFinalizeInvoice(customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode, customPaidAmount);
   };
 
   // Low Stock Modal Action 2: Add stock right in the popup (with mandatory cost price) & proceed
@@ -531,9 +577,9 @@ export default function InvoiceWizard({
       }));
     } else {
       // All deficits resolved, finalize invoice
-      const { customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode } = lowStockModalData;
+      const { customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode, customPaidAmount } = lowStockModalData;
       setLowStockModalData(null);
-      executeFinalizeInvoice(customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode);
+      executeFinalizeInvoice(customerName, itemsList, discountVal, discountType, chosenLang, chosenPaymentMode, customPaidAmount);
     }
   };
 
@@ -696,7 +742,7 @@ export default function InvoiceWizard({
     // -------------------------------------------------------------
     // BILLING: One-Shot Invoice Check
     // -------------------------------------------------------------
-    const oneShot = parseOneShotInvoice(trimmed);
+    const oneShot = parseOneShotInvoice(trimmed, inventory);
     if (oneShot.hasFullDetails) {
       if (oneShot.customerName) {
         const matched = customers.find(
@@ -738,13 +784,15 @@ export default function InvoiceWizard({
               }
             ];
 
+      const customPaid = oneShot.paidAmount === 'full' ? undefined : (oneShot.paidAmount !== null && oneShot.paidAmount !== undefined ? oneShot.paidAmount : undefined);
       finalizeInvoice(
         oneShot.customerName,
         itemsToFinalize,
         oneShot.discount,
         oneShot.discountType,
         activeLang,
-        oneShot.paymentMode || 'cash'
+        oneShot.paymentMode || 'cash',
+        customPaid
       );
       return;
     }
@@ -1687,10 +1735,120 @@ export default function InvoiceWizard({
           </div>
         )}
 
-        {/* INTERACTIVE CONTROLS 4: PAYMENT MODE SELECTION */}
+        {/* INTERACTIVE CONTROLS 4: PAYMENT SETTLEMENT & PAYMENT MODE SELECTION */}
         {step === STEPS.ASK_PAYMENT_MODE && (
-          <div className="m3-paymode-picker animate-slide-up">
-            <div className="flex items-center justify-between mb-2">
+          <div className="m3-paymode-picker animate-slide-up space-y-3">
+            {/* Bill Summary & Paid/Due Settlement Box */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-slate-800/90 dark:to-slate-800/50 border border-slate-200 dark:border-slate-700/80 shadow-xs">
+              <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-slate-200 dark:border-slate-700/60">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {lang === 'hi' ? 'कुल बिल राशि (Total Bill Amount):' : 'Total Bill Amount:'}
+                </span>
+                <span className="text-base font-extrabold text-blue-600 dark:text-blue-400">
+                  {currency} {draftTotals.grandTotal.toFixed(2)}
+                </span>
+              </div>
+
+              {/* Paid Full Amount Toggle */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-800 dark:text-slate-200 select-none">
+                  <input
+                    type="checkbox"
+                    checked={isFullPaid}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIsFullPaid(checked);
+                      if (checked) {
+                        setPaidAmountInput(String(draftTotals.grandTotal));
+                      } else {
+                        setPaidAmountInput('');
+                      }
+                    }}
+                    className="w-4 h-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                  />
+                  <span>
+                    {lang === 'hi'
+                      ? `पूरा भुगतान प्राप्त (Paid Full Amount) - ${currency}${draftTotals.grandTotal.toFixed(2)}`
+                      : `Paid Full Amount - ${currency}${draftTotals.grandTotal.toFixed(2)}`}
+                  </span>
+                </label>
+
+                {/* Custom Paid & Due Calculation Box */}
+                {!isFullPaid && (
+                  <div className="animate-slide-up space-y-2 pt-1 border-t border-dashed border-slate-200 dark:border-slate-700">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-center">
+                      {/* User Input for Paid Amount */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          {lang === 'hi' ? 'प्राप्त राशि (Paid):' : 'Paid Amount (to be filled):'}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                            {currency}
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            max={draftTotals.grandTotal}
+                            step="any"
+                            value={paidAmountInput}
+                            onChange={(e) => setPaidAmountInput(e.target.value)}
+                            placeholder={lang === 'hi' ? 'जमा राशि डालें' : 'Enter paid amount'}
+                            className="w-full pl-7 pr-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+
+                      {/* Automatically Calculated Due Amount (Total - Paid) */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          {lang === 'hi' ? 'बकाया (Due = Total - Paid):' : 'Due (Total - Paid):'}
+                        </label>
+                        <div className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-amber-900 dark:text-amber-300 uppercase">
+                            {lang === 'hi' ? 'स्वतः गणना' : 'Auto Due'}
+                          </span>
+                          <span className="text-xs font-extrabold text-rose-600 dark:text-rose-400">
+                            {currency} {Math.max(0, draftTotals.grandTotal - (Number(paidAmountInput) || 0)).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Buttons */}
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsFullPaid(true);
+                          setPaidAmountInput(String(draftTotals.grandTotal));
+                        }}
+                        className="px-2 py-1 text-[10px] font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-200 cursor-pointer"
+                      >
+                        {lang === 'hi' ? '✓ पूर्ण भुगतान' : '✓ 100% Paid'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaidAmountInput(String(Math.round(draftTotals.grandTotal / 2)))}
+                        className="px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 cursor-pointer"
+                      >
+                        50% Paid
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaidAmountInput('0')}
+                        className="px-2 py-1 text-[10px] font-bold rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 hover:bg-rose-200 cursor-pointer"
+                      >
+                        {lang === 'hi' ? 'पूरा उधार (₹0 Paid)' : 'Full Due (₹0 Paid)'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
               <span className="picker-header-title">
                 <CreditCard size={15} className="text-blue-500" />
                 <span>{lang === 'hi' ? 'पेमेंट का माध्यम चुनें (Payment Mode):' : 'Select Payment Mode:'}</span>
@@ -1700,17 +1858,21 @@ export default function InvoiceWizard({
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
               <button
                 type="button"
                 onClick={() => {
+                  const currentSettledPaid = isFullPaid
+                    ? draftTotals.grandTotal
+                    : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
                   finalizeInvoice(
                     draftCustomer,
                     draftItems,
                     draftDiscountRef.current.discount,
                     draftDiscountRef.current.discountType,
                     lang,
-                    'cash'
+                    'cash',
+                    currentSettledPaid
                   );
                 }}
                 className="m3-paymode-choice-btn cash m3-ripple"
@@ -1725,13 +1887,17 @@ export default function InvoiceWizard({
               <button
                 type="button"
                 onClick={() => {
+                  const currentSettledPaid = isFullPaid
+                    ? draftTotals.grandTotal
+                    : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
                   finalizeInvoice(
                     draftCustomer,
                     draftItems,
                     draftDiscountRef.current.discount,
                     draftDiscountRef.current.discountType,
                     lang,
-                    'upi'
+                    'upi',
+                    currentSettledPaid
                   );
                 }}
                 className="m3-paymode-choice-btn upi m3-ripple"
@@ -1746,13 +1912,17 @@ export default function InvoiceWizard({
               <button
                 type="button"
                 onClick={() => {
+                  const currentSettledPaid = isFullPaid
+                    ? draftTotals.grandTotal
+                    : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
                   finalizeInvoice(
                     draftCustomer,
                     draftItems,
                     draftDiscountRef.current.discount,
                     draftDiscountRef.current.discountType,
                     lang,
-                    'card'
+                    'card',
+                    currentSettledPaid
                   );
                 }}
                 className="m3-paymode-choice-btn card m3-ripple"
@@ -1767,13 +1937,17 @@ export default function InvoiceWizard({
               <button
                 type="button"
                 onClick={() => {
+                  const currentSettledPaid = isFullPaid
+                    ? draftTotals.grandTotal
+                    : Math.min(draftTotals.grandTotal, Math.max(0, Number(paidAmountInput) || 0));
                   finalizeInvoice(
                     draftCustomer,
                     draftItems,
                     draftDiscountRef.current.discount,
                     draftDiscountRef.current.discountType,
                     lang,
-                    'cheque'
+                    'cheque',
+                    currentSettledPaid
                   );
                 }}
                 className="m3-paymode-choice-btn cheque m3-ripple"

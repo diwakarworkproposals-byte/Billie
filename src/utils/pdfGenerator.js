@@ -206,15 +206,27 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
     grandTotal = Math.max(0, subtotal - discountVal + taxVal);
   }
 
+  const paidAmount = invoice.paidAmount !== undefined && invoice.paidAmount !== null && !isNaN(Number(invoice.paidAmount))
+    ? Number(invoice.paidAmount)
+    : (invoice.dueAmount !== undefined ? Math.max(0, grandTotal - Number(invoice.dueAmount)) : grandTotal);
+  const dueAmount = invoice.dueAmount !== undefined && invoice.dueAmount !== null && !isNaN(Number(invoice.dueAmount))
+    ? Number(invoice.dueAmount)
+    : Math.max(0, grandTotal - paidAmount);
+
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...mutedTextColor);
-  doc.text('Total Due :', rightStartX, 48);
+  doc.text(dueAmount > 0 ? 'Total Due :' : 'Total Paid :', rightStartX, 48);
 
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...darkTextColor);
-  doc.text(`INR : ${currencySymbol} ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, rightStartX, 56);
+  if (dueAmount > 0) {
+    doc.setTextColor(220, 38, 38);
+    doc.text(`INR : ${currencySymbol} ${dueAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, rightStartX, 56);
+  } else {
+    doc.setTextColor(...darkTextColor);
+    doc.text(`INR : ${currencySymbol} ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Paid)`, rightStartX, 56);
+  }
 
   // ========================================================
   // 4. ITEMS TABLE (Terracotta Pill Header)
@@ -342,10 +354,29 @@ export function generateInvoicePDF(invoice, businessInfo = {}, settings = {}) {
   doc.text('Grand Total :', summaryValX - pillWidth + 5, finalY + 6.8);
   doc.text(`${currencySymbol} ${grandTotal.toFixed(2)}`, summaryValX - 4, finalY + 6.8, { align: 'right' });
 
+  // Paid & Due Summary Lines
+  finalY += pillHeight + 3;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(16, 149, 93); // emerald
+  doc.text('Paid Amount :', summaryLblX, finalY, { align: 'right' });
+  doc.text(`${currencySymbol} ${paidAmount.toFixed(2)}`, summaryValX, finalY, { align: 'right' });
+
+  finalY += 4.5;
+  if (dueAmount > 0) {
+    doc.setTextColor(220, 38, 38); // rose
+    doc.text('Due Amount :', summaryLblX, finalY, { align: 'right' });
+    doc.text(`${currencySymbol} ${dueAmount.toFixed(2)} (Pending)`, summaryValX, finalY, { align: 'right' });
+  } else {
+    doc.setTextColor(...mutedTextColor);
+    doc.text('Due Amount :', summaryLblX, finalY, { align: 'right' });
+    doc.text(`${currencySymbol} 0.00 (Cleared)`, summaryValX, finalY, { align: 'right' });
+  }
+
   // ========================================================
   // 6. DECORATIVE ELEMENTS & TERMS / SIGNATURE FOOTER
   // ========================================================
-  finalY += pillHeight + 12;
+  finalY += 8;
 
   // Decorative Horizontal Triple Bar + Cross
   doc.setDrawColor(203, 213, 225);

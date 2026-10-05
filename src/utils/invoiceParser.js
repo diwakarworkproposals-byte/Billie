@@ -106,17 +106,40 @@ export const HINDI_DEVANAGARI_DIGITS = {
   '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
 };
 
+// Common Devanagari Product Name to Standard Product Mapping
+export const DEVANAGARI_PRODUCT_MAP = {
+  'जींस': 'Jeans', 'जीन्स': 'Jeans',
+  'शर्ट': 'Shirt',
+  'टीशर्ट': 'T-Shirt', 'टी-शर्ट': 'T-Shirt', 'टी शर्ट': 'T-Shirt',
+  'पैंट': 'Pant', 'पेंट': 'Pant', 'पेंट्स': 'Pants', 'ट्राउजर': 'Trouser',
+  'कुर्ता': 'Kurta', 'कुर्ती': 'Kurti',
+  'साड़ी': 'Saree', 'साड़ी': 'Saree', 'सूट': 'Suit',
+  'दुपट्टा': 'Dupatta', 'लहंगा': 'Lehenga', 'जैकेट': 'Jacket',
+  'स्वेटर': 'Sweater', 'कोट': 'Coat',
+  'जूते': 'Shoes', 'जूता': 'Shoes', 'चप्पल': 'Slippers', 'सैंडल': 'Sandals',
+  'मोजे': 'Socks', 'बेल्ट': 'Belt', 'लेदर बेल्ट': 'Leather Belt',
+  'टोपी': 'Cap', 'चश्मा': 'Glasses',
+  'घड़ी': 'Watch', 'मोबाइल': 'Mobile', 'फोन': 'Phone', 'लैपटॉप': 'Laptop',
+  'बैग': 'Bag', 'पर्स': 'Purse',
+  'चावल': 'Rice', 'दाल': 'Dal', 'चीनी': 'Sugar', 'चाय': 'Tea',
+  'कॉफी': 'Coffee', 'दूध': 'Milk', 'तेल': 'Oil', 'घी': 'Ghee',
+  'साबुन': 'Soap', 'सर्फ': 'Detergent'
+};
+
 // Word numbers dictionary covering Devanagari, Romanized Hindi (Hinglish), and English
 const WORD_NUMBERS = {
   // Devanagari numbers
   'शून्य': 0, 'सिफर': 0,
   'एक': 1, 'दो': 2, 'तीन': 3, 'चार': 4, 'पांच': 5, 'पाँच': 5,
   'छह': 6, 'छः': 6, 'छे': 6, 'सात': 7, 'आठ': 8, 'नौ': 9, 'दस': 10,
-  'ग्यारह': 11, 'बारह': 12, 'तेरह': 13, 'चौदह': 14, 'पंद्रह': 15,
+  'ग्यारह': 11, 'बारह': 12, 'तेरह': 13, 'चौदह': 14, 'पंद्रह': 15, 'पन्द्रह': 15,
   'सोलह': 16, 'सत्रह': 17, 'अठारह': 18, 'उन्नीस': 19, 'बीस': 20,
   'इक्कीस': 21, 'बाईस': 22, 'तेईस': 23, 'चौबीस': 24, 'पच्चीस': 25,
-  'तीस': 30, 'चालीस': 40, 'पचास': 50, 'साठ': 60, 'सत्तर': 70, 'अस्सी': 80, 'नब्बे': 90,
-  'सौ': 100, 'हजार': 1000, 'हज़ार': 1000, 'लाख': 100000,
+  'छब्बीस': 26, 'सत्ताईस': 27, 'अट्ठाईस': 28, 'उनतीस': 29,
+  'तीस': 30, 'इकतीस': 31, 'बत्तीस': 32, 'पैंतीस': 35,
+  'चालीस': 40, 'पैंतालीस': 45, 'पचास': 50, 'साठ': 60, 'सत्तर': 70, 'अस्सी': 80, 'नब्बे': 90,
+  'सौ': 100, 'हजार': 1000, 'हज़ार': 1000, 'लाख': 100000, 'करोड़': 10000000,
+  'दर्जन': 12,
 
   // Hinglish / Romanized Hindi numbers
   'zero': 0, 'shunya': 0,
@@ -141,12 +164,92 @@ const WORD_NUMBERS = {
   'eleven': 11, 'twelve': 12, 'dozen': 12, 'hundred': 100, 'thousand': 1000
 };
 
+// Converts spoken Hindi/English/Hinglish numbers into numeric digits
+export function convertSpokenNumbersToDigits(text = '') {
+  if (!text || typeof text !== 'string') return text;
+  let str = text;
+
+  // 1. Devanagari digits to ASCII digits (०-९ -> 0-9)
+  str = str.replace(/[०-९]/g, (d) => HINDI_DEVANAGARI_DIGITS[d] || d);
+
+  // 2. Protect Hindi verb phrases ending in "दो" / "do" so they are never parsed as number 2
+  str = str.replace(/(?<![\p{L}\p{N}])(?:बना|कर|दे|काट|जोड़|भेज|दिखा|लगा)\s+दो(?![\p{L}\p{N}])/gu, (m) => m.replace(/\s+दो/, '_VDO_TOKEN'));
+  str = str.replace(/(?<![\p{L}\p{N}])(?:bana|kar|de|kaat|jod|bhej|dikha|laga)\s+do(?![\p{L}\p{N}])/gui, (m) => m.replace(/\s+do/i, '_VDO_TOKEN'));
+
+  // 3. Spoken fractions & special Hindi compound scales (e.g. "डेढ़ हजार" -> 1500, "ढाई सौ" -> 250)
+  const FRACTIONS = [
+    [/(?<![\p{L}\p{N}])(?:डेढ़|देढ़)\s*(?:हजार|हज़ार|hazar|k)(?![\p{L}\p{N}])/gui, ' 1500 '],
+    [/(?<![\p{L}\p{N}])(?:ढाई|धाई)\s*(?:हजार|हज़ार|hazar|k)(?![\p{L}\p{N}])/gui, ' 2500 '],
+    [/(?<![\p{L}\p{N}])साढ़े\s*तीन\s*(?:हजार|हज़ार|hazar|k)(?![\p{L}\p{N}])/gui, ' 3500 '],
+    [/(?<![\p{L}\p{N}])साढ़े\s*चार\s*(?:हजार|हज़ार|hazar|k)(?![\p{L}\p{N}])/gui, ' 4500 '],
+    [/(?<![\p{L}\p{N}])साढ़े\s*पांच\s*(?:हजार|हज़ार|hazar|k)(?![\p{L}\p{N}])/gui, ' 5500 '],
+    [/(?<![\p{L}\p{N}])साढ़े\s*पाँच\s*(?:हजार|हज़ार|hazar|k)(?![\p{L}\p{N}])/gui, ' 5500 '],
+    [/(?<![\p{L}\p{N}])dedh\s*(?:hazar|k)(?![\p{L}\p{N}])/gui, ' 1500 '],
+    [/(?<![\p{L}\p{N}])dhai\s*(?:hazar|k)(?![\p{L}\p{N}])/gui, ' 2500 '],
+    [/(?<![\p{L}\p{N}])(?:डेढ़|देढ़)\s*(?:सौ|sau)(?![\p{L}\p{N}])/gui, ' 150 '],
+    [/(?<![\p{L}\p{N}])(?:ढाई|धाई)\s*(?:सौ|sau)(?![\p{L}\p{N}])/gui, ' 250 '],
+    [/(?<![\p{L}\p{N}])साढ़े\s*तीन\s*(?:सौ|sau)(?![\p{L}\p{N}])/gui, ' 350 '],
+    [/(?<![\p{L}\p{N}])साढ़े\s*चार\s*(?:सौ|sau)(?![\p{L}\p{N}])/gui, ' 450 '],
+    [/(?<![\p{L}\p{N}])साढ़े\s*पांच\s*(?:सौ|sau)(?![\p{L}\p{N}])/gui, ' 550 '],
+    [/(?<![\p{L}\p{N}])dedh\s*sau(?![\p{L}\p{N}])/gui, ' 150 '],
+    [/(?<![\p{L}\p{N}])dhai\s*sau(?![\p{L}\p{N}])/gui, ' 250 '],
+    [/(?<![\p{L}\p{N}])(?:डेढ़|देढ़)\s*(?:लाख|lakh)(?![\p{L}\p{N}])/gui, ' 150000 '],
+    [/(?<![\p{L}\p{N}])(?:ढाई|धाई)\s*(?:लाख|lakh)(?![\p{L}\p{N}])/gui, ' 250000 ']
+  ];
+  FRACTIONS.forEach(([pat, rep]) => {
+    str = str.replace(pat, rep);
+  });
+
+  // 4. Standalone Multipliers: "हजार", "सौ", "लाख" when spoken without preceding number (e.g. "प्राइस हजार रुपए")
+  str = str.replace(/(?<![\p{L}\p{N}])(?:हजार|हज़ार)(?![\p{L}\p{N}])/gui, (m, offset, full) => {
+    const before = full.slice(0, offset).trim();
+    if (/(?:\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ग्यारह|बारह|बीस|पचास|ek|do|teen|char|panch)$/i.test(before)) {
+      return m;
+    }
+    return ' 1000 ';
+  });
+
+  str = str.replace(/(?<![\p{L}\p{N}])(?:सौ)(?![\p{L}\p{N}])/gui, (m, offset, full) => {
+    const before = full.slice(0, offset).trim();
+    if (/(?:\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|panch)$/i.test(before)) {
+      return m;
+    }
+    return ' 100 ';
+  });
+
+  str = str.replace(/(?<![\p{L}\p{N}])(?:लाख)(?![\p{L}\p{N}])/gui, (m, offset, full) => {
+    const before = full.slice(0, offset).trim();
+    if (/(?:\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|panch)$/i.test(before)) {
+      return m;
+    }
+    return ' 100000 ';
+  });
+
+  // 5. Digit + Multiplier: "2 हजार" -> "2000", "5 सौ" -> "500", "10 hazar" -> "10000"
+  str = str.replace(/(\d+(?:\.\d+)?)\s*(?:हजार|हज़ार|hazar|hazaar|thousand|k)(?![\p{L}\p{N}])/gui, (_, n) => ` ${parseFloat(n) * 1000} `);
+  str = str.replace(/(\d+(?:\.\d+)?)\s*(?:सौ|sau|hundred)(?![\p{L}\p{N}])/gui, (_, n) => ` ${parseFloat(n) * 100} `);
+  str = str.replace(/(\d+(?:\.\d+)?)\s*(?:लाख|lakh|lac)(?![\p{L}\p{N}])/gui, (_, n) => ` ${parseFloat(n) * 100000} `);
+  str = str.replace(/(\d+(?:\.\d+)?)\s*(?:करोड़|crore)(?![\p{L}\p{N}])/gui, (_, n) => ` ${parseFloat(n) * 10000000} `);
+
+  // 6. Direct word replacement using Unicode boundary
+  const keys = Object.keys(WORD_NUMBERS).sort((a, b) => b.length - a.length);
+  for (const k of keys) {
+    const reg = new RegExp(`(?<![\\p{L}\\p{N}])${k}(?![\\p{L}\\p{N}])`, 'gui');
+    str = str.replace(reg, ` ${WORD_NUMBERS[k]} `);
+  }
+
+  // 7. Restore protected verb phrases
+  str = str.replace(/_VDO_TOKEN/g, ' do');
+
+  return str.replace(/\s+/g, ' ').trim();
+}
+
 // Robust function to extract numbers from any spoken or typed text
 export function extractNumber(text = '', defaultVal = 1) {
   if (typeof text === 'number') return isNaN(text) ? defaultVal : text;
   if (!text || typeof text !== 'string') return defaultVal;
 
-  let normalized = text.replace(/[०-९]/g, (d) => HINDI_DEVANAGARI_DIGITS[d] || d).toLowerCase().trim();
+  let normalized = convertSpokenNumbersToDigits(text).toLowerCase().trim();
 
   const digitMatch = normalized.match(/(\d+(?:\.\d+)?)/);
   if (digitMatch) {
@@ -205,8 +308,13 @@ export function isInvoiceIntent(text = '') {
     'bill generate karo',
     'बिल बना',
     'बिल बनाओ',
+    'बिल बना दो',
+    'बिल काट दो',
+    'बिल काटो',
+    'बिल बनाना है',
     'नया बिल',
     'इन्वॉइस बनाओ',
+    'इन्वॉइस बना',
     'पर्ची बनाओ',
     'रसीद बनाओ'
   ];
@@ -242,7 +350,7 @@ export function isAddStockIntent(text = '') {
   const hindiAddStock = [
     'stock add karo', 'stock add', 'stock dalo', 'stock jodo', 'maal add karo',
     'inventory add karo', 'naya stock', 'stock badhao', 'stock chadhao', 'maal dalo',
-    'स्टॉक जोड़ो', 'स्टॉक ऐड करो', 'स्टॉक डालो', 'माल जोड़ो'
+    'स्टॉक जोड़ो', 'स्टॉक ऐड करो', 'स्टॉक डालो', 'माल जोड़ो', 'स्टॉक बढ़ाओ'
   ];
   const englishAddStock = [
     'add stock', 'restock', 'add inventory', 'new stock', 'increase stock', 'stock in', 'add product stock'
@@ -258,7 +366,7 @@ export function isCheckStockIntent(text = '') {
     'check stock', 'stock check karo', 'stock dikhao', 'maal kitna hai', 'stock batao',
     'inventory dikhao', 'kitna maal bacha hai', 'stock kitna hai', 'maal check karo',
     'stock report', 'inventory check karo', 'kitna stock hai', 'stock dekhna hai',
-    'स्टॉक दिखाओ', 'स्टॉक चेक करो', 'स्टॉक बताओ', 'स्टॉक कितना है', 'माल कितना है'
+    'स्टॉक दिखाओ', 'स्टॉक चेक करो', 'स्टॉक बताओ', 'स्टॉक कितना है', 'माल कितना है', 'स्टॉक रिपोर्ट'
   ];
   const englishCheckStock = [
     'check stock', 'view stock', 'show stock', 'inventory report', 'check inventory',
@@ -277,6 +385,7 @@ export function isReportingIntent(text = '') {
     'profit', 'munafa', 'daily sales', 'check sales', 'sales check karo',
     'report dikhao', 'report check karo', 'purchase check karo', 'supplier hisab',
     'payment pending', 'due payment', 'due date', 'kab payment due', 'kiski payment',
+    'sales due', 'udhar', 'udhari', 'bakaya', 'बकाया', 'उधारी',
     'दैनिक बिक्री', 'बिक्री रिपोर्ट', 'खरीद रिपोर्ट', 'मुनाफा', 'हिसाब', 'अकाउंटिंग', 'रिपोर्ट'
   ];
   return reportTriggers.some((t) => norm.includes(t));
@@ -284,10 +393,14 @@ export function isReportingIntent(text = '') {
 
 export function detectReportType(text = '') {
   const norm = text.toLowerCase().trim();
+  const dueKeywords = ['sales due', 'udhar', 'udhari', 'bakaya', 'बकाया', 'उधारी', 'customer due'];
+  if (dueKeywords.some((k) => norm.includes(k))) {
+    return 'sales_due';
+  }
   const purchaseKeywords = [
     'purchase', 'kharid', 'khareed', 'supplier', 'vendor', 'pending payment',
     'due payment', 'kab payment', 'kis se kitna', 'acccunting', 'accounting',
-    'खरीद', 'खरीददारी', 'सप्लायर', 'वेंडर', 'बकाया'
+    'खरीद', 'खरीददारी', 'सप्लायर', 'वेंडर'
   ];
   if (purchaseKeywords.some((k) => norm.includes(k))) {
     return 'purchase';
@@ -299,12 +412,15 @@ export function detectReportType(text = '') {
 export function extractProductFromStockQuery(text = '') {
   const str = text.trim();
   const match = 
-    str.match(/(?:check stock of|stock of|stock for)\s+([A-Za-z0-9\s-]+)/i) ||
-    str.match(/([A-Za-z0-9\s-]+?)\s+(?:ka stock|ka maal|stock kitna|kitna bacha)/i);
+    str.match(/(?:check stock of|stock of|stock for)\s+([A-Za-z0-9\u0900-\u097F\s-]+)/i) ||
+    str.match(/([A-Za-z0-9\u0900-\u097F\s-]+?)\s+(?:ka stock|ka maal|stock kitna|kitna bacha|का\s+स्टॉक)/i);
 
   if (match && match[1]) {
-    const cleaned = match[1].replace(/^(check|view|show|dikhao|batao)\s+/i, '').trim();
-    if (cleaned && !['all', 'total', 'sab', 'pura', 'sabka'].includes(cleaned.toLowerCase())) {
+    let cleaned = match[1].replace(/^(check|view|show|dikhao|batao|दिखाओ|बताओ)\s+/i, '').trim();
+    if (cleaned && !['all', 'total', 'sab', 'pura', 'sabka', 'सब', 'पूरा'].includes(cleaned.toLowerCase())) {
+      if (DEVANAGARI_PRODUCT_MAP[cleaned]) {
+        return DEVANAGARI_PRODUCT_MAP[cleaned];
+      }
       return cleaned;
     }
   }
@@ -348,22 +464,39 @@ export function isNegative(text = '') {
 
 // Natural Language One-Shot Extractor for Invoice
 // Helper to repeatedly clean Hindi postpositions, bill commands, and filler words from product names
-export function cleanProductName(rawProd, customerName = '') {
+export function cleanProductName(rawProd, customerName = '', inventory = []) {
   if (!rawProd) return '';
   let p = rawProd.trim();
   p = p.replace(/^(?:x|units?\s+of|pieces?\s+of|piece\s+of|nag|piece|items?|aur|and)\s+/i, '');
   if (customerName) {
-    const custRegex = new RegExp(`\\b(?:for\\s+)?${customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    const custRegex = new RegExp(`(?:for\\s+)?${customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gui');
     p = p.replace(custRegex, ' ');
   }
   // Repeatedly strip trailing Hindi postpositions and bill filler words
   let prev = '';
   while (prev !== p) {
     prev = p;
-    p = p.replace(/\s+(?:ke\s+liye|ke\s+kiye|ka\s+bill\s+banao|ka\s+bill\s+bana|ka\s+bill|bill\s+banao|bill\s+bana|bill|invoice|bana\s+do|banao|bana|kar\s+do|de\s+do|generate\s+karo|ka|ki|ke|ko|me|mein|se|pe|par|at|@|for|rate|price|cost|hai|h|jiski|jiska|per\s+unit|unit\s+price|aur|and|है|ह)$/i, '').trim();
+    p = p.replace(/\s+(?:ke\s+liye|ke\s+kiye|ka\s+bill\s+banao|ka\s+bill\s+bana|ka\s+bill|bill\s+banao|bill\s+bana|bill|invoice|bana\s+do|banao|bana|kar\s+do|de\s+do|generate\s+karo|ka|ki|ke|ko|me|mein|se|pe|par|at|@|for|rate|price|cost|hai|h|jiski|jiska|per\s+unit|unit\s+price|aur|and|है|ह|का|की|के|को|में|से|पर|प्राइस|प्राइज|रेट|कीमत|दर|भाव|लागत)$/gui, '').trim();
   }
   p = p.replace(/\s+/g, ' ').trim();
   if (!p) return '';
+
+  // Check inventory or Devanagari dictionary
+  const lowerP = p.toLowerCase();
+  if (DEVANAGARI_PRODUCT_MAP[p]) {
+    p = DEVANAGARI_PRODUCT_MAP[p];
+  } else if (DEVANAGARI_PRODUCT_MAP[lowerP]) {
+    p = DEVANAGARI_PRODUCT_MAP[lowerP];
+  }
+
+  // Match against known inventory items
+  if (inventory && inventory.length > 0) {
+    const matched = inventory.find(
+      (inv) => inv.name && inv.name.toLowerCase().trim() === p.toLowerCase().trim()
+    );
+    if (matched) return matched.name;
+  }
+
   if (/[a-zA-Z]/.test(p)) {
     return p.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   }
@@ -371,7 +504,7 @@ export function cleanProductName(rawProd, customerName = '') {
 }
 
 // Natural Language One-Shot Extractor for Invoice (Supports Single & Multi-Product Billing)
-export function parseOneShotInvoice(rawText = '') {
+export function parseOneShotInvoice(rawText = '', inventory = []) {
   let text = (rawText || '').trim();
   if (!text) {
     return {
@@ -383,12 +516,13 @@ export function parseOneShotInvoice(rawText = '') {
       discount: 0,
       discountType: 'percent',
       paymentMode: 'cash',
+      paidAmount: null,
       hasFullDetails: false
     };
   }
 
-  // 1. Normalize Devanagari digits to ASCII & remove number commas (12,000 -> 12000)
-  text = text.replace(/[०-९]/g, (d) => HINDI_DEVANAGARI_DIGITS[d] || d);
+  // 1. Convert spoken numbers (Hindi words, fractions, etc.) to Arabic numeric digits
+  text = convertSpokenNumbersToDigits(text);
   text = text.replace(/\b(\d+),(\d{3})\b/g, '$1$2');
 
   // 2. Normalize speech mistranscriptions and Devanagari helpers
@@ -411,7 +545,19 @@ export function parseOneShotInvoice(rawText = '') {
     paymentMode = 'cheque';
   }
 
-  // 4. Discount Extraction (percentage or flat)
+  // 4. Paid / Due Extraction if explicitly spoken (e.g. "500 paid baki udhar" or "1000 advance")
+  let paidAmount = null;
+  const paidMatch =
+    text.match(/(?:paid|advance|jama|जमा)\s*[$₹€£]?\s*(\d+(?:\.\d+)?)/i) ||
+    text.match(/(\d+(?:\.\d+)?)\s*[$₹€£]?\s*(?:rupaye|rupees|rs|रुपये)?\s*(?:paid|advance|jama|जमा)/i);
+  if (paidMatch) {
+    paidAmount = parseFloat(paidMatch[1]);
+    text = text.replace(paidMatch[0], ' ');
+  } else if (normRaw.includes('full paid') || normRaw.includes('pura paid') || normRaw.includes('पूरा भुगतान')) {
+    paidAmount = 'full';
+  }
+
+  // 5. Discount Extraction (percentage or flat)
   let discount = 0;
   let discountType = 'percent';
   const discMatch =
@@ -440,7 +586,7 @@ export function parseOneShotInvoice(rawText = '') {
     text = text.replace(discMatch[0], ' ');
   }
 
-  // 5. Customer Name Extraction
+  // 6. Customer Name Extraction
   let customerName = '';
   let matchedCustStr = '';
   const custPatterns = [
@@ -449,7 +595,7 @@ export function parseOneShotInvoice(rawText = '') {
     // "bill for/to Rahul Sharma at..."
     /(?:bill\s+for|invoice\s+for|bill\s+to|invoice\s+to|for|to|customer|client)\s+([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:via|by|ke\s+liye|unit\s+price|per\s+unit|cost|price|rate|at|@|\d+|with|for|ka|ki|ke|product)|$)/i,
     // Name at start before quantity
-    /^([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+(?:\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s+)/i
+    /^([A-Za-z\u0900-\u097F\s&.'-]+?)(?=\s+\d+\s+)/i
   ];
 
   for (const cPat of custPatterns) {
@@ -477,10 +623,10 @@ export function parseOneShotInvoice(rawText = '') {
     remainingText = remainingText.replace(matchedCustStr, ' ');
   }
 
-  // 6. Trailing Collective Prices Check
-  // e.g. "Rahul ke liye 1 sofa, 2 chair, 1 almirah ka bill bana jiski cost 12000, 4000 & 15000 hai"
+  // 7. Trailing Collective Prices Check
+  // Supports Devanagari price keywords & trailing unit expressions (per unit, per piece, etc.)
   let trailingPrices = [];
-  const trailingPricePat = /(?:jiski|jiska|jinke|jinka|unki|unka|in|with)?\s*(?:per\s+unit\s+price|per\s+unit\s+cost|per\s+unit\s+rate|unit\s+price|unit\s+cost|per\s+piece\s+price|per\s+piece|rate|price|cost|keemat|lagat|bhav)\s*(?:is|hai|h|of|:)?\s*([0-9\s,&aurand]+)(?:hai|h|rs|rupaye|rupees|₹|है|ह|रुपये)?$/i;
+  const trailingPricePat = /(?:jiski|jiska|jinke|jinka|unki|unka|in|with)?\s*(?:per\s+unit\s+price|per\s+unit\s+cost|per\s+unit\s+rate|unit\s+price|unit\s+cost|per\s+piece\s+price|per\s+piece|rate|price|cost|keemat|lagat|bhav|प्राइस|प्राइज|रेट|कीमत|लागत|भाव|दर)\s*(?:is|hai|h|of|:)?\s*([0-9\s,&aurand]+)(?:hai|h|rs|rupaye|rupees|₹|है|ह|रुपये|rupay)?\s*(?:per\s+unit|per\s+piece|each|पर\s+यूनिट|प्रति\s+यूनिट|प्रति\s+इकाई|प्रति\s+पीस)?$/i;
   const tpMatch = remainingText.match(trailingPricePat);
   if (tpMatch && tpMatch[1]) {
     const rawNumStr = tpMatch[1];
@@ -493,9 +639,9 @@ export function parseOneShotInvoice(rawText = '') {
 
   // Clean bill action words and payment words from remaining
   let cleanRemaining = remainingText
-    .replace(/\b(?:ka\s+bill\s+generate\s+karo|ka\s+bill\s+banao|ka\s+bill\s+bana\s+do|ka\s+bill\s+bana|bill\s+generate\s+karo|bill\s+banao|bill\s+banado|bill\s+bana\s+do|bill\s+bana|bana\s+do|banao|bana|kar\s+do|de\s+do|invoice\s+banao|invoice\s+bana|bill\s+काटो|generate\s+bill|create\s+bill|make\s+bill|ka\s+bill|ka\s+invoice|bill|invoice)\b/gi, ' ')
-    .replace(/\b(?:jiski|jiska|jinke|jinka|hai|h|becho|bech\s+do|de\s+do|rupaye|rupees|rs|inr|each|via\s+\w+|by\s+\w+)\b/gi, ' ')
-    .replace(/\b(?:cash|card|upi|cheque|check|online|qr|gpay|paytm|phonepe|रोकड़ा|नकद|चेक)\b/gi, ' ')
+    .replace(/(?:ka\s+bill\s+generate\s+karo|ka\s+bill\s+banao|ka\s+bill\s+bana\s+do|ka\s+bill\s+bana|bill\s+generate\s+karo|bill\s+banao|bill\s+banado|bill\s+bana\s+do|bill\s+bana|bana\s+do|banao|bana|kar\s+do|de\s+do|invoice\s+banao|invoice\s+bana|bill\s+काटो|generate\s+bill|create\s+bill|make\s+bill|ka\s+bill|ka\s+invoice|bill|invoice)/gi, ' ')
+    .replace(/(?:jiski|jiska|jinke|jinka|hai|h|becho|bech\s+do|de\s+do|rupaye|rupees|rs|inr|each|via\s+\w+|by\s+\w+|per\s+unit|per\s+piece|पर\s+यूनिट|प्रति\s+यूनिट|प्रति\s+इकाई)/gi, ' ')
+    .replace(/(?:cash|card|upi|cheque|check|online|qr|gpay|paytm|phonepe|रोकड़ा|नकद|चेक)/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -504,14 +650,14 @@ export function parseOneShotInvoice(rawText = '') {
   // CASE A: Trailing collective prices found -> split items and map prices consecutively
   if (trailingPrices.length > 0) {
     let listStr = cleanRemaining.replace(/\s+(?:aur|and|तथा|एवं)\s+/gi, ', ').replace(/\s*&\s*/g, ', ');
-    listStr = listStr.replace(/\s+(?=(?:\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s+[A-Za-z\u0900-\u097F])/gi, ', ');
+    listStr = listStr.replace(/\s+(?=\d+\s+[A-Za-z\u0900-\u097F])/gi, ', ');
     const parts = listStr.split(',').map((p) => p.trim()).filter(Boolean);
 
     for (const part of parts) {
-      const match = part.match(/^(\d+|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s*(?:x|units?|pieces?|pcs?|nag|piece)?\s+(.+)$/i);
+      const match = part.match(/^(\d+)\s*(?:x|units?|pieces?|pcs?|nag|piece)?\s+(.+)$/i);
       if (match) {
-        const q = extractNumber(match[1], 1);
-        const prodName = cleanProductName(match[2], customerName);
+        const q = parseFloat(match[1]) || 1;
+        const prodName = cleanProductName(match[2], customerName, inventory);
         if (prodName) {
           items.push({ name: prodName, quantity: q, price: 0, discount: 0, discountType: 'percent' });
         }
@@ -542,12 +688,12 @@ export function parseOneShotInvoice(rawText = '') {
       const s = seg.trim();
       if (!s) continue;
       const matchInline =
-        s.match(/^(\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+?)\s+(?:at|@|rate|price|keemat|cost|bhav|me|mein|₹)\s*(\d+(?:\.\d+)?)/i) ||
-        s.match(/^(\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+?)\s*(\d+(?:\.\d+)?)\s*(?:at|@|rate|price|keemat|cost|bhav|rupaye|rupees|rs|inr|me|mein)?$/i);
+        s.match(/^(\d+)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+?)\s+(?:at|@|rate|price|keemat|cost|bhav|me|mein|₹|प्राइस|प्राइज|रेट|कीमत|दर|भाव|लागत)\s*(\d+(?:\.\d+)?)/i) ||
+        s.match(/^(\d+)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+?)\s*(\d+(?:\.\d+)?)\s*(?:at|@|rate|price|keemat|cost|bhav|rupaye|rupees|rs|inr|me|mein|प्राइस|रेट|कीमत|रुपये)?$/i);
 
       if (matchInline) {
-        const q = extractNumber(matchInline[1], 1);
-        const prodName = cleanProductName(matchInline[2], customerName);
+        const q = parseFloat(matchInline[1]) || 1;
+        const prodName = cleanProductName(matchInline[2], customerName, inventory);
         const pr = parseFloat(matchInline[3]) || 0;
         if (prodName && pr > 0) {
           items.push({ name: prodName, quantity: q, price: pr, discount: 0, discountType: 'percent' });
@@ -558,17 +704,17 @@ export function parseOneShotInvoice(rawText = '') {
 
   // CASE C: Fallback single product extraction
   if (items.length === 0) {
-    const singleQtyMatch = cleanRemaining.match(/(\d+|एक|दो|तीन|चार|पांच|ek|do|teen|char|panch)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+)/i);
+    const singleQtyMatch = cleanRemaining.match(/(\d+)\s*(?:x|units?|pieces?|pcs?|nag)?\s+([A-Za-z\u0900-\u097F\s-]+)/i);
     let singlePrice = trailingPrices[0] || 0;
     if (!singlePrice) {
       const pMatch =
-        text.match(/(?:unit\s+price|price|rate|cost|keemat|at|@)\s*(?:is|hai|h|of|:)?\s*[$₹€£]?\s*(\d+(?:\.\d+)?)/i) ||
-        text.match(/(\d+(?:\.\d+)?)\s*(?:rupaye|rupees|rs|inr|₹)/i);
+        text.match(/(?:unit\s+price|price|rate|cost|keemat|at|@|प्राइस|प्राइज|रेट|कीमत|दर|भाव|लागत)\s*(?:is|hai|h|of|:)?\s*[$₹€£]?\s*(\d+(?:\.\d+)?)/i) ||
+        text.match(/(\d+(?:\.\d+)?)\s*(?:rupaye|rupees|rs|inr|₹|रुपये)/i);
       if (pMatch) singlePrice = parseFloat(pMatch[1]) || 0;
     }
     if (singleQtyMatch) {
-      const q = extractNumber(singleQtyMatch[1], 1);
-      const prodName = cleanProductName(singleQtyMatch[2], customerName);
+      const q = parseFloat(singleQtyMatch[1]) || 1;
+      const prodName = cleanProductName(singleQtyMatch[2], customerName, inventory);
       if (prodName && singlePrice > 0) {
         items.push({ name: prodName, quantity: q, price: singlePrice, discount: 0, discountType: 'percent' });
       }
@@ -577,7 +723,7 @@ export function parseOneShotInvoice(rawText = '') {
 
   // If customerName was not found yet, check if there is a name prefix
   if (!customerName) {
-    const forMatch = text.match(/(?:for|to|naam|customer)\s+([A-Za-z\s]+?)(?=\s+(?:unit\s+price|at|@|price|rate|\d+)|$)/i);
+    const forMatch = text.match(/(?:for|to|naam|customer)\s+([A-Za-z\u0900-\u097F\s]+?)(?=\s+(?:unit\s+price|at|@|price|rate|\d+)|$)/i);
     if (forMatch) customerName = forMatch[1].trim();
   }
 
@@ -602,6 +748,7 @@ export function parseOneShotInvoice(rawText = '') {
     discount,
     discountType,
     paymentMode,
+    paidAmount,
     hasFullDetails
   };
 }

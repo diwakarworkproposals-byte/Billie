@@ -961,14 +961,41 @@ export function AppProvider({ children }) {
   };
 
   const addInvoice = (invoice) => {
-    setInvoices((prev) => [invoice, ...prev]);
-    if (invoice.items && invoice.items.length > 0) {
-      reduceStockForInvoice(invoice.items);
+    const grandTotal = Number(invoice.grandTotal !== undefined ? invoice.grandTotal : (invoice.total !== undefined ? invoice.total : 0));
+    const paid = invoice.paidAmount !== undefined && invoice.paidAmount !== null && !isNaN(Number(invoice.paidAmount))
+      ? Number(invoice.paidAmount)
+      : grandTotal;
+    const due = invoice.dueAmount !== undefined && invoice.dueAmount !== null && !isNaN(Number(invoice.dueAmount))
+      ? Number(invoice.dueAmount)
+      : Math.max(0, grandTotal - paid);
+    const status = due === 0 ? 'paid' : (paid > 0 ? 'partial' : 'unpaid');
+
+    const finalizedInvoice = {
+      ...invoice,
+      total: grandTotal,
+      grandTotal: grandTotal,
+      paidAmount: paid,
+      dueAmount: due,
+      paymentStatus: status,
+      paymentHistory: invoice.paymentHistory || [
+        {
+          id: `pay_${Date.now()}`,
+          amount: paid,
+          date: invoice.date || new Date().toISOString().split('T')[0],
+          method: invoice.paymentMode || 'cash',
+          notes: due === 0 ? 'Full payment received' : 'Initial amount paid'
+        }
+      ]
+    };
+
+    setInvoices((prev) => [finalizedInvoice, ...prev]);
+    if (finalizedInvoice.items && finalizedInvoice.items.length > 0) {
+      reduceStockForInvoice(finalizedInvoice.items);
     }
 
     // Automatically add or update customer in directory
-    if (invoice.customerName && invoice.customerName.trim()) {
-      const normName = invoice.customerName.trim().toLowerCase();
+    if (finalizedInvoice.customerName && finalizedInvoice.customerName.trim()) {
+      const normName = finalizedInvoice.customerName.trim().toLowerCase();
       const isGeneric = [
         'cash customer',
         'कैश ग्राहक',
@@ -978,17 +1005,61 @@ export function AppProvider({ children }) {
         'walk in'
       ].includes(normName);
 
-      if (!isGeneric || invoice.customerPhone || invoice.customerGst || invoice.customerCompany) {
+      if (!isGeneric || finalizedInvoice.customerPhone || finalizedInvoice.customerGst || finalizedInvoice.customerCompany) {
         addOrUpdateCustomer({
-          name: invoice.customerName.trim(),
-          companyName: invoice.customerCompany || '',
-          phone: invoice.customerPhone || '',
-          email: invoice.customerEmail || '',
-          gstNumber: invoice.customerGst || '',
-          address: invoice.customerAddress || ''
+          name: finalizedInvoice.customerName.trim(),
+          companyName: finalizedInvoice.customerCompany || '',
+          phone: finalizedInvoice.customerPhone || '',
+          email: finalizedInvoice.customerEmail || '',
+          gstNumber: finalizedInvoice.customerGst || '',
+          address: finalizedInvoice.customerAddress || ''
         });
       }
     }
+  };
+
+  const updateInvoice = (updatedInvoice) => {
+    if (!updatedInvoice || !updatedInvoice.id) return;
+    setInvoices((prev) =>
+      prev.map((inv) => (inv.id === updatedInvoice.id ? { ...inv, ...updatedInvoice } : inv))
+    );
+  };
+
+  const recordInvoicePayment = (invoiceId, amountPaid, paymentMethod = 'cash', notes = '') => {
+    const payAmount = Math.max(0, Number(amountPaid) || 0);
+    if (payAmount <= 0) return { success: false, error: 'Invalid payment amount' };
+
+    let updatedInv = null;
+    setInvoices((prev) =>
+      prev.map((inv) => {
+        if (inv.id === invoiceId) {
+          const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
+          const currentPaid = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));
+          const newPaid = Math.min(grandTotal, currentPaid + payAmount);
+          const newDue = Math.max(0, grandTotal - newPaid);
+          const newStatus = newDue === 0 ? 'paid' : 'partial';
+
+          const newHistoryItem = {
+            id: `pay_${Date.now()}`,
+            amount: payAmount,
+            date: new Date().toISOString().split('T')[0],
+            method: paymentMethod,
+            notes: notes || `Recorded payment of ₹${payAmount}`
+          };
+
+          updatedInv = {
+            ...inv,
+            paidAmount: newPaid,
+            dueAmount: newDue,
+            paymentStatus: newStatus,
+            paymentHistory: [...(inv.paymentHistory || []), newHistoryItem]
+          };
+          return updatedInv;
+        }
+        return inv;
+      })
+    );
+    return { success: true, invoice: updatedInv };
   };
 
   const deleteInvoice = (id) => {
@@ -1228,6 +1299,85 @@ export function AppProvider({ children }) {
     );
   };
 
+  // Dynamic Real-time Notifications & Alerts for Profile Panel
+  const notificationAlerts = useMemo(() => {
+    // 1. Low stock alerts (quantity <= lowStockThreshold or 5)
+    const lowStock = (inventory || [])
+      .filter((item) => {
+        const threshold = Number(item.lowStockThreshold) || Number(settings.lowStockThreshold) || 5;
+        return Number(item.quantity || 0) <= threshold;
+      })
+      .map((item) => ({
+        id: `low_${item.id}`,
+        type: 'low_stock',
+        title: item.name,
+        qty: Number(item.quantity || 0),
+        threshold: Number(item.lowStockThreshold) || Number(settings.lowStockThreshold) || 5,
+        item
+      }));
+
+    // 2. Supplier due payment alerts (due in <= 2 days or overdue)
+    const supplierDue = (purchases || [])
+      .filter((pur) => Number(pur.pendingAmount || 0) > 0 && pur.dueDate)
+      .map((pur) => {
+        const dueDate = new Date(pur.dueDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+        return {
+          id: `sup_${pur.id}`,
+          type: 'supplier_due',
+          purchase: pur,
+          supplierName: pur.supplierName,
+          supplierContact: pur.supplierContact,
+          pendingAmount: Number(pur.pendingAmount || 0),
+          dueDate: pur.dueDate,
+          daysLeft
+        };
+      })
+      .filter((alert) => alert.daysLeft <= 2);
+
+    // 3. Customer sales due alerts (due amount > 0 and bill age > 7 days)
+    const customerDue = (invoices || [])
+      .filter((inv) => {
+        const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
+        const paid = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));
+        const due = inv.dueAmount !== undefined ? Number(inv.dueAmount) : Math.max(0, grandTotal - paid);
+        return due > 0;
+      })
+      .map((inv) => {
+        const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
+        const paid = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));
+        const due = inv.dueAmount !== undefined ? Number(inv.dueAmount) : Math.max(0, grandTotal - paid);
+        const invTime = inv.timestamp || (inv.rawDate ? new Date(inv.rawDate).getTime() : new Date(inv.date).getTime());
+        const ageDays = Math.floor((Date.now() - invTime) / (1000 * 60 * 60 * 24));
+        return {
+          id: `cust_${inv.id}`,
+          type: 'customer_due',
+          invoice: inv,
+          customerName: inv.customerName,
+          customerPhone: inv.customerPhone,
+          grandTotal,
+          paidAmount: paid,
+          dueAmount: due,
+          invoiceNumber: inv.invoiceNumber,
+          date: inv.date,
+          ageDays
+        };
+      })
+      .filter((alert) => alert.ageDays > 7);
+
+    const totalCount = lowStock.length + supplierDue.length + customerDue.length;
+
+    return {
+      lowStock,
+      supplierDue,
+      customerDue,
+      totalCount
+    };
+  }, [inventory, purchases, invoices, settings.lowStockThreshold]);
+
   return (
     <AppContext.Provider
       value={{
@@ -1262,6 +1412,8 @@ export function AppProvider({ children }) {
         updateSettings,
         setLanguage,
         addInvoice,
+        updateInvoice,
+        recordInvoicePayment,
         deleteInvoice,
         getNextInvoiceNumber,
         addOrUpdateStock,
@@ -1271,7 +1423,8 @@ export function AppProvider({ children }) {
         addPurchase,
         recordPurchasePayment,
         deletePurchase,
-        updatePurchase
+        updatePurchase,
+        notificationAlerts
       }}
     >
       {children}

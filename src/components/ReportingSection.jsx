@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
+import { shareToWhatsAppDirectly } from '../utils/mobileNative';
 import {
   TrendingUp,
   CreditCard,
@@ -25,7 +26,9 @@ import {
   Building,
   FileText,
   Download,
-  Package
+  Package,
+  MessageSquare,
+  AlertCircle
 } from 'lucide-react';
 
 const formatPayModeBadge = (mode, isHindi) => {
@@ -63,13 +66,14 @@ export default function ReportingSection({
     addPurchase,
     recordPurchasePayment,
     deletePurchase,
+    recordInvoicePayment,
     settings
   } = useApp();
 
   const isHindi = settings.language === 'hi';
   const currency = settings.currency || '₹';
 
-  // Active Report View Mode: 'sales' (बिक्री रिपोर्ट) or 'purchase' (खरीददारी व सप्लायर खाता)
+  // Active Report View Mode: 'sales' (बिक्री रिपोर्ट) | 'purchase' (सप्लायर खाता) | 'sales_due' (ग्राहक उधारी व बकाया)
   const [reportMode, setReportMode] = useState(initialMode);
 
   // Time filter for Sales: 'today' (Daily) | 'week' (Weekly) | 'month' (Monthly) | 'all' (All Time)
@@ -79,6 +83,15 @@ export default function ReportingSection({
   // Purchase filters
   const [purchaseStatusFilter, setPurchaseStatusFilter] = useState('all'); // 'all' | 'pending' | 'due' | 'paid'
   const [purchaseSearchQuery, setPurchaseSearchQuery] = useState('');
+
+  // Sales Due (ग्राहक उधारी) filters & payment modal state
+  const [salesDueFilter, setSalesDueFilter] = useState('all'); // 'all' | 'overdue' | 'today'
+  const [salesDueSearchQuery, setSalesDueSearchQuery] = useState('');
+  const [activeCustomerPaymentInvoice, setActiveCustomerPaymentInvoice] = useState(null);
+  const [customerPayAmount, setCustomerPayAmount] = useState('');
+  const [customerPayMethod, setCustomerPayMethod] = useState('cash');
+  const [customerPayNotes, setCustomerPayNotes] = useState('');
+  const [customerPaySuccessMsg, setCustomerPaySuccessMsg] = useState('');
 
   // Modals for Purchase Accounting
   const [isAddPurchaseOpen, setIsAddPurchaseOpen] = useState(false);
@@ -436,6 +449,142 @@ export default function ReportingSection({
   };
 
   // -------------------------------------------------------------
+  // 3. SALES DUE (ग्राहक उधारी व बकाया) CALCULATIONS & HANDLERS
+  // -------------------------------------------------------------
+  const processedDueInvoices = useMemo(() => {
+    return (invoices || [])
+      .map((inv) => {
+        const grandTotal = Number(inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0));
+        const paidAmount = Number(inv.paidAmount !== undefined ? inv.paidAmount : (inv.dueAmount !== undefined ? grandTotal - inv.dueAmount : grandTotal));
+        const dueAmount = inv.dueAmount !== undefined ? Number(inv.dueAmount) : Math.max(0, grandTotal - paidAmount);
+
+        const invTime = inv.timestamp || (inv.rawDate ? new Date(inv.rawDate).getTime() : parseDateSafe(inv.date, null, null, inv.id).getTime());
+        const ageDays = invTime > 0 ? Math.floor((Date.now() - invTime) / (1000 * 60 * 60 * 24)) : 0;
+
+        return {
+          ...inv,
+          grandTotal,
+          paidAmount,
+          dueAmount,
+          ageDays,
+          isOverdue7Days: ageDays > 7
+        };
+      })
+      .filter((inv) => inv.dueAmount > 0)
+      .sort((a, b) => b.ageDays - a.ageDays);
+  }, [invoices]);
+
+  const salesDueKPIs = useMemo(() => {
+    const totalDue = processedDueInvoices.reduce((sum, inv) => sum + inv.dueAmount, 0);
+    const totalBilled = processedDueInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const totalPaid = processedDueInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
+    const overdue7DaysCount = processedDueInvoices.filter((inv) => inv.ageDays > 7).length;
+    const uniqueCustomers = new Set(processedDueInvoices.map((i) => (i.customerName || i.customerPhone || i.id).trim().toLowerCase())).size;
+
+    return {
+      totalDue,
+      totalBilled,
+      totalPaid,
+      overdue7DaysCount,
+      customerCount: uniqueCustomers,
+      totalInvoicesCount: processedDueInvoices.length
+    };
+  }, [processedDueInvoices]);
+
+  const filteredDueInvoices = useMemo(() => {
+    return processedDueInvoices.filter((inv) => {
+      if (salesDueFilter === 'overdue' && inv.ageDays <= 7) return false;
+      if (salesDueFilter === 'today' && inv.ageDays !== 0) return false;
+
+      if (salesDueSearchQuery.trim()) {
+        const q = salesDueSearchQuery.toLowerCase().trim();
+        const matchName = (inv.customerName || '').toLowerCase().includes(q);
+        const matchPhone = (inv.customerPhone || '').toLowerCase().includes(q);
+        const matchNum = String(inv.invoiceNumber || inv.id || '').toLowerCase().includes(q);
+        return matchName || matchPhone || matchNum;
+      }
+      return true;
+    });
+  }, [processedDueInvoices, salesDueFilter, salesDueSearchQuery]);
+
+  const handleSendWhatsAppDueReminder = (inv) => {
+    const cleanPhone = (inv.customerPhone || '').replace(/[^0-9]/g, '');
+    const storeName = user?.storeName || user?.businessName || settings?.storeName || 'Billie Store';
+    const custName = inv.customerName || (isHindi ? 'ग्राहक' : 'Customer');
+    const invNum = inv.invoiceNumber || inv.id || 'INV';
+    const message = isHindi
+      ? `नमस्ते ${custName} जी 🙏\n\n` +
+        `यह *${storeName}* से आपके बिल #${invNum} का पेमेंट रिमाइंडर है।\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `• कुल बिल राशि: ${currency}${Number(inv.grandTotal).toLocaleString()}\n` +
+        `• प्राप्त भुगतान: ${currency}${Number(inv.paidAmount).toLocaleString()}\n` +
+        `• कुल बकाया बाकी (Due): *${currency}${Number(inv.dueAmount).toLocaleString()}*\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `कृपया बकाया राशि का भुगतान शीघ्र करने का कष्ट करें।\n` +
+        `धन्यवाद! 🙏`
+      : `Hello ${custName} 🙏\n\n` +
+        `This is a friendly payment reminder from *${storeName}* for Invoice #${invNum}.\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `• Total Bill: ${currency}${Number(inv.grandTotal).toLocaleString()}\n` +
+        `• Received: ${currency}${Number(inv.paidAmount).toLocaleString()}\n` +
+        `• Balance Due: *${currency}${Number(inv.dueAmount).toLocaleString()}*\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `Kindly clear the pending dues at your earliest convenience.\n` +
+        `Thank you!`;
+
+    shareToWhatsAppDirectly({ phone: cleanPhone, text: message });
+  };
+
+  const handleOpenCustomerPaymentModal = (inv) => {
+    setActiveCustomerPaymentInvoice(inv);
+    setCustomerPayAmount(String(inv.dueAmount));
+    setCustomerPayMethod('cash');
+    setCustomerPayNotes('');
+    setCustomerPaySuccessMsg('');
+  };
+
+  const handleConfirmCustomerPayment = (e) => {
+    e.preventDefault();
+    if (!activeCustomerPaymentInvoice) return;
+
+    const amount = Number(customerPayAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert(isHindi ? 'कृपया मान्य राशि दर्ज करें!' : 'Please enter a valid amount!');
+      return;
+    }
+
+    if (amount > activeCustomerPaymentInvoice.dueAmount) {
+      alert(
+        isHindi
+          ? `भुगतान राशि बकाया राशि (${currency}${activeCustomerPaymentInvoice.dueAmount.toLocaleString()}) से अधिक नहीं हो सकती!`
+          : `Amount cannot exceed balance due (${currency}${activeCustomerPaymentInvoice.dueAmount.toLocaleString()})!`
+      );
+      return;
+    }
+
+    const res = recordInvoicePayment(
+      activeCustomerPaymentInvoice.id,
+      amount,
+      customerPayMethod,
+      customerPayNotes || (isHindi ? 'ग्राहक से बकाया भुगतान प्राप्त' : 'Customer due payment received')
+    );
+
+    if (res && res.success !== false) {
+      setCustomerPaySuccessMsg(
+        isHindi
+          ? `✓ ${currency}${amount.toLocaleString()} का भुगतान सफलतापूर्वक दर्ज हो गया!`
+          : `✓ Payment of ${currency}${amount.toLocaleString()} recorded successfully!`
+      );
+      setTimeout(() => {
+        setActiveCustomerPaymentInvoice(null);
+        setCustomerPaySuccessMsg('');
+        setCustomerPayAmount('');
+        setCustomerPayNotes('');
+      }, 1000);
+    }
+  };
+
+  // -------------------------------------------------------------
   // ADD PURCHASE BILL HANDLERS
   // -------------------------------------------------------------
   const handleAddPurchaseSubmit = (e) => {
@@ -529,14 +678,20 @@ export default function ReportingSection({
       <div className="m3-report-top-bar">
         <div className="flex items-center gap-2.5">
           <div className="m3-report-icon-box">
-            {reportMode === 'sales' ? <TrendingUp size={20} /> : <ShoppingBag size={20} />}
+            {reportMode === 'sales' ? (
+              <TrendingUp size={20} />
+            ) : reportMode === 'sales_due' ? (
+              <Receipt size={20} />
+            ) : (
+              <ShoppingBag size={20} />
+            )}
           </div>
           <div>
             <h3 className="m3-report-heading">
               {isHindi ? 'हिसाब-किताब व रिपोर्ट' : 'Business Reports'}
             </h3>
             <p className="m3-report-subheading">
-              {isHindi ? 'बिक्री, मुनाफ़ा व सप्लायर उधारी' : 'Sales, Profit & Supplier Dues'}
+              {isHindi ? 'बिक्री, मुनाफ़ा, सप्लायर व ग्राहक उधारी' : 'Sales, Profit, Suppliers & Customer Dues'}
             </p>
           </div>
         </div>
@@ -563,7 +718,7 @@ export default function ReportingSection({
           className={`m3-segment-btn ${reportMode === 'sales' ? 'active-sales' : ''}`}
         >
           <TrendingUp size={15} />
-          <span>{isHindi ? 'बिक्री व मुनाफ़ा (Sales)' : 'Sales & Profit'}</span>
+          <span>{isHindi ? 'बिक्री (Sales)' : 'Sales'}</span>
         </button>
 
         <button
@@ -572,9 +727,21 @@ export default function ReportingSection({
           className={`m3-segment-btn ${reportMode === 'purchase' ? 'active-purchase' : ''}`}
         >
           <ShoppingBag size={15} />
-          <span>{isHindi ? 'सप्लायर खाता (Purchase)' : 'Supplier Ledger'}</span>
+          <span>{isHindi ? 'सप्लायर खाता' : 'Suppliers'}</span>
           {purchaseKPIs.pendingCount > 0 && (
             <span className="m3-alert-badge">{purchaseKPIs.pendingCount}</span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setReportMode('sales_due')}
+          className={`m3-segment-btn ${reportMode === 'sales_due' ? 'active-sales-due' : ''}`}
+        >
+          <Receipt size={15} />
+          <span>{isHindi ? 'ग्राहक उधारी' : 'Sales Due'}</span>
+          {salesDueKPIs.totalInvoicesCount > 0 && (
+            <span className="m3-alert-badge due-badge">{salesDueKPIs.totalInvoicesCount}</span>
           )}
         </button>
       </div>
@@ -1119,6 +1286,279 @@ export default function ReportingSection({
                           title="Delete"
                         >
                           <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* VIEW 3: SALES DUE (उधारी व बकाया) SECTION                 */}
+      {/* ========================================================= */}
+      {reportMode === 'sales_due' && (
+        <div className="m3-sales-due-section-body animate-fade-in">
+          {/* Summary KPI Cards (100% Mobile Responsive) */}
+          <div className="m3-purchase-summary-row">
+            <div className="m3-p-kpi-box highlighted-rose">
+              <span className="p-kpi-label">{isHindi ? 'कुल उधारी (Total Due)' : 'Total Balance Due'}</span>
+              <span className="p-kpi-val text-rose-600 dark:text-rose-400">
+                {currency}{salesDueKPIs.totalDue.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="m3-p-kpi-box">
+              <span className="p-kpi-label">{isHindi ? 'कुल बिल (Billed)' : 'Total Billed'}</span>
+              <span className="p-kpi-val text-blue-700 dark:text-blue-300">
+                {currency}{salesDueKPIs.totalBilled.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="m3-p-kpi-box">
+              <span className="p-kpi-label">{isHindi ? 'प्राप्त (Paid)' : 'Already Paid'}</span>
+              <span className="p-kpi-val text-emerald-600 dark:text-emerald-400">
+                {currency}{salesDueKPIs.totalPaid.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="m3-p-kpi-box">
+              <span className="p-kpi-label">{isHindi ? 'ग्राहक संख्या' : 'Due Customers'}</span>
+              <span className="p-kpi-val text-indigo-600 dark:text-indigo-400">
+                {salesDueKPIs.customerCount}
+              </span>
+            </div>
+          </div>
+
+          {/* Overdue > 7 Days Warning Banner if any */}
+          {salesDueKPIs.overdue7DaysCount > 0 && (
+            <div className="m3-alert-banner warning mt-3 animate-fade-in flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} className="text-amber-600 flex-shrink-0" />
+                <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                  {isHindi
+                    ? `⚠️ ${salesDueKPIs.overdue7DaysCount} ग्राहकों की उधारी 7 दिन से ज्यादा पुरानी हो चुकी है!`
+                    : `⚠️ ${salesDueKPIs.overdue7DaysCount} customer accounts are overdue by more than 7 days!`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSalesDueFilter(salesDueFilter === 'overdue' ? 'all' : 'overdue')}
+                className="text-xs font-extrabold text-amber-800 dark:text-amber-300 underline bg-transparent border-0 cursor-pointer"
+              >
+                {salesDueFilter === 'overdue' ? (isHindi ? 'सभी देखें' : 'Show All') : (isHindi ? 'फ़िल्टर करें' : 'Filter Overdue')}
+              </button>
+            </div>
+          )}
+
+          {/* Search Bar & Filter Chips */}
+          <div className="m3-purchase-toolbar mt-3">
+            <div className="m3-search-bar-wrap w-full">
+              <Search size={14} className="text-slate-400" />
+              <input
+                type="text"
+                placeholder={isHindi ? 'ग्राहक का नाम, फ़ोन या बिल नंबर खोजें...' : 'Search customer name, phone or invoice #...'}
+                value={salesDueSearchQuery}
+                onChange={(e) => setSalesDueSearchQuery(e.target.value)}
+                className="m3-search-input-field"
+              />
+              {salesDueSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSalesDueSearchQuery('')}
+                  className="bg-transparent border-0 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Status Filter Tabs */}
+          <div className="m3-status-filter-pills-row mt-2.5">
+            <button
+              type="button"
+              onClick={() => setSalesDueFilter('all')}
+              className={`m3-status-chip ${salesDueFilter === 'all' ? 'active' : ''}`}
+            >
+              {isHindi ? 'सभी उधारी (All)' : 'All Dues'} ({salesDueKPIs.totalInvoicesCount})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSalesDueFilter('overdue')}
+              className={`m3-status-chip ${salesDueFilter === 'overdue' ? 'active alert-chip' : ''}`}
+            >
+              {isHindi ? '⚠️ 7+ दिन पुरानी' : '⚠️ >7 Days Overdue'} ({salesDueKPIs.overdue7DaysCount})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSalesDueFilter('today')}
+              className={`m3-status-chip ${salesDueFilter === 'today' ? 'active' : ''}`}
+            >
+              {isHindi ? 'आज की उधारी' : "Today's Dues"}
+            </button>
+          </div>
+
+          {/* Customer Due List Cards */}
+          <div className="m3-purchase-list-scroll mt-3 custom-scrollbar">
+            {filteredDueInvoices.length === 0 ? (
+              <div className="m3-empty-ledger-box">
+                <Receipt size={36} className="text-emerald-500 opacity-60 mb-2" />
+                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  {salesDueSearchQuery
+                    ? (isHindi ? 'कोई मेल खाता उधारी बिल नहीं मिला' : 'No matching due invoice found')
+                    : (isHindi ? 'शाबाश! कोई ग्राहक उधारी बकाया नहीं है' : 'All Clear! No customer balance dues pending')}
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  {salesDueSearchQuery
+                    ? (isHindi ? 'कृपया दूसरा नाम या नंबर सर्च करें' : 'Try searching another name or phone')
+                    : (isHindi ? 'सभी ग्राहकों का पूरा भुगतान प्राप्त हो चुका है।' : 'All sales invoices are fully paid.')}
+                </p>
+              </div>
+            ) : (
+              filteredDueInvoices.map((inv) => {
+                const customerPhone = (inv.customerPhone || '').trim();
+                const cleanPhone = customerPhone.replace(/[^0-9]/g, '');
+                const hasValidPhone = cleanPhone.length >= 10;
+                const itemsSummary = Array.isArray(inv.items) && inv.items.length > 0
+                  ? inv.items.map((it) => `${it.name} (${it.quantity || 1})`).join(', ')
+                  : (inv.product ? `${inv.product} (${inv.quantity || 1})` : '');
+
+                return (
+                  <div
+                    key={inv.id}
+                    className={`m3-purchase-item-card ${inv.isOverdue7Days ? 'overdue-border' : ''} animate-fade-in`}
+                  >
+                    {/* Top Row: Customer info & Bill identifier */}
+                    <div className="m3-p-card-top">
+                      <div className="flex items-start gap-2.5">
+                        <div className="m3-sup-avatar-circle" style={{ background: inv.isOverdue7Days ? '#fee2e2' : '#e0e7ff', color: inv.isOverdue7Days ? '#b91c1c' : '#4338ca' }}>
+                          <User size={15} />
+                        </div>
+                        <div>
+                          <h4 className="m3-p-sup-name font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                            {inv.customerName || (isHindi ? 'ग्राहक (अज्ञात)' : 'Customer')}
+                            {inv.isOverdue7Days && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-extrabold border border-rose-300">
+                                {isHindi ? '7+ दिन बकाया' : '>7 Days Overdue'}
+                              </span>
+                            )}
+                          </h4>
+                          {hasValidPhone ? (
+                            <span className="m3-p-sup-contact text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                              <Phone size={11} className="text-slate-400" /> {customerPhone}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">
+                              {isHindi ? 'फ़ोन नंबर उपलब्ध नहीं' : 'No phone number'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="m3-p-bill-num">
+                          #{inv.invoiceNumber || inv.id}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          {inv.date || 'हालिया'} • {inv.ageDays === 0 ? (isHindi ? 'आज' : 'Today') : `${inv.ageDays} ${isHindi ? 'दिन पुराना' : 'd ago'}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Product Summary Row if available */}
+                    {itemsSummary && (
+                      <div className="m3-p-product-info-bar mt-2">
+                        <span className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1">
+                          🛒 <strong className="text-slate-700 dark:text-slate-300">{isHindi ? 'सामान: ' : 'Items: '}</strong>
+                          {itemsSummary}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Financial Numbers Bar (Total Bill, Paid, Due Amount) */}
+                    <div className="m3-p-finances-grid mt-2.5">
+                      <div className="m3-fin-col">
+                        <span className="lbl">{isHindi ? 'कुल बिल (Total)' : 'Total Bill'}</span>
+                        <span className="val text-slate-800 dark:text-slate-200">
+                          {currency}{Number(inv.grandTotal).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="m3-fin-col">
+                        <span className="lbl">{isHindi ? 'प्राप्त (Paid)' : 'Paid'}</span>
+                        <span className="val text-emerald-600 dark:text-emerald-400">
+                          {currency}{Number(inv.paidAmount).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="m3-fin-col highlighted">
+                        <span className="lbl">{isHindi ? 'कुल बकाया (Due)' : 'Balance Due'}</span>
+                        <span className="val text-rose-600 dark:text-rose-400 font-black">
+                          {currency}{Number(inv.dueAmount).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Action Buttons: Call, WhatsApp, Receive Payment & PDF */}
+                    <div className="m3-p-card-bottom mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Direct Call Button (User Request) */}
+                        {hasValidPhone && (
+                          <a
+                            href={`tel:${cleanPhone}`}
+                            className="m3-contact-btn call m3-ripple"
+                            title={isHindi ? 'ग्राहक को कॉल करें' : 'Call Customer'}
+                          >
+                            <Phone size={13} />
+                            <span>{isHindi ? 'कॉल करें' : 'Call'}</span>
+                          </a>
+                        )}
+
+                        {/* Direct WhatsApp Reminder Button (User Request) */}
+                        {hasValidPhone && (
+                          <button
+                            type="button"
+                            onClick={() => handleSendWhatsAppDueReminder(inv)}
+                            className="m3-contact-btn whatsapp m3-ripple"
+                            title={isHindi ? 'व्हाट्सएप पर तगादा / रिमाइंडर भेजें' : 'Send WhatsApp Reminder'}
+                          >
+                            <MessageSquare size={13} />
+                            <span>{isHindi ? 'व्हाट्सएप तगादा' : 'WhatsApp'}</span>
+                          </button>
+                        )}
+
+                        {!hasValidPhone && (
+                          <span className="text-[11px] text-slate-400 italic">
+                            {isHindi ? 'तगादा के लिए फ़ोन नंबर दर्ज नहीं है' : 'No phone to call/WhatsApp'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {/* Receive Payment Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCustomerPaymentModal(inv)}
+                          className="m3-pay-now-btn due-collect-btn m3-ripple"
+                        >
+                          <CheckCircle2 size={13} />
+                          <span>{isHindi ? 'भुगतान दर्ज करें' : 'Receive Pay'}</span>
+                        </button>
+
+                        {/* PDF Receipt Button */}
+                        <button
+                          type="button"
+                          onClick={() => generateInvoicePDF(inv, user)}
+                          className="m3-del-icon-btn pdf-btn"
+                          title={isHindi ? 'बिल PDF डाउनलोड करें' : 'Download Invoice PDF'}
+                        >
+                          <Download size={13} />
                         </button>
                       </div>
                     </div>
@@ -1688,6 +2128,181 @@ export default function ReportingSection({
                 >
                   <Plus size={16} />
                   <span>{isHindi ? 'खरीद बिल सेव करें' : 'Save Purchase Bill'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL 3: RECORD CUSTOMER DUE PAYMENT DIALOG               */}
+      {/* ========================================================= */}
+      {activeCustomerPaymentInvoice && (
+        <div className="modal-backdrop animate-fade-in" onClick={() => setActiveCustomerPaymentInvoice(null)}>
+          <div
+            className="m3-modal-sheet-dialog animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="m3-dialog-header-enhanced">
+              <div className="flex items-center gap-3">
+                <div className="m3-dialog-icon-pill emerald">
+                  <CheckCircle2 size={20} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="m3-dialog-title">
+                    {isHindi ? 'ग्राहक से बकाया भुगतान प्राप्त करें' : 'Receive Customer Due Payment'}
+                  </h3>
+                  <p className="m3-dialog-subtitle">
+                    {isHindi ? 'उधारी खाते में भुगतान जमा करें' : 'Settle customer balance dues'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveCustomerPaymentInvoice(null)}
+                className="m3-dialog-close-circle"
+                title={isHindi ? 'बंद करें' : 'Close'}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmCustomerPayment} className="m3-dialog-body-scroll">
+              {customerPaySuccessMsg && (
+                <div className="m3-alert-banner success animate-fade-in">
+                  <CheckCircle2 size={16} />
+                  <span>{customerPaySuccessMsg}</span>
+                </div>
+              )}
+
+              {/* Customer & Due Spotlight Card */}
+              <div className="m3-modal-ledger-summary-card">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="m3-modal-sup-tag">{isHindi ? 'ग्राहक खाता' : 'Customer Account'}</span>
+                    <h4 className="m3-modal-sup-name">{activeCustomerPaymentInvoice.customerName || (isHindi ? 'ग्राहक' : 'Customer')}</h4>
+                    {activeCustomerPaymentInvoice.customerPhone && (
+                      <span className="m3-modal-sup-phone">
+                        <Phone size={11} /> {activeCustomerPaymentInvoice.customerPhone}
+                      </span>
+                    )}
+                  </div>
+                  <span className="m3-modal-bill-badge">
+                    #{activeCustomerPaymentInvoice.invoiceNumber || activeCustomerPaymentInvoice.id}
+                  </span>
+                </div>
+
+                <div className="m3-modal-ledger-grid mt-3">
+                  <div className="m3-modal-stat-box">
+                    <span className="lbl">{isHindi ? 'कुल बिल' : 'Total Bill'}</span>
+                    <span className="val">{currency}{Number(activeCustomerPaymentInvoice.grandTotal).toLocaleString()}</span>
+                  </div>
+                  <div className="m3-modal-stat-box">
+                    <span className="lbl">{isHindi ? 'प्राप्त' : 'Already Paid'}</span>
+                    <span className="val text-emerald-600">{currency}{Number(activeCustomerPaymentInvoice.paidAmount).toLocaleString()}</span>
+                  </div>
+                  <div className="m3-modal-stat-box due">
+                    <span className="lbl">{isHindi ? 'कुल बाकी' : 'Balance Due'}</span>
+                    <span className="val text-rose-600 font-extrabold">{currency}{Number(activeCustomerPaymentInvoice.dueAmount).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Amount Input */}
+              <div className="m3-form-field-group">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="m3-field-label m-0">
+                    {isHindi ? 'प्राप्त की जा रही राशि (Received Amount) *' : 'Received Amount *'}
+                  </label>
+                  <span className="text-xs text-rose-600 font-bold">
+                    {isHindi ? 'बाकी बकाया: ' : 'Due: '}{currency}{Number(activeCustomerPaymentInvoice.dueAmount).toLocaleString()}
+                  </span>
+                </div>
+                <div className="m3-amount-input-box">
+                  <span className="m3-input-prefix">{currency}</span>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max={activeCustomerPaymentInvoice.dueAmount}
+                    value={customerPayAmount}
+                    onChange={(e) => setCustomerPayAmount(e.target.value)}
+                    placeholder="0"
+                    className="m3-enhanced-input"
+                  />
+                </div>
+
+                {/* Quick Fill Chips */}
+                <div className="m3-quick-pills-row mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCustomerPayAmount(String(activeCustomerPaymentInvoice.dueAmount))}
+                    className="m3-quick-fill-chip active"
+                  >
+                    ✓ {isHindi ? 'पूरा भरें' : 'Pay Full'} ({currency}{Number(activeCustomerPaymentInvoice.dueAmount).toLocaleString()})
+                  </button>
+                  {activeCustomerPaymentInvoice.dueAmount > 100 && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomerPayAmount(String(Math.round(activeCustomerPaymentInvoice.dueAmount / 2)))}
+                      className="m3-quick-fill-chip"
+                    >
+                      {isHindi ? '50% (आधा)' : '50% (Half)'} ({currency}{Math.round(activeCustomerPaymentInvoice.dueAmount / 2).toLocaleString()})
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Mode (Cash, UPI, Card, Cheque) */}
+              <div className="m3-form-field-group">
+                <label className="m3-field-label">
+                  {isHindi ? 'भुगतान माध्यम (Payment Method)' : 'Payment Method'}
+                </label>
+                <div className="m3-mode-selection-grid">
+                  {['cash', 'upi', 'card', 'cheque'].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setCustomerPayMethod(mode)}
+                      className={`m3-mode-select-btn ${customerPayMethod === mode ? 'selected' : ''}`}
+                    >
+                      <span>{formatPayModeBadge(mode, isHindi)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="m3-form-field-group">
+                <label className="m3-field-label">
+                  {isHindi ? 'नोट्स / टिप्पणी (वैकल्पिक)' : 'Notes / Remarks (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={customerPayNotes}
+                  onChange={(e) => setCustomerPayNotes(e.target.value)}
+                  placeholder={isHindi ? 'जैसे: नकद दिया या ऑनलाइन ट्रांसफर' : 'e.g. Paid in cash or online'}
+                  className="m3-enhanced-input text-field-only"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="m3-dialog-actions-row">
+                <button
+                  type="button"
+                  onClick={() => setActiveCustomerPaymentInvoice(null)}
+                  className="m3-btn-secondary"
+                >
+                  {isHindi ? 'रद्द करें' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="m3-btn-primary emerald"
+                >
+                  <Check size={16} />
+                  <span>{isHindi ? 'भुगतान सुरक्षित करें' : 'Confirm Payment'}</span>
                 </button>
               </div>
             </form>

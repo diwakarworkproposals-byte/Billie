@@ -11349,3 +11349,413 @@ input:checked + .slider:before {
   color: var(--md-on-surface-variant, #64748b);
 }
 
+/* ========================================================= */
+/* SALES DUE SECTION & SMART NOTIFICATIONS PANEL STYLES      */
+/* ========================================================= */
+
+.m3-segment-btn.active-sales-due {
+  background-color: #ea580c;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+}
+
+.m3-alert-badge.due-badge {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.m3-status-chip.alert-chip.active {
+  background-color: #e11d48;
+  color: #ffffff;
+  border-color: #e11d48;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.25);
+}
+
+.m3-p-kpi-box.highlighted-rose {
+  border-left: 3px solid #f43f5e;
+  background: linear-gradient(to right, rgba(254, 242, 242, 0.8), rgba(255, 255, 255, 0.95));
+}
+
+[data-theme="dark"] .m3-p-kpi-box.highlighted-rose,
+.dark .m3-p-kpi-box.highlighted-rose {
+  background: linear-gradient(to right, rgba(136, 19, 55, 0.25), rgba(30, 41, 59, 0.95));
+  border-left-color: #f43f5e;
+}
+
+.m3-purchase-item-card.overdue-border {
+  border-left: 4px solid #ef4444;
+}
+
+/* Contact buttons (Call & WhatsApp) */
+.m3-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.m3-contact-btn.call {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.m3-contact-btn.call:hover {
+  background-color: #dbeafe;
+}
+
+[data-theme="dark"] .m3-contact-btn.call,
+.dark .m3-contact-btn.call {
+  background-color: rgba(30, 58, 138, 0.4);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.m3-contact-btn.whatsapp {
+  background-color: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.m3-contact-btn.whatsapp:hover {
+  background-color: #d1fae5;
+}
+
+[data-theme="dark"] .m3-contact-btn.whatsapp,
+.dark .m3-contact-btn.whatsapp {
+  background-color: rgba(6, 78, 59, 0.4);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.m3-pay-now-btn.due-collect-btn {
+  background-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(5, 150, 105, 0.25);
+}
+
+.m3-del-icon-btn.pdf-btn {
+  color: #475569;
+  background: var(--md-surface-container, #f1f5f9);
+}
+
+/* Bell header notification badge */
+.notif-badge-pill {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+}
+
+/* User Profile Smart Notification Panel */
+.profile-notifications-panel {
+  border-radius: 16px;
+  padding: 14px 15px;
+  background: var(--md-surface, #ffffff);
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .profile-notifications-panel,
+.dark .profile-notifications-panel {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.profile-notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-notif-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fef3c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .profile-notif-icon-box,
+.dark .profile-notif-icon-box {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.profile-notif-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--md-on-surface, #0f172a);
+  margin: 0;
+}
+
+[data-theme="dark"] .profile-notif-title,
+.dark .profile-notif-title {
+  color: #f1f5f9;
+}
+
+.profile-notif-subtitle {
+  font-size: 0.72rem;
+  color: var(--md-on-surface-variant, #64748b);
+  margin: 2px 0 0 0;
+}
+
+.notif-count-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  white-space: nowrap;
+}
+
+.notif-ok-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: #dcfce7;
+  color: #15803d;
+  white-space: nowrap;
+}
+
+/* Sub-tab filter chips inside notification panel */
+.notif-tab-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+  scrollbar-width: none;
+}
+
+.notif-tab-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.notif-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  background: var(--md-surface-container, #f8fafc);
+  color: var(--md-on-surface-variant, #64748b);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .notif-tab-chip,
+.dark .notif-tab-chip {
+  background: #0f172a;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+.notif-tab-chip.active {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.notif-tab-chip .chip-count {
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.notif-tab-chip.active .chip-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* List of notifications */
+.notif-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notif-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--md-surface-container-low, #f8fafc);
+  border: 1px solid var(--md-outline-variant, #e2e8f0);
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .notif-card-item,
+.dark .notif-card-item {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.notif-card-item.overdue {
+  border-left: 3px solid #ef4444;
+  background: linear-gradient(to right, rgba(254, 242, 242, 0.5), var(--md-surface-container-low, #f8fafc));
+}
+
+[data-theme="dark"] .notif-card-item.overdue,
+.dark .notif-card-item.overdue {
+  background: linear-gradient(to right, rgba(136, 19, 55, 0.2), #0f172a);
+}
+
+.notif-badge-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notif-badge-icon.amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.notif-badge-icon.rose {
+  background: #fee2e2;
+  color: #e11d48;
+}
+
+.notif-item-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--md-on-surface, #0f172a);
+  margin: 0;
+}
+
+[data-theme="dark"] .notif-item-title,
+.dark .notif-item-title {
+  color: #f1f5f9;
+}
+
+.notif-urgency-pill {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.notif-urgency-pill.amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.notif-urgency-pill.rose {
+  background: #fee2e2;
+  color: #be123c;
+}
+
+.notif-item-desc {
+  font-size: 0.72rem;
+  color: var(--md-on-surface-variant, #64748b);
+  margin: 2px 0 0 0;
+}
+
+.notif-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.notif-action-btn.primary {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.notif-action-btn.primary.amber {
+  background-color: #d97706;
+  color: #ffffff;
+}
+
+.notif-action-btn.primary.rose {
+  background-color: #e11d48;
+  color: #ffffff;
+}
+
+.notif-icon-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.notif-icon-action-btn.call {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.notif-icon-action-btn.whatsapp {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.notif-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  text-align: center;
+  border-radius: 12px;
+  background: var(--md-surface-container-low, #f8fafc);
+  border: 1px dashed var(--md-outline-variant, #cbd5e1);
+}
+
+[data-theme="dark"] .notif-empty-state,
+.dark .notif-empty-state {
+  background: #0f172a;
+  border-color: #334155;
+}
+

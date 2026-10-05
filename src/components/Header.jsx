@@ -5,7 +5,7 @@ import { isAppOnline, getPendingSyncCount, initOfflineSync } from '../utils/offl
 import { requestNotificationPermission } from '../utils/notificationService';
 
 export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onOpenReporting, onOpenCustomers }) {
-  const { user, settings, setIsVoiceSessionActive } = useApp();
+  const { user, settings, setIsVoiceSessionActive, notificationAlerts } = useApp();
   const isHindi = settings.language === 'hi';
   const [online, setOnline] = useState(isAppOnline());
   const [pendingCount, setPendingCount] = useState(getPendingSyncCount());
@@ -34,12 +34,16 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
     };
   }, []);
 
-  const handleToggleNotifications = async () => {
-    const granted = await requestNotificationPermission();
-    setNotifEnabled(granted);
-    if (granted) {
-      alert(isHindi ? 'सूचनाएं (Notifications) चालू कर दी गई हैं!' : 'Notifications enabled successfully!');
+  const handleBellClick = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
+      try {
+        const granted = await requestNotificationPermission();
+        setNotifEnabled(granted);
+      } catch (e) {
+        console.warn('Notification permission request error:', e);
+      }
     }
+    if (onOpenProfile) onOpenProfile();
   };
 
   return (
@@ -71,15 +75,33 @@ export default function Header({ onOpenProfile, onOpenSettings, onOpenAdmin, onO
           </span>
         </div>
 
-        {/* Notifications Bell */}
+        {/* Notifications Bell with Dynamic Alert Badge */}
         <button
           type="button"
-          onClick={handleToggleNotifications}
-          className={`icon-button m3-ripple ${notifEnabled ? 'notif-active' : ''}`}
-          title={notifEnabled ? (isHindi ? 'सूचनाएं चालू हैं' : 'Notifications Active') : (isHindi ? 'सूचनाएं चालू करें' : 'Enable Notifications')}
+          onClick={handleBellClick}
+          className={`icon-button m3-ripple relative ${notificationAlerts?.totalCount > 0 ? 'has-active-alerts' : notifEnabled ? 'notif-active' : ''}`}
+          title={
+            notificationAlerts?.totalCount > 0
+              ? (isHindi
+                  ? `🔔 ${notificationAlerts.totalCount} एक्टिव अलर्ट्स (देखने के लिए टैप करें)`
+                  : `🔔 ${notificationAlerts.totalCount} active alerts (tap to view)`)
+              : (isHindi ? 'सूचनाएं व अलर्ट्स' : 'Notifications & Alerts')
+          }
           aria-label="Toggle Notifications"
         >
-          {notifEnabled ? <BellRing size={18} className="text-amber-500" /> : <Bell size={18} />}
+          {notificationAlerts?.totalCount > 0 ? (
+            <BellRing size={19} className="text-amber-500 animate-pulse" />
+          ) : notifEnabled ? (
+            <BellRing size={18} className="text-blue-500" />
+          ) : (
+            <Bell size={18} />
+          )}
+
+          {notificationAlerts?.totalCount > 0 && (
+            <span className="notif-badge-pill">
+              {notificationAlerts.totalCount > 9 ? '9+' : notificationAlerts.totalCount}
+            </span>
+          )}
         </button>
         {/* Customers Tab Button */}
         {onOpenCustomers && (

@@ -24,8 +24,15 @@ import {
   CreditCard,
   Calendar,
   Check,
-  BarChart3
+  BarChart3,
+  Bell,
+  BellRing,
+  Clock,
+  MessageSquare,
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
+import { shareToWhatsAppDirectly } from '../utils/mobileNative';
 
 export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenAdmin, onOpenReporting }) {
   const {
@@ -39,6 +46,7 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
     installPWA,
     isOffline,
     inventory,
+    notificationAlerts,
     settings
   } = useApp();
 
@@ -80,6 +88,40 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
   const [confirmNewPin, setConfirmNewPin] = useState('');
   const [pinError, setPinError] = useState('');
   const [pinSuccess, setPinSuccess] = useState('');
+
+  // Notification Panel Tab State: 'all' | 'stock' | 'supplier' | 'customer'
+  const [activeNotifTab, setActiveNotifTab] = useState('all');
+
+  // Customer Due WhatsApp Reminder handler from notification
+  const handleSendCustomerDueReminder = (alertItem) => {
+    const cleanPhone = (alertItem.customerPhone || '').replace(/[^0-9]/g, '');
+    const storeName = user?.storeName || user?.businessName || settings?.storeName || 'Billie Store';
+    const custName = alertItem.customerName || (isHindi ? 'ग्राहक' : 'Customer');
+    const invNum = alertItem.invoiceNumber || alertItem.invoice?.id || 'INV';
+    const message = isHindi
+      ? `नमस्ते ${custName} जी 🙏\n\n` +
+        `यह *${storeName}* से आपके बिल #${invNum} का पेमेंट रिमाइंडर है।\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `• कुल बिल राशि: ${currency}${Number(alertItem.grandTotal).toLocaleString()}\n` +
+        `• प्राप्त भुगतान: ${currency}${Number(alertItem.paidAmount).toLocaleString()}\n` +
+        `• कुल बकाया बाकी (Due): *${currency}${Number(alertItem.dueAmount).toLocaleString()}*\n` +
+        `• बकाया अवधि: ${alertItem.ageDays} दिन\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `कृपया बकाया राशि का भुगतान शीघ्र करने का कष्ट करें।\n` +
+        `धन्यवाद! 🙏`
+      : `Hello ${custName} 🙏\n\n` +
+        `This is a friendly payment reminder from *${storeName}* for Invoice #${invNum}.\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `• Total Bill: ${currency}${Number(alertItem.grandTotal).toLocaleString()}\n` +
+        `• Received: ${currency}${Number(alertItem.paidAmount).toLocaleString()}\n` +
+        `• Balance Due: *${currency}${Number(alertItem.dueAmount).toLocaleString()}*\n` +
+        `• Pending for: ${alertItem.ageDays} days\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `Kindly clear the pending dues at your earliest convenience.\n` +
+        `Thank you!`;
+
+    shareToWhatsAppDirectly({ phone: cleanPhone, text: message });
+  };
 
   if (!isOpen) return null;
 
@@ -412,6 +454,254 @@ export default function ProfileModal({ isOpen, onClose, onOpenInventory, onOpenA
                   </div>
                 </div>
               )}
+
+              {/* SMART NOTIFICATIONS & ALERTS PANEL (User Request: Low Stock, Supplier Due <=2d, Customer Due >7d) */}
+              <div className="profile-notifications-panel mt-4 animate-fade-in">
+                <div className="profile-notif-header">
+                  <div className="flex items-center gap-2.5">
+                    <div className="profile-notif-icon-box">
+                      <BellRing size={20} className={notificationAlerts?.totalCount > 0 ? "text-amber-500 animate-pulse" : "text-slate-400"} />
+                    </div>
+                    <div>
+                      <h4 className="profile-notif-title">
+                        {isHindi ? '🔔 बिज़नेस नोटिफिकेशन्स व अलर्ट्स' : '🔔 Business Alerts & Notifications'}
+                      </h4>
+                      <p className="profile-notif-subtitle">
+                        {isHindi
+                          ? 'कम स्टॉक, सप्लायर ड्यू डेट (≤2 दिन) व ग्राहक उधारी (>7 दिन)'
+                          : 'Low stock, supplier dues (≤2d) & overdue customer dues (>7d)'}
+                      </p>
+                    </div>
+                  </div>
+                  {notificationAlerts?.totalCount > 0 ? (
+                    <span className="notif-count-badge">
+                      {notificationAlerts.totalCount} {isHindi ? 'अलर्ट' : 'Alerts'}
+                    </span>
+                  ) : (
+                    <span className="notif-ok-badge">
+                      ✓ {isHindi ? 'सब ठीक' : 'All Clear'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Sub-tab Filter Chips */}
+                <div className="notif-tab-chips mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveNotifTab('all')}
+                    className={`notif-tab-chip ${activeNotifTab === 'all' ? 'active' : ''}`}
+                  >
+                    <span>{isHindi ? 'सभी' : 'All'}</span>
+                    <span className="chip-count">{notificationAlerts?.totalCount || 0}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveNotifTab('stock')}
+                    className={`notif-tab-chip ${activeNotifTab === 'stock' ? 'active' : ''}`}
+                  >
+                    <span>{isHindi ? 'कम स्टॉक' : 'Low Stock'}</span>
+                    <span className="chip-count">{notificationAlerts?.lowStock?.length || 0}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveNotifTab('supplier')}
+                    className={`notif-tab-chip ${activeNotifTab === 'supplier' ? 'active' : ''}`}
+                  >
+                    <span>{isHindi ? 'सप्लायर पेमेंट (≤2d)' : 'Supplier Due'}</span>
+                    <span className="chip-count">{notificationAlerts?.supplierDue?.length || 0}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveNotifTab('customer')}
+                    className={`notif-tab-chip ${activeNotifTab === 'customer' ? 'active' : ''}`}
+                  >
+                    <span>{isHindi ? 'ग्राहक उधारी (>7d)' : 'Customer Due'}</span>
+                    <span className="chip-count">{notificationAlerts?.customerDue?.length || 0}</span>
+                  </button>
+                </div>
+
+                {/* List of Alerts */}
+                <div className="notif-cards-list mt-3">
+                  {/* Empty State */}
+                  {((activeNotifTab === 'all' && (!notificationAlerts || notificationAlerts.totalCount === 0)) ||
+                    (activeNotifTab === 'stock' && (!notificationAlerts?.lowStock || notificationAlerts.lowStock.length === 0)) ||
+                    (activeNotifTab === 'supplier' && (!notificationAlerts?.supplierDue || notificationAlerts.supplierDue.length === 0)) ||
+                    (activeNotifTab === 'customer' && (!notificationAlerts?.customerDue || notificationAlerts.customerDue.length === 0))) && (
+                    <div className="notif-empty-state">
+                      <CheckCircle size={28} className="text-emerald-500 opacity-70 mb-1.5" />
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {isHindi
+                          ? '✓ इस केटेगरी में कोई पेंडिंग अलर्ट नहीं है!'
+                          : '✓ No pending alerts in this category!'}
+                      </p>
+                      <span className="text-[11px] text-slate-400">
+                        {isHindi
+                          ? 'दुकान की इन्वेंटरी और सभी पेमेंट खाते बिल्कुल अप-टू-डेट हैं।'
+                          : 'Inventory and payment accounts are fully up to date.'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 1. Low Stock Alerts */}
+                  {(activeNotifTab === 'all' || activeNotifTab === 'stock') &&
+                    notificationAlerts?.lowStock?.map((alert) => (
+                      <div key={alert.id} className="notif-card-item stock-alert animate-fade-in">
+                        <div className="flex items-start gap-2.5 flex-1">
+                          <div className="notif-badge-icon amber">
+                            <Package size={16} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h5 className="notif-item-title">{alert.title}</h5>
+                              <span className="notif-urgency-pill amber">
+                                {isHindi ? 'कम स्टॉक' : 'Low Stock'}
+                              </span>
+                            </div>
+                            <p className="notif-item-desc">
+                              {isHindi
+                                ? `केवल ${alert.qty} पीस शेष हैं (न्यूनतम सीमा: ${alert.threshold})`
+                                : `Only ${alert.qty} units left (Threshold: ${alert.threshold})`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            if (onOpenInventory) onOpenInventory();
+                          }}
+                          className="notif-action-btn primary m3-ripple"
+                          title={isHindi ? 'इन्वेंटरी में स्टॉक बढ़ाएं' : 'Restock in Inventory'}
+                        >
+                          <Package size={12} />
+                          <span>{isHindi ? 'स्टॉक जोड़ें' : 'Restock'}</span>
+                        </button>
+                      </div>
+                    ))}
+
+                  {/* 2. Supplier Due Payment Alerts (<= 2 days left or overdue) */}
+                  {(activeNotifTab === 'all' || activeNotifTab === 'supplier') &&
+                    notificationAlerts?.supplierDue?.map((alert) => {
+                      const isOverdue = alert.daysLeft < 0;
+                      const isDueToday = alert.daysLeft === 0;
+                      const isDueTomorrow = alert.daysLeft === 1;
+
+                      return (
+                        <div key={alert.id} className={`notif-card-item supplier-alert ${isOverdue ? 'overdue' : ''} animate-fade-in`}>
+                          <div className="flex items-start gap-2.5 flex-1">
+                            <div className={`notif-badge-icon ${isOverdue ? 'rose' : 'amber'}`}>
+                              <Clock size={16} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h5 className="notif-item-title">{alert.supplierName}</h5>
+                                <span className={`notif-urgency-pill ${isOverdue || isDueToday ? 'rose' : 'amber'}`}>
+                                  {isOverdue
+                                    ? (isHindi ? `⚠️ ${Math.abs(alert.daysLeft)} दिन लेट` : `⚠️ ${Math.abs(alert.daysLeft)}d Overdue`)
+                                    : isDueToday
+                                    ? (isHindi ? '🚨 आज ही ड्यू डेट है' : '🚨 Due Today')
+                                    : isDueTomorrow
+                                    ? (isHindi ? '⏳ कल ड्यू डेट है (1 दिन बाकी)' : '⏳ Due Tomorrow')
+                                    : (isHindi ? '⏳ 2 दिन बाकी हैं' : '⏳ 2 days left')}
+                                </span>
+                              </div>
+                              <p className="notif-item-desc">
+                                {isHindi
+                                  ? `बकाया भुगतान: ${currency}${alert.pendingAmount.toLocaleString()} • ड्यू डेट: ${alert.dueDate}`
+                                  : `Pending Due: ${currency}${alert.pendingAmount.toLocaleString()} • Due Date: ${alert.dueDate}`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClose();
+                              if (onOpenReporting) onOpenReporting('purchase');
+                            }}
+                            className="notif-action-btn primary amber m3-ripple"
+                            title={isHindi ? 'सप्लायर खाता खोलें' : 'Open Supplier Ledger'}
+                          >
+                            <CreditCard size={12} />
+                            <span>{isHindi ? 'भुगतान करें' : 'Pay'}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                  {/* 3. Customer Sales Due Alerts (> 7 days overdue) */}
+                  {(activeNotifTab === 'all' || activeNotifTab === 'customer') &&
+                    notificationAlerts?.customerDue?.map((alert) => {
+                      const hasPhone = alert.customerPhone && alert.customerPhone.replace(/[^0-9]/g, '').length >= 10;
+                      const cleanPhone = hasPhone ? alert.customerPhone.replace(/[^0-9]/g, '') : '';
+
+                      return (
+                        <div key={alert.id} className="notif-card-item customer-alert overdue animate-fade-in">
+                          <div className="flex items-start gap-2.5 flex-1">
+                            <div className="notif-badge-icon rose">
+                              <AlertCircle size={16} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h5 className="notif-item-title">
+                                  {alert.customerName || (isHindi ? 'ग्राहक' : 'Customer')}
+                                </h5>
+                                <span className="notif-urgency-pill rose">
+                                  {isHindi ? `⚠️ ${alert.ageDays} दिन से बकाया` : `⚠️ ${alert.ageDays}d Overdue`}
+                                </span>
+                              </div>
+                              <p className="notif-item-desc">
+                                {isHindi
+                                  ? `बिल #${alert.invoiceNumber || 'INV'} • कुल: ${currency}${alert.grandTotal.toLocaleString()} • बकाया: ${currency}${alert.dueAmount.toLocaleString()}`
+                                  : `Bill #${alert.invoiceNumber || 'INV'} • Total: ${currency}${alert.grandTotal.toLocaleString()} • Due: ${currency}${alert.dueAmount.toLocaleString()}`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {hasPhone && (
+                              <a
+                                href={`tel:${cleanPhone}`}
+                                className="notif-icon-action-btn call"
+                                title={isHindi ? 'ग्राहक को कॉल करें' : 'Call Customer'}
+                              >
+                                <Phone size={13} />
+                              </a>
+                            )}
+
+                            {hasPhone && (
+                              <button
+                                type="button"
+                                onClick={() => handleSendCustomerDueReminder(alert)}
+                                className="notif-icon-action-btn whatsapp"
+                                title={isHindi ? 'व्हाट्सएप रिमाइंडर भेजें' : 'Send WhatsApp Reminder'}
+                              >
+                                <MessageSquare size={13} />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onClose();
+                                if (onOpenReporting) onOpenReporting('sales_due');
+                              }}
+                              className="notif-action-btn primary rose m3-ripple"
+                              title={isHindi ? 'उधारी खाता खोलें' : 'Open Due Ledger'}
+                            >
+                              <span>{isHindi ? 'खाता देखें' : 'View Due'}</span>
+                              <ArrowRight size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
 
               {/* Inventory Management Card */}
               <div className="profile-inventory-card mt-4">

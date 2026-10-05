@@ -112,6 +112,13 @@ export default function InvoiceCard({
     grandTotalNum = Math.max(0, subtotalNum - finalDiscAmount + taxAmountNum);
   }
 
+  const paidAmountNum = invoice.paidAmount !== undefined && invoice.paidAmount !== null && !isNaN(Number(invoice.paidAmount))
+    ? Number(invoice.paidAmount)
+    : (invoice.dueAmount !== undefined ? Math.max(0, grandTotalNum - Number(invoice.dueAmount)) : grandTotalNum);
+  const dueAmountNum = invoice.dueAmount !== undefined && invoice.dueAmount !== null && !isNaN(Number(invoice.dueAmount))
+    ? Number(invoice.dueAmount)
+    : Math.max(0, grandTotalNum - paidAmountNum);
+
   const customerName = invoice.customerName || (isHindi ? 'सम्मानित ग्राहक' : 'Valued Customer');
   const companyTitle = user?.businessName || 'BILLIE STORE';
   const invoiceNumber = invoice.invoiceNumber || 'INV-001';
@@ -250,9 +257,20 @@ export default function InvoiceCard({
 
           {/* Total Due Callout Box */}
           <div className="designer-total-due-box">
-            <span className="total-due-label">Total Due :</span>
-            <div className="total-due-amount">
-              INR : {currency} {grandTotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span className="total-due-label">
+              {dueAmountNum > 0 ? (isHindi ? 'बकाया राशि :' : 'Total Due :') : (isHindi ? 'कुल राशि :' : 'Total Paid :')}
+            </span>
+            <div className={`total-due-amount ${dueAmountNum > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+              INR : {currency} {(dueAmountNum > 0 ? dueAmountNum : grandTotalNum).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {dueAmountNum === 0 ? (
+                <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  ✓ {isHindi ? 'पूर्ण भुगतान' : 'Fully Paid'}
+                </span>
+              ) : (
+                <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                  ⚠️ {isHindi ? 'बकाया' : 'Due'}
+                </span>
+              )}
             </div>
           </div>
 
@@ -330,6 +348,31 @@ export default function InvoiceCard({
             <div className="designer-grand-total-pill">
               <span className="gt-label">{isHindi ? 'कुल योग' : 'Grand Total'} :</span>
               <span className="gt-val">{currency} {grandTotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+
+            {/* Paid & Due Breakdown Row */}
+            <div className="summary-lines-group mt-2 pt-2 border-t border-slate-200 dark:border-slate-700/60">
+              <div className="summary-line">
+                <span className="lbl text-emerald-700 dark:text-emerald-400 font-bold">{isHindi ? 'प्राप्त राशि (Paid)' : 'Paid Amount'} :</span>
+                <span className="val text-emerald-700 dark:text-emerald-400 font-bold">{currency} {paidAmountNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="summary-line">
+                <span className={`lbl font-bold ${dueAmountNum > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                  {isHindi ? 'बकाया राशि (Due)' : 'Due Amount'} :
+                </span>
+                <span className={`val font-bold ${dueAmountNum > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                  {currency} {dueAmountNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  {dueAmountNum > 0 ? (
+                    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold">
+                      {isHindi ? 'उधार' : 'Pending'}
+                    </span>
+                  ) : (
+                    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">
+                      {isHindi ? 'पूर्ण' : 'Cleared'}
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
           </div>
 

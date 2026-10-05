@@ -24,10 +24,17 @@ function BillieApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isReportingOpen, setIsReportingOpen] = useState(false);
+  const [reportingInitialMode, setReportingInitialMode] = useState('sales');
   const [isCustomersOpen, setIsCustomersOpen] = useState(false);
   const [activeCustomerForBill, setActiveCustomerForBill] = useState(null);
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [promptHint, setPromptHint] = useState('');
+
+  const handleOpenReporting = (mode = 'sales') => {
+    if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
+    setReportingInitialMode(mode);
+    setIsReportingOpen(true);
+  };
 
   const isHindi = settings.language === 'hi';
   const isSubExpired =
@@ -114,10 +121,7 @@ function BillieApp() {
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAdmin={user.role === 'admin' ? openAdminPage : null}
-        onOpenReporting={() => {
-          if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
-          setIsReportingOpen(true);
-        }}
+        onOpenReporting={handleOpenReporting}
         onOpenCustomers={() => {
           if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
           setIsCustomersOpen(true);
@@ -155,10 +159,7 @@ function BillieApp() {
           onResetExternalQuery={() => setSubmittedQuery('')}
           onOpenInventory={() => setIsInventoryOpen(true)}
           onOpenAdmin={user.role === 'admin' ? openAdminPage : null}
-          onOpenReporting={() => {
-            if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
-            setIsReportingOpen(true);
-          }}
+          onOpenReporting={handleOpenReporting}
           onOpenCustomers={() => {
             if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
             setIsCustomersOpen(true);
@@ -179,10 +180,7 @@ function BillieApp() {
         onClose={() => setIsProfileOpen(false)}
         onOpenInventory={() => setIsInventoryOpen(true)}
         onOpenAdmin={openAdminPage}
-        onOpenReporting={() => {
-          if (setIsVoiceSessionActive) setIsVoiceSessionActive(false);
-          setIsReportingOpen(true);
-        }}
+        onOpenReporting={handleOpenReporting}
       />
 
       <InventoryModal
@@ -215,7 +213,7 @@ function BillieApp() {
             aria-modal="true"
           >
             <ReportingSection
-              initialMode="sales"
+              initialMode={reportingInitialMode}
               onClose={() => setIsReportingOpen(false)}
               isStandalone={false}
             />
