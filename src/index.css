@@ -34,6 +34,38 @@
   --radius-lg: 24px;
   --radius-xl: 28px;
   --radius-full: 9999px;
+
+  /* ==========================================================================
+     GLASSMORPHISM DESIGN TOKENS (LIGHT PALETTE)
+     ========================================================================== */
+  --glass-canvas: 
+    radial-gradient(circle at 10% 15%, rgba(59, 130, 246, 0.40) 0%, transparent 45%),
+    radial-gradient(circle at 90% 12%, rgba(168, 85, 247, 0.38) 0%, transparent 42%),
+    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.36) 0%, transparent 45%),
+    radial-gradient(circle at 15% 85%, rgba(99, 102, 241, 0.35) 0%, transparent 42%),
+    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.20) 0%, transparent 50%),
+    linear-gradient(135deg, #c7d9fc 0%, #ded7fe 30%, #c4eeff 65%, #d6ddfe 100%);
+
+  --glass-surface-base: rgba(255, 255, 255, 0.68);
+  --glass-surface-card: rgba(255, 255, 255, 0.72);
+  --glass-surface-elevated: rgba(255, 255, 255, 0.80);
+  --glass-surface-overlay: rgba(255, 255, 255, 0.86);
+  --glass-surface-subtle: rgba(255, 255, 255, 0.48);
+  --glass-surface-input: rgba(255, 255, 255, 0.58);
+  --glass-surface-highlight: rgba(255, 255, 255, 0.92);
+
+  --glass-border-specular: 1.5px solid rgba(255, 255, 255, 0.75);
+  --glass-border-subtle: 1px solid rgba(255, 255, 255, 0.50);
+  --glass-border-active: 1.5px solid rgba(37, 99, 235, 0.65);
+  --glass-border-glow: 0 0 16px rgba(37, 99, 235, 0.30);
+
+  --glass-blur-sm: blur(12px) saturate(170%);
+  --glass-blur-md: blur(20px) saturate(180%);
+  --glass-blur-lg: blur(30px) saturate(200%);
+
+  --glass-shadow-ambient: 0 16px 40px -10px rgba(15, 23, 42, 0.10), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.90);
+  --glass-shadow-float: 0 24px 60px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.60), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
+  --glass-shadow-subtle: 0 6px 20px -2px rgba(15, 23, 42, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.80);
 }
 
 [data-theme="dark"],
@@ -56,6 +88,34 @@
   --md-elevation-2: 0 4px 12px rgba(0,0,0,0.4);
   --md-elevation-3: 0 10px 25px rgba(0,0,0,0.5);
   --md-elevation-float: 0 16px 40px rgba(0,0,0,0.6);
+
+  /* ==========================================================================
+     GLASSMORPHISM DESIGN TOKENS (DARK PALETTE)
+     ========================================================================== */
+  --glass-canvas:
+    radial-gradient(circle at 10% 15%, rgba(59, 130, 246, 0.55) 0%, transparent 45%),
+    radial-gradient(circle at 90% 12%, rgba(168, 85, 247, 0.50) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.45) 0%, transparent 50%),
+    radial-gradient(circle at 15% 85%, rgba(99, 102, 241, 0.40) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(217, 70, 239, 0.28) 0%, transparent 48%),
+    linear-gradient(135deg, #070d1e 0%, #0d1730 45%, #080c1a 100%);
+
+  --glass-surface-base: rgba(15, 23, 42, 0.68);
+  --glass-surface-card: rgba(18, 28, 51, 0.72);
+  --glass-surface-elevated: rgba(22, 33, 58, 0.78);
+  --glass-surface-overlay: rgba(15, 23, 42, 0.85);
+  --glass-surface-subtle: rgba(30, 41, 59, 0.50);
+  --glass-surface-input: rgba(15, 23, 42, 0.62);
+  --glass-surface-highlight: rgba(30, 41, 59, 0.90);
+
+  --glass-border-specular: 1.5px solid rgba(255, 255, 255, 0.15);
+  --glass-border-subtle: 1px solid rgba(255, 255, 255, 0.09);
+  --glass-border-active: 1.5px solid rgba(96, 165, 250, 0.65);
+  --glass-border-glow: 0 0 18px rgba(96, 165, 250, 0.35);
+
+  --glass-shadow-ambient: 0 20px 48px -10px rgba(0, 0, 0, 0.55), inset 0 1px 1px 0 rgba(255, 255, 255, 0.14);
+  --glass-shadow-float: 0 28px 70px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.18);
+  --glass-shadow-subtle: 0 6px 20px -2px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.10);
 }
 
 /* Reset & Base */
@@ -69,13 +129,7 @@ html, body {
   width: 100%;
   height: 100%;
   font-family: var(--font-family);
-  background:
-    radial-gradient(circle at 5% 5%, rgba(37, 99, 235, 0.55) 0%, transparent 45%),
-    radial-gradient(circle at 95% 10%, rgba(139, 92, 246, 0.50) 0%, transparent 45%),
-    radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.45) 0%, transparent 50%),
-    radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.40) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.28) 0%, transparent 50%),
-    linear-gradient(135deg, #bfdbfe 0%, #ddd6fe 35%, #bae6fd 70%, #c7d2fe 100%) !important;
+  background: var(--glass-canvas) !important;
   color: var(--md-on-surface);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -86,13 +140,7 @@ html, body {
 [data-theme="dark"] body,
 .dark html,
 .dark body {
-  background:
-    radial-gradient(circle at 5% 5%, rgba(59, 130, 246, 0.65) 0%, transparent 50%),
-    radial-gradient(circle at 95% 10%, rgba(147, 51, 234, 0.60) 0%, transparent 50%),
-    radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.55) 0%, transparent 50%),
-    radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.50) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.35) 0%, transparent 50%),
-    linear-gradient(135deg, #050b18 0%, #0d152a 45%, #080c18 100%) !important;
+  background: var(--glass-canvas) !important;
 }
 
 #root {
@@ -101,7 +149,7 @@ html, body {
   background: transparent !important;
 }
 
-/* App Viewport */
+/* App Viewport with ambient mesh glow */
 .billie-app-viewport {
   display: flex;
   flex-direction: column;
@@ -109,27 +157,15 @@ html, body {
   height: 100dvh;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 5% 5%, rgba(37, 99, 235, 0.55) 0%, transparent 45%),
-    radial-gradient(circle at 95% 10%, rgba(139, 92, 246, 0.50) 0%, transparent 45%),
-    radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.45) 0%, transparent 50%),
-    radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.40) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.28) 0%, transparent 50%),
-    linear-gradient(135deg, #bfdbfe 0%, #ddd6fe 35%, #bae6fd 70%, #c7d2fe 100%) !important;
+  background: transparent !important;
 }
 
 [data-theme="dark"] .billie-app-viewport,
 .dark .billie-app-viewport {
-  background:
-    radial-gradient(circle at 5% 5%, rgba(59, 130, 246, 0.65) 0%, transparent 50%),
-    radial-gradient(circle at 95% 10%, rgba(147, 51, 234, 0.60) 0%, transparent 50%),
-    radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.55) 0%, transparent 50%),
-    radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.50) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.35) 0%, transparent 50%),
-    linear-gradient(135deg, #050b18 0%, #0d152a 45%, #080c18 100%) !important;
+  background: transparent !important;
 }
 
-/* Header */
+/* Header (Frosted Glass Navigation Bar) */
 .billie-header {
   height: 64px;
   min-height: 64px;
@@ -137,19 +173,20 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  background-color: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  background: var(--glass-surface-base) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border-bottom: var(--glass-border-specular) !important;
   z-index: 30;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05), inset 0 -1px 0 rgba(255, 255, 255, 0.4) !important;
+  transition: all 0.25s ease;
 }
 
 [data-theme="dark"] .billie-header,
 .dark .billie-header {
-  background-color: rgba(13, 21, 39, 0.80);
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  background: var(--glass-surface-base) !important;
+  border-bottom: var(--glass-border-specular) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 -1px 0 rgba(255, 255, 255, 0.06) !important;
 }
 
 .header-left {
@@ -12289,4 +12326,808 @@ input:checked + .slider:before {
   background: rgba(30, 41, 59, 0.96);
   border-color: rgba(255, 255, 255, 0.15);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* ==========================================================================
+   MASTER GLASSMORPHISM DESIGN SYSTEM (APP-WIDE TRANSFORM)
+   Ultra-modern frosted glass acrylic depth with specular borders & ambient glow
+   ========================================================================== */
+
+/* 1. FLOATING BOTTOM SEARCH & VOICE BAR CAPSULE */
+.bottom-search-bar {
+  background: var(--glass-surface-base) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-float) !important;
+  border-radius: var(--radius-full) !important;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.bottom-search-bar:focus-within {
+  background: var(--glass-surface-elevated) !important;
+  border: var(--glass-border-active) !important;
+  box-shadow: var(--glass-shadow-float), var(--glass-border-glow) !important;
+}
+
+.bottom-search-bar.listening-active {
+  background: var(--glass-surface-elevated) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.7) !important;
+  box-shadow: var(--glass-shadow-float), 0 0 24px rgba(239, 68, 68, 0.35) !important;
+}
+
+.bottom-search-bar .search-input {
+  background: transparent !important;
+  color: var(--md-on-surface) !important;
+}
+
+.bottom-search-bar .search-input::placeholder {
+  color: var(--md-on-surface-variant) !important;
+  opacity: 0.85;
+}
+
+.bottom-search-bar .lang-quick-toggle {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border-radius: var(--radius-full) !important;
+  color: var(--md-on-surface) !important;
+  transition: all 0.2s ease;
+}
+
+.bottom-search-bar .lang-quick-toggle:hover {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-specular) !important;
+}
+
+.bottom-search-bar .mic-button {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(59, 130, 246, 0.8)) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+}
+
+.bottom-search-bar .mic-button.active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(244, 63, 94, 0.85)) !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+}
+
+.bottom-search-bar .bottom-bar-scan-btn {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  color: var(--md-on-surface) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border-radius: var(--radius-full) !important;
+  transition: all 0.2s ease;
+}
+
+.bottom-search-bar .bottom-bar-scan-btn:hover {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-specular) !important;
+}
+
+.bottom-search-bar .send-button {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+.bottom-search-bar .bottom-bar-clear-btn {
+  background: var(--glass-surface-subtle) !important;
+  color: var(--md-on-surface-variant) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: var(--radius-full) !important;
+}
+
+/* 2. HERO ASSISTANT WELCOME CARD & SUGGESTION CHIPS */
+.hero-assistant-card {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  border-radius: 28px !important;
+  padding: 32px 24px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-assistant-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  pointer-events: none;
+}
+
+[data-theme="dark"] .hero-assistant-card::before,
+.dark .hero-assistant-card::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+}
+
+.hero-avatar {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%) !important;
+  box-shadow: 0 10px 25px -4px rgba(99, 102, 241, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+}
+
+.highlight-pill {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  color: var(--md-primary) !important;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.suggestion-chip {
+  background: var(--glass-surface-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-subtle) !important;
+  box-shadow: var(--glass-shadow-subtle) !important;
+  border-radius: 9999px !important;
+  color: var(--md-on-surface) !important;
+  font-weight: 600 !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.suggestion-chip:hover {
+  background: var(--glass-surface-elevated) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+}
+
+.suggestion-chip.active-sparkle {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(147, 51, 234, 0.16)) !important;
+  border: 1.5px solid rgba(99, 102, 241, 0.5) !important;
+  color: var(--md-primary) !important;
+}
+
+.suggestion-chip.active-report-chip {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(59, 130, 246, 0.14)) !important;
+  border: 1.5px solid rgba(99, 102, 241, 0.45) !important;
+}
+
+/* 3. CONVERSATIONAL STREAM & MESSAGE BUBBLES */
+.message-bubble.assistant-bubble {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-subtle) !important;
+  border-radius: 20px 20px 20px 4px !important;
+  color: var(--md-on-surface) !important;
+}
+
+.message-bubble.user-bubble {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.92) 0%, rgba(29, 78, 216, 0.88) 100%) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+  border-radius: 20px 20px 4px 20px !important;
+  color: #ffffff !important;
+}
+
+.avatar-mini.assistant {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-subtle) !important;
+  color: var(--md-primary) !important;
+}
+
+.avatar-mini.user {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  border: var(--glass-border-specular) !important;
+  color: #ffffff !important;
+}
+
+.draft-live-progress {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  border-radius: 20px !important;
+}
+
+.live-preview-box {
+  background: var(--glass-surface-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 14px !important;
+}
+
+.step-badge {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 9999px !important;
+}
+
+.step-badge.active {
+  background: var(--md-primary) !important;
+  border-color: var(--md-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4) !important;
+}
+
+.step-badge.done {
+  background: rgba(16, 185, 129, 0.16) !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  color: #059669 !important;
+}
+
+[data-theme="dark"] .step-badge.done,
+.dark .step-badge.done {
+  color: #34d399 !important;
+}
+
+/* 4. INVOICE WIZARD SETTLEMENT & PAYMENT CARD */
+.m3-paymode-picker {
+  background: var(--glass-surface-overlay) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-float) !important;
+  border-radius: 24px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.m3-paymode-picker::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, #a855f7, #06b6d4);
+  pointer-events: none;
+}
+
+.m3-settle-card-header {
+  border-bottom: var(--glass-border-subtle) !important;
+}
+
+.m3-settle-segment-track {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 9999px !important;
+  padding: 3px !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+}
+
+.m3-settle-segment-btn {
+  border-radius: 9999px !important;
+  color: var(--md-on-surface-variant) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.m3-settle-segment-btn.active-full {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.9)) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+.m3-settle-segment-btn.active-due {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.9)) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+.m3-settle-partial-box {
+  background: var(--glass-surface-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 16px !important;
+}
+
+.m3-settle-input-wrapper {
+  background: var(--glass-surface-input) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 12px !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.m3-settle-input-wrapper:focus-within {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-active) !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08), var(--glass-border-glow) !important;
+}
+
+.m3-settle-chip {
+  background: var(--glass-surface-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 9999px !important;
+  color: var(--md-on-surface) !important;
+  transition: all 0.18s ease;
+}
+
+.m3-settle-chip:hover {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-specular) !important;
+}
+
+.m3-settle-chip.success {
+  background: rgba(16, 185, 129, 0.16) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #059669 !important;
+}
+
+[data-theme="dark"] .m3-settle-chip.success,
+.dark .m3-settle-chip.success {
+  color: #34d399 !important;
+}
+
+.m3-settle-chip.danger {
+  background: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #dc2626 !important;
+}
+
+[data-theme="dark"] .m3-settle-chip.danger,
+.dark .m3-settle-chip.danger {
+  color: #f87171 !important;
+}
+
+.m3-paymode-horiz-btn {
+  background: var(--glass-surface-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 14px !important;
+  color: var(--md-on-surface) !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.m3-paymode-horiz-btn:hover {
+  background: var(--glass-surface-elevated) !important;
+  border: var(--glass-border-specular) !important;
+  transform: translateY(-1.5px);
+}
+
+.m3-paymode-horiz-btn.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(59, 130, 246, 0.15)) !important;
+  border: 1.5px solid rgba(37, 99, 235, 0.65) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
+  color: var(--md-primary) !important;
+}
+
+.m3-generate-bill-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: 0 8px 25px -4px rgba(37, 99, 235, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+  border-radius: 16px !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.m3-generate-bill-btn:hover {
+  box-shadow: 0 12px 30px -4px rgba(37, 99, 235, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+  transform: translateY(-1.5px);
+}
+
+/* 5. INTERACTIVE CUSTOMER SELECTION CHIPS */
+.m3-cust-choice-card {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  border-radius: 20px !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.m3-cust-choice-card:hover {
+  background: var(--glass-surface-elevated) !important;
+  border: var(--glass-border-active) !important;
+  box-shadow: var(--glass-shadow-float) !important;
+  transform: translateY(-2px);
+}
+
+.m3-existing-customer-picker {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  border-radius: 20px !important;
+}
+
+.m3-existing-cust-chip {
+  background: var(--glass-surface-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 16px !important;
+  transition: all 0.2s ease;
+}
+
+.m3-existing-cust-chip:hover {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-specular) !important;
+  transform: translateY(-1.5px);
+}
+
+/* 6. APP MODALS & DIALOG SHEETS (APP-WIDE) */
+.modal-backdrop,
+.low-stock-modal-backdrop,
+.m3-barcode-scanner-backdrop {
+  background: rgba(15, 23, 42, 0.55) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+[data-theme="dark"] .modal-backdrop,
+[data-theme="dark"] .low-stock-modal-backdrop,
+[data-theme="dark"] .m3-barcode-scanner-backdrop,
+.dark .modal-backdrop,
+.dark .low-stock-modal-backdrop,
+.dark .m3-barcode-scanner-backdrop {
+  background: rgba(7, 13, 30, 0.72) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+.m3-dialog-container,
+.m3-customers-modal-sheet,
+.reporting-dialog-viewport,
+.low-stock-modal-card,
+.m3-barcode-scanner-card {
+  background: var(--glass-surface-overlay) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-float) !important;
+  border-radius: 28px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.m3-dialog-container::before,
+.m3-customers-modal-sheet::before,
+.reporting-dialog-viewport::before,
+.low-stock-modal-card::before,
+.m3-barcode-scanner-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  pointer-events: none;
+}
+
+[data-theme="dark"] .m3-dialog-container::before,
+[data-theme="dark"] .m3-customers-modal-sheet::before,
+[data-theme="dark"] .reporting-dialog-viewport::before,
+[data-theme="dark"] .low-stock-modal-card::before,
+[data-theme="dark"] .m3-barcode-scanner-card::before,
+.dark .m3-dialog-container::before,
+.dark .m3-customers-modal-sheet::before,
+.dark .reporting-dialog-viewport::before,
+.dark .low-stock-modal-card::before,
+.dark .m3-barcode-scanner-card::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.dialog-header,
+.m3-dialog-header-enhanced,
+.m3-barcode-scanner-header,
+.low-stock-header {
+  border-bottom: var(--glass-border-subtle) !important;
+}
+
+.stock-icon-pill,
+.m3-dialog-icon-pill,
+.low-stock-icon-badge,
+.m3-scanner-badge {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-specular) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  box-shadow: var(--glass-shadow-subtle) !important;
+  border-radius: 14px !important;
+}
+
+.dialog-close-btn,
+.low-stock-close-btn,
+.m3-scanner-close-btn {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border-radius: 9999px !important;
+  color: var(--md-on-surface-variant) !important;
+  transition: all 0.2s ease;
+}
+
+.dialog-close-btn:hover,
+.low-stock-close-btn:hover,
+.m3-scanner-close-btn:hover {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-specular) !important;
+  color: var(--md-on-surface) !important;
+}
+
+/* 7. CUSTOMER DIRECTORY CARDS & STATS */
+.m3-customer-vertical-card {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-subtle) !important;
+  border-radius: 20px !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.m3-customer-vertical-card:hover {
+  background: var(--glass-surface-elevated) !important;
+  border: var(--glass-border-active) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  transform: translateY(-2px);
+}
+
+.cust-card-stats-bar,
+.m3-customer-stats-bar {
+  background: var(--glass-surface-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 14px !important;
+}
+
+.customer-info-tag {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 9999px !important;
+}
+
+/* 8. INVENTORY & ACCOUNTING TABLES & CARDS */
+.inventory-table-container,
+.reporting-section-container,
+.low-stock-info-card {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  border-radius: 20px !important;
+}
+
+.report-summary-card,
+.stat-summary-card {
+  background: var(--glass-surface-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: var(--glass-border-subtle) !important;
+  box-shadow: var(--glass-shadow-subtle) !important;
+  border-radius: 18px !important;
+  transition: all 0.2s ease;
+}
+
+.report-summary-card:hover,
+.stat-summary-card:hover {
+  background: var(--glass-surface-elevated) !important;
+  border: var(--glass-border-specular) !important;
+}
+
+.m3-filter-chip {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  border-radius: 9999px !important;
+}
+
+.m3-filter-chip.active {
+  background: var(--md-primary) !important;
+  border-color: var(--md-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* 9. SUPER ADMIN PORTAL DASHBOARD */
+.admin-page-scrollable-container {
+  background: transparent !important;
+}
+
+.admin-page-header {
+  background: var(--glass-surface-base) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border-bottom: var(--glass-border-specular) !important;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
+}
+
+.admin-gate-box {
+  background: var(--glass-surface-overlay) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-float) !important;
+  border-radius: 28px !important;
+}
+
+.admin-metric-card {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-subtle) !important;
+  border-radius: 20px !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.admin-metric-card:hover {
+  background: var(--glass-surface-elevated) !important;
+  border: var(--glass-border-active) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  transform: translateY(-2px);
+}
+
+.admin-metric-card.active-border {
+  border: 1.5px solid var(--md-primary) !important;
+  box-shadow: var(--glass-shadow-ambient), var(--glass-border-glow) !important;
+}
+
+.admin-plans-horizontal-card,
+.admin-table-wrapper {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  border-radius: 22px !important;
+}
+
+/* 10. AUTHENTICATION FULL-PAGE & 6-PIN CARDS */
+.auth-fullscreen-container {
+  background: var(--glass-canvas) !important;
+}
+
+.auth-card-wrapper {
+  background: var(--glass-surface-overlay) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-float) !important;
+  border-radius: 32px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+  pointer-events: none;
+}
+
+.auth-tabs-segmented {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border-radius: 9999px !important;
+  padding: 4px !important;
+}
+
+.auth-tab-btn {
+  border-radius: 9999px !important;
+  color: var(--md-on-surface-variant) !important;
+  transition: all 0.2s ease;
+}
+
+.auth-tab-btn.active {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-specular) !important;
+  color: var(--md-primary) !important;
+  font-weight: 700 !important;
+  box-shadow: var(--glass-shadow-subtle) !important;
+}
+
+.six-pin-box {
+  background: var(--glass-surface-input) !important;
+  border: var(--glass-border-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border-radius: 14px !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.six-pin-box:focus,
+.six-pin-box.active {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-active) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05), var(--glass-border-glow) !important;
+  transform: translateY(-2px) scale(1.05) !important;
+}
+
+.m3-text-field,
+.auth-input,
+.search-input-field {
+  background: var(--glass-surface-input) !important;
+  border: var(--glass-border-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border-radius: 14px !important;
+  color: var(--md-on-surface) !important;
+  transition: all 0.2s ease;
+}
+
+.m3-text-field:focus,
+.auth-input:focus,
+.search-input-field:focus {
+  background: var(--glass-surface-highlight) !important;
+  border: var(--glass-border-active) !important;
+  box-shadow: var(--glass-border-glow) !important;
+}
+
+/* 11. INVOICE DESIGNER WRAPPER */
+.invoice-designer-wrapper {
+  background: var(--glass-surface-card) !important;
+  backdrop-filter: var(--glass-blur-md) !important;
+  -webkit-backdrop-filter: var(--glass-blur-md) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-ambient) !important;
+  border-radius: 28px !important;
+  padding: 18px !important;
+}
+
+.invoice-ready-strip {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border-radius: 16px !important;
+}
+
+/* 12. NOTIFICATION PANEL & PROFILE DROPDOWNS */
+.notification-panel-card,
+.profile-menu-dropdown {
+  background: var(--glass-surface-overlay) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  border: var(--glass-border-specular) !important;
+  box-shadow: var(--glass-shadow-float) !important;
+  border-radius: 24px !important;
+}
+
+.notification-alert-item {
+  background: var(--glass-surface-subtle) !important;
+  border: var(--glass-border-subtle) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border-radius: 16px !important;
+  transition: all 0.2s ease;
+}
+
+.notification-alert-item:hover {
+  background: var(--glass-surface-elevated) !important;
+  border: var(--glass-border-specular) !important;
 }
